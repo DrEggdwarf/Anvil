@@ -1,0 +1,48 @@
+name: Nouvelle Feature
+description: Processus complet pour implémenter une nouvelle fonctionnalité
+
+steps:
+  - step: 1
+    agent: pm
+    action: Rédiger la spec (user stories, critères d'acceptation, priorité)
+    output: Spec validée
+    depends_on: []
+
+  - step: 2
+    agent: architect
+    action: Définir l'architecture (modèles, routes, composants, bridges, IPC)
+    output: Plan technique
+    depends_on: []
+    # Parallélisable avec step 1
+
+  - step: 3
+    agent: rust
+    action: Implémenter les commandes IPC Tauri nécessaires (si applicable)
+    output: Code Rust
+    depends_on: [2]
+    condition: "Si la feature nécessite des capabilities Tauri (file dialog, serial, etc.)"
+
+  - step: 4
+    agent: backend
+    action: Implémenter les routes API, bridges Python, modèles Pydantic
+    output: Code backend
+    depends_on: [2]
+
+  - step: 5
+    agent: frontend
+    action: Créer les composants React, panels, hooks
+    output: Code frontend
+    depends_on: [3, 4]
+
+  - step: 6
+    agent: testing
+    action: Écrire les tests unitaires et d'intégration
+    output: Tests complets
+    depends_on: [4, 5]
+
+  - step: 7
+    agent: security
+    action: Auditer le code produit (vulnérabilités, bonnes pratiques)
+    output: Rapport de sécurité + corrections
+    depends_on: [3, 4, 5]
+    # Parallélisable avec step 6

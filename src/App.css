@@ -1,0 +1,127 @@
+/* Anvil — Base styles */
+
+:root {
+  --anvil-bg: #0d1117;
+  --anvil-bg-secondary: #161b22;
+  --anvil-bg-tertiary: #21262d;
+  --anvil-fg: #c9d1d9;
+  --anvil-fg-muted: #8b949e;
+  --anvil-accent: #58a6ff;
+  --anvil-accent-hover: #79c0ff;
+  --anvil-danger: #f85149;
+  --anvil-success: #3fb950;
+  --anvil-warning: #d29922;
+  --anvil-border: #30363d;
+  --anvil-radius: 6px;
+  --anvil-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  --anvil-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--anvil-font-sans);
+  background: var(--anvil-bg);
+  color: var(--anvil-fg);
+}
+
+.anvil-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.anvil-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--anvil-bg-secondary);
+  border-bottom: 1px solid var(--anvil-border);
+}
+
+.anvil-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--anvil-accent);
+  letter-spacing: 0.5px;
+}
+
+.anvil-modes {
+  display: flex;
+  gap: 4px;
+}
+
+.anvil-mode-btn {
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--anvil-radius);
+  background: transparent;
+  color: var(--anvil-fg-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.anvil-mode-btn:hover {
+  color: var(--anvil-fg);
+  background: var(--anvil-bg-tertiary);
+}
+
+.anvil-mode-btn--active {
+  color: var(--anvil-accent);
+  background: var(--anvil-bg-tertiary);
+  border-color: var(--anvil-accent);
+}
+
+.anvil-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anvil-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--anvil-fg-muted);
+}
+
+.anvil-status-dot--ok {
+  background: var(--anvil-success);
+}
+
+.anvil-status-dot--err {
+  background: var(--anvil-danger);
+}
+
+.anvil-status-btn {
+  background: none;
+  border: none;
+  color: var(--anvil-fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.anvil-status-btn:hover {
+  color: var(--anvil-fg);
+}
+
+.anvil-workspace {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.anvil-placeholder {
+  color: var(--anvil-fg-muted);
+  font-size: 16px;
+  font-family: var(--anvil-font-mono);
+}

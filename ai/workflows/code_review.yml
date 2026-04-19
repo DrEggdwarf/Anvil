@@ -1,0 +1,108 @@
+name: Code Review Multi-Agents
+description: Review de code par chaque agent selon son périmètre
+mode: parallel
+
+# Agents "core" — lancés à chaque review
+core:
+  - agent: architect
+    action: Vérifier la cohérence structurelle et le respect des patterns
+    checklist:
+      - Le code est au bon endroit dans l'arborescence (Rust / TS / Python)
+      - Les dépendances sont justifiées
+      - Les conventions de nommage sont respectées
+      - Pas de couplage fort entre les couches (Tauri ↔ Frontend ↔ Backend)
+      - Communication IPC/WebSocket correctement utilisée
+
+  - agent: security
+    action: Auditer les vulnérabilités statiques (lecture de code)
+    checklist:
+      - Pas d'injection possible (commandes GDB, rizin, shell)
+      - Entrées utilisateur validées (fichiers, scripts, commandes)
+      - Pas de secrets en dur
+      - Capabilities Tauri minimales
+      - Subprocess isolation (timeout, resource limits)
+
+  - agent: quality
+    action: Vérifier la maintenabilité et la qualité du code
+    checklist:
+      - Aucun fichier > 200 lignes sans justification
+      - Aucune fonction > 30 lignes sans justification
+      - Conventions de nommage respectées (Rust/TS/Python)
+      - Pas de code dupliqué
+      - Pas de magic numbers ou strings hardcodées
+
+  - agent: testing
+    action: Vérifier la couverture de tests
+    checklist:
+      - Tests pour les bridges modifiés (pytest)
+      - Tests pour les composants modifiés (Vitest)
+      - Cas limites couverts (fichiers invalides, timeouts, crashes)
+      - Tests indépendants et lisibles
+
+# Agents "rust" — lancés si des fichiers src-tauri/ ont changé
+rust:
+  - agent: rust
+    action: Vérifier le code Rust et la configuration Tauri
+    checklist:
+      - Pas de unwrap() en code de production
+      - Gestion d'erreurs explicite (thiserror/anyhow)
+      - Commandes IPC typées (Serialize/Deserialize)
+      - Capabilities minimales dans tauri.conf.json
+      - Cleanup propre des subprocesses
+
+# Agents "backend" — lancés si des fichiers backend/ ont changé
+backend:
+  - agent: backend
+    action: Vérifier la logique métier et la qualité Python
+    checklist:
+      - Type hints systématiques
+      - Pydantic models pour la validation
+      - Bridges = wrappers fins (pas de logique UI)
+      - Gestion propre des subprocesses (cleanup, timeout)
+      - Pas de N+1 ou requêtes inutiles
+
+  - agent: performance
+    action: Vérifier les performances backend (latence, memory, subprocess)
+    checklist:
+      - Debug stepping latency < 100ms
+      - Subprocess reuse (pas de respawn à chaque requête)
+      - Pas de blocking I/O dans les handlers async
+
+# Agents "frontend" — lancés si des fichiers src/ ont changé
+frontend:
+  - agent: frontend
+    action: Vérifier l'UI, les conventions React et les styles
+    checklist:
+      - Composants fonctionnels uniquement
+      - Hooks custom pour la logique WebSocket
+      - CSS avec prefix anvil- (pas de styles globaux)
+      - Lazy loading pour les modes non actifs
+
+  - agent: a11y
+    action: Auditer l'accessibilité WCAG 2.1 AA
+    checklist:
+      - Contraste >= 4.5:1 sur tous les textes
+      - Attributs ARIA présents et corrects
+      - Navigation clavier fonctionnelle
+      - Focus visible sur les éléments interactifs
+      - Hiérarchie des headings logique
+
+  - agent: performance
+    action: Vérifier les performances frontend (bundle, rendering, WebSocket)
+    checklist:
+      - Bundle JS < 200kb gzip par mode
+      - Lazy loading pour les modes non actifs
+      - Canvas rendering à 60fps
+      - Pas de re-render inutiles
+
+# Agents "on-demand" — lancés uniquement sur demande explicite
+on_demand:
+  - agent: pentester
+    trigger: "après ajout d'un nouveau handler WebSocket, d'un upload, ou d'une commande IPC"
+    action: Exécuter des tests d'intrusion sur localhost
+    checklist:
+      - Injection de commandes testée sur les handlers WS
+      - Upload de fichiers malveillants testés
+      - Path traversal vérifié
+      - Rate limiting en place
+      - IPC Tauri non abusable

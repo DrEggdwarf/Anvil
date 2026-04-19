@@ -1,0 +1,130 @@
+"""WebSocket infrastructure — typed messages, dispatcher, heartbeat.
+
+All WebSocket communication follows the WSMessage schema.
+Handlers are registered in the dispatcher and routed by session_type + command.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from collections.abc import Awaitable, Callable
+
+from backend.app.models.ws import WSMessage, WSMessageType
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["websocket"])
+
+# Handler signature: async (websocket, message, session_id) -> dict | None
+WSHandler = Callable[[WebSocket, WSMessage, str], Awaitable[dict | None]]
+
+
+class WSDispatcher:
+    """Routes incoming WebSocket messages to registered handlers."""
+
+    def __init__(self) -> None:
+        self._handlers: dict[str, WSHandler] = {}
+
+    def register(self, command: str, handler: WSHandler) -> None:
+        """Register a handler for 'session_type.command'."""
+        self._handlers[command] = handler
+
+    def get_handler(self, command: str) -> WSHandler | None:
+        return self._handlers.get(command)
+
+    @property
+    def commands(self) -> list[str]:
+        return list(self._handlers.keys())
+
+
+# Global dispatcher — bridges register their WS handlers here
+ws_dispatcher = WSDispatcher()
+
+
+@router.websocket("/ws/{session_type}/{session_id}")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    session_type: str,
+    session_id: str,
+) -> None:
+    """Generic WebSocket endpoint — dispatches messages to registered handlers."""
+    await websocket.accept()
+    logger.info("WS connected: %s/%s", session_type, session_id)
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+
+            # Parse message
+            try:
+                data = json.loads(raw)
+                message = WSMessage(**data)
+            except (json.JSONDecodeError, Exception) as e:
+                await _send_error(websocket, "INVALID_MESSAGE", str(e))
+                continue
+
+            # Heartbeat
+            if message.type == WSMessageType.PING:
+                await websocket.send_json(
+                    WSMessage(
+                        type=WSMessageType.PONG,
+                        request_id=message.request_id,
+                    ).model_dump()
+                )
+                continue
+
+            # Command dispatch
+            if message.type == WSMessageType.COMMAND:
+                command_name = message.payload.get("command", "")
+                handler_key = f"{session_type}.{command_name}"
+                handler = ws_dispatcher.get_handler(handler_key)
+
+                if handler is None:
+                    await _send_error(
+                        websocket,
+                        "UNKNOWN_COMMAND",
+                        f"No handler for '{handler_key}'",
+                        request_id=message.request_id,
+                    )
+                    continue
+
+                try:
+                    result = await handler(websocket, message, session_id)
+                    if result is not None:
+                        await websocket.send_json(
+                            WSMessage(
+                                type=WSMessageType.RESULT,
+                                session_id=session_id,
+                                request_id=message.request_id,
+                                payload=result,
+                            ).model_dump()
+                        )
+                except Exception:
+                    logger.exception("Handler error: %s", handler_key)
+                    await _send_error(
+                        websocket,
+                        "HANDLER_ERROR",
+                        f"Internal error in handler '{handler_key}'",
+                        request_id=message.request_id,
+                    )
+
+    except WebSocketDisconnect:
+        logger.info("WS disconnected: %s/%s", session_type, session_id)
+
+
+async def _send_error(
+    ws: WebSocket,
+    code: str,
+    message: str,
+    request_id: str | None = None,
+) -> None:
+    """Send a typed error message over WebSocket."""
+    await ws.send_json(
+        WSMessage(
+            type=WSMessageType.ERROR,
+            request_id=request_id or "",
+            payload={"code": code, "message": message},
+        ).model_dump()
+    )

@@ -1,0 +1,69 @@
+[project]
+name = "anvil-backend"
+version = "0.1.0"
+description = "Anvil — Low-Level Security Toolkit Backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "websockets>=14.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pygdbmi>=0.11.0.0",
+    "slowapi>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.8",
+    "bandit>=1.7",
+]
+re = [
+    "rzpipe>=0.4.0",
+]
+pwn = [
+    "pwntools>=4.12",
+]
+firmware = [
+    "binwalk>=2.4",
+]
+protocols = [
+    "pymodbus>=3.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["../tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "S",    # bandit (security)
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "S101",  # assert used — OK in tests
+    "S603",  # subprocess without shell=True — intentional
+    "S607",  # start process with partial path — intentional
+    "B008",  # Depends() in defaults — standard FastAPI pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"../tests/**" = ["S101", "S106"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B603", "B607"]

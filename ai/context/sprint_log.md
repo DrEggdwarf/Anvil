@@ -1,0 +1,412 @@
+# Sprint Log — Anvil
+
+## Sprint 0 — Bootstrap (18 avril 2026) ✅
+
+### Objectif
+Scaffolding du projet : Tauri v2 + React 19 + TypeScript + Vite 7 + système AI multi-agent.
+
+### Réalisé
+- [x] Init projet Tauri v2 avec template react-ts
+- [x] npm install (72 packages)
+- [x] Création du système AI multi-agent (12 agents, 2 workflows)
+- [x] Adaptation des agents de Rails (Ruby/Inertia) vers Anvil (Rust/React/Python)
+- [x] Remplacement de l'agent `database` par `rust` (pas de DB, mais shell Tauri)
+- [x] Fichiers context initialisés (sprint_log, decisions, backlog)
+
+### Décisions
+- Voir ai/context/decisions.md
+
+---
+
+## Sprint 1 — API Engine Core (19 avril 2026) ✅
+**Objectif** : Fondation backend blindée — architecture modulaire, gestion de sessions,
+lifecycle subprocess, WebSocket infra, error handling, tests complets.
+**Agents** : @architect → @backend → @security → @testing
+**Priorité** : 🔴 CRITIQUE — c'est le socle de tout le reste
+
+### Réalisé
+- [x] `backend/app/core/config.py` — Settings Pydantic (env vars, ANVIL_ prefix, defaults)
+- [x] `backend/app/core/exceptions.py` — Hiérarchie complète (AnvilError → BridgeError, SessionError, ValidationError, SubprocessError, ToolNotFound)
+- [x] `backend/app/core/lifecycle.py` — Startup/shutdown events FastAPI (SubprocessManager, SessionManager, WorkspaceManager)
+- [x] `backend/app/core/subprocess_manager.py` — spawn(), execute(), kill(), cleanup_all()
+- [x] `backend/app/bridges/base.py` — BaseBridge ABC (start, stop, health, execute, state machine)
+- [x] `backend/app/bridges/registry.py` — Bridge Registry (enregistrement dynamique)
+- [x] `backend/app/sessions/manager.py` — Session Manager (create, get, destroy, timeout, cleanup, concurrent limits)
+- [x] `backend/app/api/health.py`, `sessions.py`, `ws.py`, `deps.py`
+- [x] `backend/app/models/` — tools.py (24 tools), ws.py, sessions.py, errors.py, health.py
+- [x] WebSocket infra (typed JSON messages, handlers dispatcher, heartbeat, errors)
+- [x] Exception hierarchy + error middleware → JSON responses uniformes
+- [x] **97 tests, 95% coverage**
+
+---
+
+## Sprint 2 — GDB Bridge (19 avril 2026) ✅
+**Objectif** : Premier bridge concret (GDB/MI via pygdbmi). Implémentation de référence,
+tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
+**Agents** : @backend → @testing → @security → @pentester
+
+### Réalisé
+- [x] `bridges/gdb_bridge.py` — full pygdbmi wrapper (~15 commandes initiales : load, run, step, bp, registers, memory, stack, disassemble, evaluate)
+- [x] `api/gdb.py` — 14 routes REST /api/gdb/{session_id}/*
+- [x] `api/gdb_ws.py` — 14 handlers WebSocket (gdb.step_into, gdb.registers, etc.)
+- [x] `models/gdb.py` — Schemas Pydantic complets
+- [x] Mock pygdbmi complet — CI sans GDB installé
+- [x] **171 tests, 97% coverage**
+
+---
+
+## Sprint 3 — Compilation Pipeline (19 avril 2026) ✅
+**Objectif** : Compiler ASM (nasm+ld) et C (gcc), checksec, gestion fichiers.
+**Agents** : @backend → @security → @testing
+
+### Réalisé
+- [x] `bridges/compilation.py` — CompilationBridge (ASM: nasm+ld/gcc, C: gcc avec flags sécurité)
+- [x] `bridges/binary_analyzer.py` — BinaryAnalyzer (checksec, file info, ELF sections)
+- [x] `core/workspace.py` — WorkspaceManager (dirs isolés par session, protection path traversal)
+- [x] `api/compile.py` — Routes REST /api/compile/{session_id}/* (files CRUD, asm, c, checksec, fileinfo, sections)
+- [x] `models/compilation.py` — Schemas Pydantic (compile req/resp, checksec, sections, file management)
+- [x] Error parsers : nasm stderr + gcc stderr → erreurs structurées (file/line/severity)
+- [x] Security flags map : relro, canary, nx, pie, fortify + négations
+- [x] **243 tests, 97% coverage**
+
+---
+
+## Sprint 4 — RE Bridge + Feature Completion (19 avril 2026) ✅
+**Objectif** : Bridge rzpipe complet + couverture 100% features GDB et binary analysis.
+**Agents** : @backend → @testing → @security
+
+### Réalisé — Rizin Bridge
+- [x] `bridges/rizin_bridge.py` — ~50 méthodes via rzpipe (analyse, fonctions, désassemblage, décompilation, strings, imports/exports, symboles, sections, segments, relocations, classes, xrefs, search, flags, comments, types, ESIL, hashing, graphs, projets, patching)
+- [x] `api/rizin.py` — ~70 endpoints REST /api/re/{session_id}/* (couverture complète du bridge)
+- [x] `models/rizin.py` — Schemas Pydantic (22 request models + 13 response models)
+- [x] Auto-register bridge dans registry + lifecycle.py
+- [x] `rzpipe>=0.4.0` ajouté à requirements.txt
+
+### Réalisé — GDB Bridge étendu (de ~15 → ~45 commandes)
+- [x] Nouvelles commandes : interrupt, step_source, next_source, until, reverse_continue, reverse_step
+- [x] Breakpoints avancés : enable/disable, condition, watchpoints (write/read/access), hardware bp, temporary bp
+- [x] Mémoire : write_memory, search_memory
+- [x] Registres : set_register, get_register, get_changed_registers
+- [x] Stack : get_stack_arguments, get_stack_depth, select_frame
+- [x] Threads : thread_info, thread_select
+- [x] Process : attach, detach, get_memory_map, get_shared_libraries
+- [x] Variables : set_variable, print_variable, get_local_variables
+- [x] Signaux : get_signals, handle_signal, catch_syscall, catch_signal
+- [x] Record : record_start, record_stop
+- [x] Disassemble : disassemble_with_source
+- [x] ~40 nouvelles routes REST dans api/gdb.py
+
+### Réalisé — Binary Analyzer étendu (de 3 → ~20 méthodes)
+- [x] ELF header, program headers, symbols (nm), dynamic symbols (readelf)
+- [x] Imports, exports, relocations, GOT entries, PLT entries
+- [x] Strings (strings -a -t x), dependencies (ldd)
+- [x] Disassemble (objdump -d), hexdump (xxd), size info (size)
+- [x] ~15 nouvelles routes REST dans api/compile.py
+
+### Tests
+- [x] `test_rizin_bridge.py` — 75 tests (mock rzpipe, lifecycle, toutes méthodes)
+- [x] `test_gdb_bridge.py` étendu — ~40 nouveaux tests
+- [x] `test_binary_analyzer.py` étendu — ~25 nouveaux tests
+- [x] Fix regex dynamic_symbols parser (\s+ matchait \n)
+- [x] **388 tests, 0 failures**
+
+---
+
+## Sprint 5 — Bridges Pwn, Firmware, Protocols (19 avril 2026) ✅
+**Objectif** : Compléter l'arsenal de bridges — couverture 100% features des outils wrappés.
+**Agents** : @backend → @testing → @security → @pentester
+
+### Réalisé — Pwn Bridge (pwntools)
+- [x] `bridges/pwn_bridge.py` — ~40 méthodes : context, cyclic, pack/unpack/flat, asm/disasm, make_elf, shellcraft (multi-arch), ELF analysis (checksec, symbols, GOT, PLT, sections, search, bss), ROP (create, gadgets, call, raw, chain, dump, migrate, setRegisters), fmtstr_payload, SigreturnFrame (SROP), Ret2dlresolvePayload, encoding (XOR, hex, base64, URL), hashing (md5/sha1/sha256/sha512), shellcode encoding, constants DB, corefile analysis, bit rotation
+- [x] `api/pwn.py` — ~40 routes REST /api/pwn/{session_id}/*
+- [x] `models/pwn.py` — Schemas Pydantic (context, cyclic, pack, asm, shellcraft, ELF, ROP, fmtstr, SROP, encoding, hash, constants, corefile)
+
+### Réalisé — Firmware Bridge (binwalk)
+- [x] `bridges/firmware_bridge.py` — ~20 méthodes : scan (signature, filtered, crypto, filesystem, compression), extract (auto, recursive, carve), entropy (blocks + PNG graph), strings, opcodes/arch detection, raw byte search, secret scanning (private keys, certs, passwords, API keys, SSH keys), file info, extracted listing, signatures list
+- [x] Auto-détection binwalk v3 CLI (JSON --log=-) ou v2 Python module fallback
+- [x] `api/firmware.py` — ~20 routes REST /api/firmware/{session_id}/*
+- [x] `models/firmware.py` — Schemas Pydantic (scan, extract, entropy, strings, secrets, search, files, signatures)
+
+### Réalisé — Protocol Bridge (pymodbus)
+- [x] `bridges/protocol_bridge.py` — ~40 méthodes : connect (TCP/UDP/Serial/TLS + framer), disconnect, read coils/discrete/holding/input/exception_status/FIFO/file_record, write single/multiple coils/registers/mask/readwrite/file_record, device info (MEI type 14), report_server_id, diagnostics (all sub-functions 0x00-0x15), comm event counter/log, data type conversion (INT16-64/UINT/FLOAT32-64/STRING/BITS), scan devices, scan registers, start server (simulator/honeypot)
+- [x] `api/protocol.py` — ~40 routes REST /api/protocol/{session_id}/*
+- [x] `models/protocol.py` — Schemas Pydantic (connect, read/write, diagnostics, device info, conversion, scan, server)
+
+### Wiring & Dependencies
+- [x] `main.py` — 3 nouveaux routers inclus (pwn, firmware, protocol)
+- [x] `lifecycle.py` — 3 imports bridges auto-register
+- [x] `requirements.txt` — pwntools>=4.0, binwalk>=2.3, pymodbus>=3.0
+
+### Tests
+- [x] `test_pwn_bridge.py` — tests exhaustifs (lifecycle, context, cyclic, packing, asm, shellcraft, ELF, ROP, fmtstr, SROP, ret2dl, encoding, hashing, constants, corefile, misc, guards)
+- [x] `test_firmware_bridge.py` — tests exhaustifs (lifecycle, scan v2/v3, filtered scans, extraction, entropy, strings, opcodes, raw search, secrets, file info, listing, signatures, parsing helpers, guards)
+- [x] `test_protocol_bridge.py` — tests exhaustifs (lifecycle, connection, read/write ops, device info, diagnostics all sub-functions, event counter/log, data conversion, scan devices/registers, server, properties, guards)
+- [x] **586 tests, 0 failures** (198 nouveaux tests)
+
+### Décisions techniques
+- Binary data I/O en hex strings pour JSON REST API (pwntools)
+- binwalk v3 CLI préféré (JSON), v2 Python fallback automatique
+- execute() utilise inspect.isawaitable() pour gérer méthodes sync/async
+- Tous les mocks via sys.modules (pas d'import réel pwntools/binwalk/pymodbus en CI)
+
+---
+
+## Sprint 6 — Hardening & Integration (completed) ✅
+**Objectif** : Sécurité, performance, tests E2E API, CI.
+**Agents** : @security → @pentester → @performance → @testing → @devops
+
+### 6.1 — Security ✅
+- [x] Input sanitization module (`core/sanitization.py`) — GDB/MI, Rizin, path traversal, GCC flags, session ID, string length validators
+- [x] GDB bridge hardened — all user-controlled inputs sanitized (binary_path, location, expression, variable, pattern, address, etc.)
+- [x] Rizin bridge hardened — all user-controlled inputs sanitized (command, address, new_name, hex_data, string, instruction, etc.)
+- [x] `!`, `;`, `` ` ``, `\n` blocked in GDB/Rizin inputs — prevents shell escape and command chaining
+- [x] `shell`, `python`, `pipe`, `source`, `define` blocked in GDB inputs
+- [x] Path validation — blocks /etc, /proc, /sys, /dev, /root, /boot; enforces allowed_dirs containment
+- [x] GCC extra_flags allowlist — blocks -wrapper, -fplugin, -specs; allows -O, -g, -W, -f, -m, -std=, etc.
+- [x] Session ID format validation — regex `^[a-f0-9]{16}$`
+- [x] Rate limiting via slowapi — `rate_limit_per_minute=120` from config, applied globally
+- [x] CORS hardened — explicit methods (GET/POST/PUT/DELETE/PATCH) and headers (Content-Type/Authorization/X-Session-ID)
+- [x] Workspace base dir changed from `/tmp/anvil` to `~/.anvil/workspaces`
+- [x] Error codes: INJECTION_BLOCKED (400), PATH_BLOCKED (403) added to status map
+
+### 6.2 — Performance ✅
+- [x] Subprocess concurrency limit — semaphore (max 20 concurrent) in SubprocessManager
+- [x] Subprocess output size enforcement — truncate to `subprocess_max_output_bytes` (10MB)
+- [x] Semaphore release in both kill() and execute() cleanup paths
+
+### 6.3 — Input Validation ✅
+- [x] Pydantic max_length on all GDB model string fields (binary_path: 4096, expression: 4096, address: 256, register: 64, etc.)
+- [x] Pydantic max_length on all Rizin model string fields
+- [x] Pydantic max_length on compilation models (source_code: 1M)
+
+### 6.4 — Tests ✅
+- [x] `test_security.py` — 30 tests: GDB injection, Rizin injection, path traversal, session ID, GCC flags, string length
+- [x] `test_e2e_security.py` — E2E API tests: dangerous flags, oversized inputs, malformed session IDs, CORS
+- [x] **631 tests, 0 failures** (45 new security tests)
+
+### 6.5 — CI & Linting ✅
+- [x] `.github/workflows/ci.yml` — GitHub Actions: lint + security scan + tests
+- [x] `pyproject.toml` — ruff config (E/W/F/I/S/B/UP/SIM/RUF rules), bandit config
+- [x] slowapi added to requirements.txt and pyproject.toml
+
+### Décisions techniques
+- Sanitization at bridge level (not API level) — defense in depth, bridges are reusable
+- `$` allowed in GDB inputs (needed for register references like `$rax`)
+- `|` allowed in both GDB/Rizin (needed for some valid expressions) — `pipe` command blocked separately
+- Null bytes in paths caught before `Path.resolve()` to avoid ValueError
+- Semaphore-based concurrency limit (not queue-based) — simpler, no ordering needed
+
+---
+
+> **FIN DE LA PHASE 0 — API ENGINE** ✅
+> Sprints 0-6 terminés. 631 tests, 0 failures.
+> 6 bridges (GDB, Rizin, Compilation, Pwn, Firmware, Protocols), ~100+ routes REST, WS infra, CI, sécurité.
+> Tout le backend est prêt. Les phases suivantes sont principalement **frontend**.
+
+---
+
+## Sprint 7 — Mode ASM : Éditeur & Compilation UI
+**Objectif** : Premier mode fonctionnel — écrire du code ASM, compiler, voir le résultat.
+**Agents** : @frontend → @architect → @testing
+
+### 7.1 — Layout de base
+- [ ] Shell React : sidebar modes (6 icônes) + zone principale + barre d'état
+- [ ] Router interne : switch entre modes (ASM, RE, Pwn, Debug, Firmware, Protocols)
+- [ ] Composant `<Editor>` — CodeMirror 6 avec coloration syntaxique x86 ASM
+- [ ] Split pane vertical : éditeur | output (terminal/console)
+
+### 7.2 — Compilation pipeline UI
+- [ ] Bouton Compile (Ctrl+B) → POST /api/compile/{session_id}/asm
+- [ ] Affichage erreurs nasm inline (markers CodeMirror)
+- [ ] Affichage warnings/errors dans panel output
+- [ ] Toggle libc linking (checkbox)
+- [ ] Panel "Binary Info" : checksec + ELF info après compilation
+
+### 7.3 — Session management UI
+- [ ] Connexion WebSocket au boot
+- [ ] Création session auto (bridge_type=compilation)
+- [ ] Indicateur statut backend (connected/disconnected)
+- [ ] Gestion reconnection WS
+
+### 7.4 — Tests
+- [ ] Tests Vitest composants React
+- [ ] Tests intégration WS mock
+
+---
+
+## Sprint 8 — Mode ASM : Debug interactif (GDB)
+**Objectif** : Débuguer le binaire compilé — breakpoints, step, registres, mémoire, stack.
+**Agents** : @frontend → @backend → @testing
+
+### 8.1 — Debug controls
+- [ ] Bouton "Debug" → crée session GDB + load binary
+- [ ] Toolbar debug : Run, Continue, Step Into, Step Over, Step Out, Stop
+- [ ] Raccourcis clavier (F5 Run, F10 Step Over, F11 Step Into, Shift+F11 Step Out)
+- [ ] Sync instruction courante ↔ ligne éditeur (highlight)
+
+### 8.2 — Panels debug
+- [ ] Panel Registres — tableau live (GPR, flags, segments) via WS gdb.registers
+- [ ] Panel Stack — frames + variables locales via WS gdb.stack
+- [ ] Panel Mémoire — hex viewer avec lecture via /api/gdb/{sid}/memory
+- [ ] Panel Disassembly — instructions autour de $pc
+- [ ] Panel Breakpoints — liste, activer/désactiver, conditions
+
+### 8.3 — Breakpoints visuels
+- [ ] Click marge éditeur → set breakpoint (gutter markers)
+- [ ] Sync bidirectionnelle breakpoints éditeur ↔ GDB bridge
+- [ ] Breakpoints conditionnels (input dialog)
+
+### 8.4 — Tests
+- [ ] Tests WS debug flow (mock GDB responses)
+- [ ] Tests composants debug panels
+
+---
+
+## Sprint 9 — Mode RE : Frontend reverse engineering
+**Objectif** : Interface complète d'analyse statique de binaires via le bridge Rizin.
+**Agents** : @frontend → @architect → @testing
+> Backend 100% prêt (Sprint 4 : 50 méthodes, 70 endpoints).
+
+### 9.1 — Layout RE
+- [ ] Layout 3 colonnes : fonctions | vue centrale | sidebar info
+- [ ] File dialog natif (Tauri) ou upload pour charger un binaire
+- [ ] Barre d'analyse : boutons aa / aaa / aaaa + progress
+
+### 9.2 — Vue centrale
+- [ ] Tab Disassembly — instructions colorisées, adresses, opcodes
+- [ ] Tab Décompilation — pseudo-C via r2ghidra (pdg)
+- [ ] Tab Hexdump — hex editor interactif
+- [ ] Tab Strings — tableau filtrable
+- [ ] Navigation adresse ↔ fonction (click = seek)
+
+### 9.3 — Sidebar info
+- [ ] Imports / Exports
+- [ ] Symbols
+- [ ] Sections / Segments
+- [ ] Cross-references (xrefs to/from)
+- [ ] Binary info (arch, format, endian, entry)
+
+### 9.4 — Fonctionnalités avancées
+- [ ] CFG control flow graph (canvas SVG/WebGL)
+- [ ] Call graph
+- [ ] Rename function (inline edit → /api/re/{sid}/rename)
+- [ ] Comments (add/edit/delete)
+- [ ] Flags
+- [ ] Dangerous functions highlight (system, strcpy, gets, etc.)
+
+### 9.5 — Tests
+- [ ] Tests Vitest composants RE
+- [ ] Tests navigation + recherche
+
+---
+
+## Sprint 10 — Mode Pwn : Exploit development
+**Objectif** : Éditeur Python + templates exploits + outils pwntools intégrés.
+**Agents** : @frontend → @pentester → @testing
+> Backend 100% prêt (Sprint 5 : 40 méthodes, ~40 routes).
+
+### 10.1 — Éditeur exploit
+- [ ] CodeMirror 6 avec coloration Python
+- [ ] Templates d'exploits pré-remplis (BOF, fmtstr, ret2libc, ROP chain, heap, SROP)
+- [ ] Exécution script Python (subprocess backend)
+- [ ] Output console (stdout/stderr streaming WS)
+- [ ] Target selector : local binary / remote host:port
+
+### 10.2 — Outils intégrés
+- [ ] Panel Checksec — affichage protections binaire cible
+- [ ] Panel ROP — recherche gadgets (via /api/pwn/{sid}/rop/*)
+- [ ] Format string calculator UI
+- [ ] Cyclic pattern generator/finder
+- [ ] Payload hex viewer (pack/unpack preview)
+
+### 10.3 — ELF browser
+- [ ] Chargement ELF → symbols, GOT, PLT, sections
+- [ ] Navigation rapide symbols → adresses
+
+### 10.4 — Tests
+- [ ] Tests composants Pwn
+- [ ] Tests flow template → edit → execute
+
+---
+
+## Sprint 11 — Mode Debug enhanced + Mode Firmware
+**Objectif** : Heap visualizer, syscall trace, firmware analysis UI.
+**Agents** : @frontend → @pentester → @testing
+
+### 11.1 — Debug enhanced
+- [ ] Heap visualizer — chunks, bins, tcache (graphe interactif)
+- [ ] Syscall trace (via GDB catch syscall → table live)
+- [ ] Memory map visuelle — barres colorées (stack, heap, .text, libs)
+- [ ] Canary + return address tracking
+- [ ] Core dump loader + analysis
+
+### 11.2 — Mode Firmware UI
+- [ ] Upload firmware → scan binwalk
+- [ ] Résultats scan : tableau signatures détectées
+- [ ] Extraction : arbre filesystem navigable
+- [ ] Graphe entropie (chart.js / recharts)
+- [ ] Secret scanning : highlights passwords, clés, tokens
+- [ ] Transition → RE (ouvrir un binaire extrait dans le mode RE)
+
+### 11.3 — Tests
+- [ ] Tests composants heap/memory map
+- [ ] Tests flow firmware scan → extract → browse
+
+---
+
+## Sprint 12 — Mode Protocols ICS/OT + Tauri packaging
+**Objectif** : Interface Modbus/ICS + packaging desktop natif.
+**Agents** : @frontend → @devops → @rust → @testing
+> Backend 100% prêt (Sprint 5 : 40 méthodes Modbus).
+
+### 12.1 — Mode Protocols UI
+- [ ] Connexion Modbus TCP/RTU : formulaire host/port/unit/baudrate
+- [ ] Register browser : tableau live coils, discrete inputs, holding, input registers
+- [ ] Read/Write operations avec ⚠️ avertissement sécurité
+- [ ] Device info panel (identification)
+- [ ] Scan devices/registers (progress bar)
+- [ ] Diagnostics panel
+- [ ] Data type conversion calculator
+
+### 12.2 — Tauri packaging
+- [ ] `src-tauri/src/lib.rs` : spawn FastAPI subprocess + health check loop
+- [ ] File dialogs natifs (ouvrir binaires .elf/.bin/.hex/.c)
+- [ ] Dependency checker au premier lancement (gdb, rizin, gcc, python, nasm)
+- [ ] Build AppImage Linux
+- [ ] Auto-update (tauri-plugin-updater)
+- [ ] Icône + splash screen
+
+### 12.3 — Tests
+- [ ] Tests composants Protocols
+- [ ] Tests Tauri IPC (mocks)
+- [ ] Tests E2E Playwright (smoke)
+
+---
+
+## Sprint 13 — Polish, a11y, i18n
+**Objectif** : Qualité finale — accessibilité, internationalisation, tests e2e complets.
+**Agents** : @a11y → @quality → @frontend → @testing
+
+### 13.1 — Accessibilité
+- [ ] Audit WCAG 2.1 AA
+- [ ] Navigation clavier complète
+- [ ] Screen reader support (aria-labels)
+- [ ] Contrastes couleurs (dark theme)
+- [ ] Focus management
+
+### 13.2 — Internationalisation
+- [ ] i18n framework (react-i18next)
+- [ ] Traductions EN + FR
+- [ ] Détection langue auto
+
+### 13.3 — Tests E2E
+- [ ] Suite Playwright — smoke tests tous les modes
+- [ ] Flow complet : écrire ASM → compiler → débuguer → step → voir registres
+- [ ] Multi-session concurrentes
+- [ ] Tests responsivité
+
+### 13.4 — Extras
+- [ ] Shellcode workshop (mode ASM) — exercices interactifs
+- [ ] Multi-architecture ASM (ARM64, RISC-V via cross-compile)
+- [ ] Plugin system (API extension points)
+- [ ] Documentation utilisateur (guide + tooltips)
