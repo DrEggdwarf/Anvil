@@ -1,52 +1,336 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useState, useCallback, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { useColResize } from './hooks/useColResize'
+import { useAnvilSession } from './hooks/useAnvilSession'
+import { EditorPanel } from './components/EditorPanel'
+import { RegistersPane } from './components/RegistersPane'
+import { TerminalDrawer } from './components/TerminalDrawer'
+import { StackPanel } from './components/panels/StackPanel'
+import { MemoryPanel } from './components/panels/MemoryPanel'
+import { SecurityPanel } from './components/panels/SecurityPanel'
+import './App.css'
 
-type Mode = "ASM" | "RE" | "Pwn" | "Debug" | "Firmware" | "Protocols";
+type Mode = 'ASM' | 'RE' | 'Pwn' | 'Debug' | 'Firmware' | 'Protocols'
+
+const MODE_ICONS: Record<Mode, string> = {
+  ASM: 'fa-microchip',
+  RE: 'fa-magnifying-glass-chart',
+  Pwn: 'fa-skull-crossbones',
+  Debug: 'fa-bug',
+  Firmware: 'fa-hard-drive',
+  Protocols: 'fa-network-wired',
+}
+
+const MODE_CAT: Record<Mode, string> = {
+  ASM: 'asm',
+  RE: 're',
+  Pwn: 'pwn',
+  Debug: 'dbg',
+  Firmware: 'fw',
+  Protocols: 'hw',
+}
+
+const SAMPLE = `section .data
+    msg db "Hello, World!", 10
+    len equ $ - msg
+
+section .text
+    global _start
+
+_start:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, msg
+    mov rdx, len
+    syscall
+
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+`
 
 function App() {
-  const [mode, setMode] = useState<Mode>("ASM");
-  const [backendStatus, setBackendStatus] = useState<string>("checking...");
+  const [mode, setMode] = useState<Mode>('ASM')
+  const [backendOk, setBackendOk] = useState<boolean | null>(null)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [openPanels, setOpenPanels] = useState({ stack: true, memory: true, security: false })
+  const [assembler, setAssembler] = useState<'nasm' | 'gas' | 'fasm'>('nasm')
+  const [fileName] = useState('source.asm')
+  const [code, setCode] = useState(SAMPLE)
+  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set())
+
+  const session = useAnvilSession()
+  const { cols, bodyRef, onDown } = useColResize([30, 36, 34])
+
+  const toggleBp = useCallback((line: number) => {
+    setBreakpoints(prev => {
+      const next = new Set(prev)
+      if (next.has(line)) next.delete(line); else next.add(line)
+      return next
+    })
+    session.setBreakpoint(line)
+  }, [session])
+
+  // Cleanup sessions on unmount
+  useEffect(() => {
+    return () => { session.destroySessions() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function checkBackend() {
     try {
-      const ok = await invoke<boolean>("check_backend");
-      setBackendStatus(ok ? "connected" : "unreachable");
+      const ok = await invoke<boolean>('check_backend')
+      setBackendOk(ok)
     } catch {
-      setBackendStatus("error");
+      setBackendOk(false)
     }
   }
 
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.setAttribute('data-theme', next)
+  }
+
+  function togglePanel(key: keyof typeof openPanels) {
+    setOpenPanels(p => ({ ...p, [key]: !p[key] }))
+  }
+
+  function handleDownload() {
+    const blob = new Blob([code], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleOpen() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.asm,.s,.S,.nasm'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => setCode(reader.result as string)
+      reader.readAsText(file)
+    }
+    input.click()
+  }
+
+  const backendStatus = backendOk === null ? 'checking' : backendOk ? 'ok' : 'err'
+
   return (
-    <main className="anvil-app">
+    <main className="anvil-app" data-cat={MODE_CAT[mode]}>
+      {/* ── Header ────────────────────────────────────────────── */}
       <header className="anvil-header">
-        <h1 className="anvil-title">Anvil</h1>
-        <nav className="anvil-modes" role="tablist" aria-label="Modes">
-          {(["ASM", "RE", "Pwn", "Debug", "Firmware", "Protocols"] as Mode[]).map((m) => (
+        <span className="anvil-logo"><i className="fa-solid fa-hammer" /> AN<strong>VIL</strong></span>
+
+        <nav className="anvil-modes">
+          {(['ASM', 'RE', 'Pwn', 'Debug', 'Firmware', 'Protocols'] as Mode[]).map(m => (
             <button
               key={m}
-              role="tab"
-              aria-selected={mode === m}
-              className={`anvil-mode-btn ${mode === m ? "anvil-mode-btn--active" : ""}`}
+              className={`anvil-mode-btn ${mode === m ? 'anvil-mode-btn--active' : ''}`}
               onClick={() => setMode(m)}
             >
+              <i className={`fa-solid ${MODE_ICONS[m]}`} />
               {m}
             </button>
           ))}
         </nav>
-        <div className="anvil-status">
-          <span className={`anvil-status-dot anvil-status-dot--${backendStatus === "connected" ? "ok" : "err"}`} />
-          <button className="anvil-status-btn" onClick={checkBackend}>
-            Backend: {backendStatus}
-          </button>
+
+        <div className="anvil-header-controls">
+          <div className="anvil-ctrl-group">
+            <button className="anvil-theme-btn" onClick={toggleTheme} title="Toggle theme">
+              <i className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'}`} />
+            </button>
+          </div>
+
+          <div className="anvil-ctrl-group">
+            <span className={`anvil-status-dot anvil-status-dot--${backendStatus === 'ok' ? 'ok' : 'err'}`} />
+            <button className="anvil-btn" onClick={checkBackend} style={{ border: 'none', background: 'none', padding: '2px 4px' }}>
+              Backend
+            </button>
+          </div>
         </div>
       </header>
 
-      <section className="anvil-workspace">
-        <p className="anvil-placeholder">Mode: {mode} — workspace vide</p>
-      </section>
+      {/* ── Body (3 columns) ──────────────────────────────────── */}
+      <div className="anvil-body" ref={bodyRef}>
+        {/* Column 1: Editor */}
+        <div className="anvil-col anvil-col-editor" style={{ width: cols[0] + '%' }}>
+          {/* File bar + assembler selector */}
+          <div className="anvil-file-bar">
+            <i className="fa-solid fa-file-code anvil-file-bar-icon" />
+            <span className="anvil-file-bar-name">{fileName}</span>
+            <span className="anvil-file-bar-sep" />
+            <select
+              className="anvil-asm-select"
+              value={assembler}
+              onChange={e => setAssembler(e.target.value as 'nasm' | 'gas' | 'fasm')}
+            >
+              <option value="nasm">NASM x86-64</option>
+              <option value="gas">GAS (AT&T)</option>
+              <option value="fasm">FASM</option>
+            </select>
+            <div className="anvil-file-bar-actions">
+              <button className="anvil-file-btn" title="Open file" onClick={handleOpen}><i className="fa-solid fa-folder-open" /></button>
+              <button className="anvil-file-btn" title="Download .asm" onClick={handleDownload}><i className="fa-solid fa-download" /></button>
+            </div>
+          </div>
+
+          {/* Execution toolbar (compact) */}
+          <div className="anvil-exec-toolbar">
+            {/* Build & Run: compile + load into GDB */}
+            <button
+              className="anvil-tb-run"
+              title="Compiler et lancer (F5)"
+              disabled={session.compiling || session.running}
+              onClick={() => session.buildAndRun(code)}
+            >
+              {session.compiling
+                ? <i className="fa-solid fa-spinner fa-spin" />
+                : <i className="fa-solid fa-hammer" />}
+              Run <span className="anvil-kbd">F5</span>
+            </button>
+            {/* Play / Pause: auto-step toggle */}
+            <button
+              className={`anvil-tb-btn anvil-tb-playpause ${session.autoStepping ? 'active' : ''}`}
+              title={session.autoStepping ? 'Mettre en pause l\'auto-step' : 'Lancer l\'auto-step'}
+              onClick={() => session.autoStepping ? session.stopAutoStep() : session.startAutoStep()}
+            >
+              <i className={`fa-solid ${session.autoStepping ? 'fa-pause' : 'fa-play'}`} />
+            </button>
+            <span className="anvil-tb-div" />
+            <div className="anvil-step-group">
+              <button
+                className="anvil-step-btn"
+                title="Instruction precedente"
+                onClick={() => { /* reverse step not yet wired */ }}
+              >
+                <i className="fa-solid fa-chevron-left" />
+                <span className="anvil-step-label">Back</span>
+              </button>
+              <button
+                className="anvil-step-btn"
+                title="Entrer dans la fonction (F11)"
+                onClick={() => session.stepInto()}
+              >
+                <i className="fa-solid fa-right-to-bracket" />
+                <span className="anvil-step-label">Into</span>
+              </button>
+              <button
+                className="anvil-step-btn"
+                title="Passer par-dessus (F10)"
+                onClick={() => session.stepOver()}
+              >
+                <i className="fa-solid fa-share" />
+                <span className="anvil-step-label">Over</span>
+              </button>
+              <button
+                className="anvil-step-btn"
+                title="Sortir de la fonction (Shift+F11)"
+                onClick={() => session.stepOut()}
+              >
+                <i className="fa-solid fa-right-from-bracket" />
+                <span className="anvil-step-label">Out</span>
+              </button>
+              <button
+                className="anvil-step-btn"
+                title="Instruction suivante"
+                onClick={() => session.stepOver()}
+              >
+                <i className="fa-solid fa-chevron-right" />
+                <span className="anvil-step-label">Next</span>
+              </button>
+            </div>
+            <span className="anvil-step-count">step {session.stepCount || '--'}</span>
+          </div>
+
+          <EditorPanel
+            code={code}
+            onChange={setCode}
+            activeLine={session.activeLine}
+            errorLine={session.errorLine}
+            breakpoints={breakpoints}
+            onToggleBreakpoint={toggleBp}
+          />
+        </div>
+
+        {/* Resize handle 1 */}
+        <div className="anvil-resize-col" onMouseDown={onDown(0)} />
+
+        {/* Column 2: Registers + Terminal */}
+        <div className="anvil-col anvil-col-regs" style={{ width: cols[1] + '%' }}>
+          <RegistersPane registers={session.registers} />
+          <TerminalDrawer lines={session.lines} onClear={session.clearTerminal} />
+        </div>
+
+        {/* Resize handle 2 */}
+        <div className="anvil-resize-col" onMouseDown={onDown(1)} />
+
+        {/* Column 3: Right panels (collapsible) */}
+        {rightCollapsed ? (
+          <div className="anvil-col-right-collapsed">
+            <button className="anvil-tab-collapse" onClick={() => setRightCollapsed(false)} title="Expand">
+              <i className="fa-solid fa-chevron-left" />
+            </button>
+          </div>
+        ) : (
+          <div className="anvil-col" style={{ width: cols[2] + '%' }}>
+            <div className="anvil-right-toolbar">
+              <button className="anvil-tab-collapse" onClick={() => setRightCollapsed(true)} title="Collapse">
+                <i className="fa-solid fa-chevron-right" />
+              </button>
+            </div>
+
+            <div className="anvil-stacked-panels">
+              <div className="anvil-panel-section">
+                <div className="anvil-panel-section-header" onClick={() => togglePanel('stack')}>
+                  <i className={`fa-solid fa-chevron-right anvil-panel-section-arrow ${openPanels.stack ? 'open' : ''}`} />
+                  <i className="fa-solid fa-layer-group anvil-panel-icon" />
+                  <span className="anvil-panel-section-title">Stack</span>
+                </div>
+                {openPanels.stack && <StackPanel />}
+              </div>
+
+              <div className="anvil-panel-section">
+                <div className="anvil-panel-section-header" onClick={() => togglePanel('memory')}>
+                  <i className={`fa-solid fa-chevron-right anvil-panel-section-arrow ${openPanels.memory ? 'open' : ''}`} />
+                  <i className="fa-solid fa-memory anvil-panel-icon" />
+                  <span className="anvil-panel-section-title">Memory</span>
+                </div>
+                {openPanels.memory && <MemoryPanel />}
+              </div>
+
+              <div className="anvil-panel-section">
+                <div className="anvil-panel-section-header" onClick={() => togglePanel('security')}>
+                  <i className={`fa-solid fa-chevron-right anvil-panel-section-arrow ${openPanels.security ? 'open' : ''}`} />
+                  <i className="fa-solid fa-shield-halved anvil-panel-icon" />
+                  <span className="anvil-panel-section-title">Security</span>
+                </div>
+                {openPanels.security && <SecurityPanel />}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Status Bar ────────────────────────────────────────── */}
+      <footer className="anvil-statusbar">
+        <span className="anvil-statusbar-item clickable">HEX</span>
+        <span className="anvil-statusbar-item">{assembler.toUpperCase()}</span>
+        <span className="anvil-statusbar-item"><i className="fa-solid fa-microchip" /> {mode}</span>
+        <div className="anvil-statusbar-right">
+          <span className="anvil-statusbar-item">Step: {session.stepCount}</span>
+          <span className={`anvil-status-dot anvil-status-dot--${backendStatus === 'ok' ? 'ok' : 'err'}`} />
+        </div>
+      </footer>
     </main>
-  );
+  )
 }
 
-export default App;
+export default App

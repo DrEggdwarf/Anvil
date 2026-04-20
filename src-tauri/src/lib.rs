@@ -27,14 +27,14 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Launch FastAPI backend as subprocess
+            // Uses backend.app.main:app from project root so `backend.*` imports resolve
+            let project_root = app.path()
+                .resource_dir()
+                .unwrap_or_default();
             let child = Command::new("uvicorn")
-                .args(["app.main:app", "--host", "127.0.0.1", "--port", "8000"])
-                .current_dir(
-                    app.path()
-                        .resource_dir()
-                        .unwrap_or_default()
-                        .join("backend"),
-                )
+                .args(["backend.app.main:app", "--host", "127.0.0.1", "--port", "8000"])
+                .current_dir(&project_root)
+                .env("PYTHONPATH", &project_root)
                 .spawn();
 
             match child {

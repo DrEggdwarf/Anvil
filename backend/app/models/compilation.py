@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 class CompileAsmRequest(BaseModel):
     source_code: str = Field(..., max_length=1_000_000)
     filename: str = Field(default="program.asm", max_length=255)
-    fmt: str = Field(default="elf64", max_length=32)
+    fmt: str | None = Field(default=None, max_length=32)
     debug: bool = True
     link: bool = True
     use_libc: bool = False

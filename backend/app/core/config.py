@@ -47,10 +47,7 @@ class Settings(BaseSettings):
     ws_message_max_size_bytes: int = 1 * 1024 * 1024  # 1 MB
 
     # ── CORS ─────────────────────────────────────────────
-    cors_origins: list[str] = [
-        "http://localhost:1420",
-        "http://localhost:5173",
-    ]
+    cors_origins: list[str] = ["*"]
 
     # ── Rate limiting ────────────────────────────────────
     rate_limit_per_minute: int = 120

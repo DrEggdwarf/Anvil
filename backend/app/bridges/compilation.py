@@ -7,6 +7,7 @@ Manages temporary workspaces per session with auto-cleanup.
 from __future__ import annotations
 
 import logging
+import platform
 import re
 from pathlib import Path
 
@@ -81,7 +82,7 @@ class CompilationBridge:
         *,
         workspace: str,
         filename: str = "program.asm",
-        fmt: str = "elf64",
+        fmt: str | None = None,
         debug: bool = True,
         link: bool = True,
         use_libc: bool = False,
@@ -90,9 +91,13 @@ class CompilationBridge:
 
         Returns: {success, binary_path, object_path, errors, stdout, stderr}
         """
+        if fmt is None:
+            fmt = "win64" if platform.system() == "Windows" else "elf64"
+
         src_path = Path(workspace) / filename
         obj_path = src_path.with_suffix(".o")
-        bin_path = src_path.with_suffix("")
+        bin_ext = ".exe" if fmt.startswith("win") else ""
+        bin_path = src_path.with_suffix(bin_ext) if bin_ext else src_path.with_suffix("")
 
         # Write source
         src_path.write_text(source_code)
@@ -100,6 +105,8 @@ class CompilationBridge:
         # ── nasm ─────────────────────────────────────────
         nasm_cmd = ["nasm", f"-f{fmt}"]
         if debug:
+            # Always use DWARF — GDB needs it for source-line mapping.
+            # cv8 is only useful for MSVC/WinDbg which we don't use.
             nasm_cmd += ["-g", "-F", "dwarf"]
         nasm_cmd += [str(src_path), "-o", str(obj_path)]
 
@@ -130,10 +137,18 @@ class CompilationBridge:
             }
 
         # ── link ─────────────────────────────────────────
+        # Map NASM format to ld emulation mode
+        _ld_emulation = {
+            "elf64": "elf_x86_64",
+            "elf32": "elf_i386",
+            "win64": "i386pep",
+            "win32": "i386pe",
+        }
         if use_libc:
             link_cmd = ["gcc", "-no-pie", str(obj_path), "-o", str(bin_path)]
         else:
-            link_cmd = ["ld", "-m", "elf_x86_64", str(obj_path), "-o", str(bin_path)]
+            emu = _ld_emulation.get(fmt, "elf_x86_64")
+            link_cmd = ["ld", "-m", emu, str(obj_path), "-o", str(bin_path)]
 
         l_stdout, l_stderr, l_rc = await self._spm.execute(link_cmd, cwd=workspace)
 

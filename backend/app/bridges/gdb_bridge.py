@@ -77,6 +77,10 @@ class GdbBridge(BaseBridge):
     async def execute(self, command: str, **kwargs: Any) -> Any:
         """Execute a raw GDB/MI command and return parsed responses."""
         self._require_ready()
+        # Check GDB is still alive before sending command
+        if not await self.health():
+            self.state = BridgeState.ERROR
+            raise BridgeCrash("gdb", exit_code=None)
         timeout = kwargs.get("timeout", 10)
         async with self._lock:
             try:
@@ -89,7 +93,11 @@ class GdbBridge(BaseBridge):
             except Exception as e:
                 if "timeout" in str(e).lower():
                     raise BridgeTimeout("gdb", timeout) from e
-                raise
+                # GDB process likely crashed — mark bridge as errored
+                if not await self.health():
+                    self.state = BridgeState.ERROR
+                    raise BridgeCrash("gdb", exit_code=None) from e
+                raise BridgeCrash("gdb", exit_code=None) from e
 
     # ── High-level commands ──────────────────────────────
 
