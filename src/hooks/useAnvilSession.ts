@@ -11,6 +11,11 @@ export interface RegMap {
   [name: string]: string
 }
 
+export interface StackData {
+  baseAddr: number
+  bytes: number[]
+}
+
 // Parse source line number from GDB raw responses (*stopped frame info)
 function parseFrameLine(res: GdbRawResponse): number {
   for (const r of (res.responses || [])) {
@@ -113,6 +118,8 @@ export function useAnvilSession() {
   const autoRef = useRef(false)
 
   const [registers, setRegisters] = useState<RegMap>({})
+  const registersRef = useRef<RegMap>({})
+  const [prevRegisters, setPrevRegisters] = useState<RegMap>({})
   const [lines, setLines] = useState<TermLine[]>([{ type: 'info', text: 'Pret. Compilez du code pour commencer...' }])
   const [activeLine, setActiveLine] = useState(0)
   const [errorLine, setErrorLine] = useState(0)
@@ -121,6 +128,7 @@ export function useAnvilSession() {
   const [running, setRunning] = useState(false)
   const [autoStepping, setAutoStepping] = useState(false)
   const [binaryPath, setBinaryPath] = useState<string | null>(null)
+  const [stackData, setStackData] = useState<StackData | null>(null)
 
   const log = useCallback((type: TermLine['type'], text: string) => {
     setLines(prev => [...prev, { type, text }])
@@ -203,7 +211,33 @@ export function useAnvilSession() {
       } else if (typeof res.registers === 'object') {
         Object.assign(map, res.registers)
       }
+      setPrevRegisters(registersRef.current)
+      registersRef.current = map
       setRegisters(map)
+    } catch { /* ignore */ }
+  }
+
+  async function refreshStack() {
+    if (!sessionId.current) return
+    try {
+      // Read 64 bytes (8 rows of 8) starting at $rsp
+      const res = await api.gdbMemory(sessionId.current, '$rsp', 64)
+      for (const r of (res.responses || [])) {
+        const payload = r.payload as Record<string, unknown> | undefined
+        if (!payload) continue
+        const memory = payload.memory as Array<{ begin: string; contents: string }> | undefined
+        if (!Array.isArray(memory)) continue
+        for (const block of memory) {
+          const baseAddr = parseInt(block.begin, 16)
+          const hex = block.contents
+          const bytes: number[] = []
+          for (let i = 0; i + 2 <= hex.length; i += 2) {
+            bytes.push(parseInt(hex.slice(i, i + 2), 16))
+          }
+          setStackData({ baseAddr, bytes })
+          return
+        }
+      }
     } catch { /* ignore */ }
   }
 
@@ -320,6 +354,7 @@ export function useAnvilSession() {
       if (frameLine > 0) setActiveLine(frameLine)
 
       await refreshRegisters()
+      await refreshStack()
       log('info', 'Arrete a _start. Utilisez les boutons step pour avancer.')
 
       // Enable GDB execution recording for reverse stepping (Back button)
@@ -369,6 +404,7 @@ export function useAnvilSession() {
       log('step', label)
 
       await refreshRegisters()
+      await refreshStack()
     } catch (e) {
       const msg = (e as Error).message
       // Detect bridge crash / session gone
@@ -406,6 +442,7 @@ export function useAnvilSession() {
       const frameLine = await resolveActiveLine(res)
       if (frameLine > 0) setActiveLine(frameLine)
       await refreshRegisters()
+      await refreshStack()
       log('info', 'Continue')
     } catch (e) {
       log('error', `Continue: ${(e as Error).message}`)
@@ -452,6 +489,7 @@ export function useAnvilSession() {
         if (frameLine > 0) setActiveLine(frameLine)
         setStepCount(c => c + 1)
         await refreshRegisters()
+        await refreshStack()
       } catch {
         autoRef.current = false
         break
@@ -491,6 +529,8 @@ export function useAnvilSession() {
 
   return {
     registers,
+    prevRegisters,
+    stackData,
     lines,
     activeLine,
     errorLine,

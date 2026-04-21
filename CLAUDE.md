@@ -57,7 +57,7 @@ Note: pytest asyncio_mode is set to "auto" in pyproject.toml — no need for `@p
 
 ```
 src-tauri/src/     Rust shell: spawns backend as subprocess, 2 IPC commands (check_backend, check_dependencies)
-src/               React UI (skeleton — ~50 LOC, mode switcher only)
+src/               React UI — 3-column layout: ASM editor | registers+terminal | stack/memory/security panels
 backend/app/       FastAPI: main.py → 8 routers, core/, bridges/, models/, sessions/
 tests/             24 pytest modules, all use MockBridge (no real tools needed in CI)
 ai/                12 Claude Code agents + 2 workflows (see ai/README.md)

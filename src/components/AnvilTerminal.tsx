@@ -55,6 +55,13 @@ export function AnvilTerminal({ lines, onClear, onInput }: Props) {
   useEffect(() => {
     if (!containerRef.current) return
 
+    // Cleanup any previous instance (React StrictMode)
+    if (termRef.current) {
+      termRef.current.dispose()
+      termRef.current = null
+      fitRef.current = null
+    }
+
     const term = new XTerm({
       theme: THEME,
       fontFamily: "'Geist Mono', 'Fira Code', monospace",
@@ -71,7 +78,10 @@ export function AnvilTerminal({ lines, onClear, onInput }: Props) {
     term.loadAddon(new WebLinksAddon())
 
     term.open(containerRef.current)
-    fit.fit()
+    // Delay fit to ensure container has layout dimensions
+    requestAnimationFrame(() => {
+      try { fit.fit() } catch { /* ignore */ }
+    })
 
     if (onInput) {
       term.onData((data) => onInput(data))
@@ -79,13 +89,22 @@ export function AnvilTerminal({ lines, onClear, onInput }: Props) {
 
     termRef.current = term
     fitRef.current = fit
+
+    // Replay existing lines into fresh terminal
     lineCountRef.current = 0
+    for (const line of lines) {
+      const color = TYPE_COLORS[line.type] || ''
+      const prefix = line.type === 'output' ? '' : '\u276f '
+      term.writeln(`${color}${prefix}${line.text}${RESET}`)
+    }
+    lineCountRef.current = lines.length
 
     // Resize observer
+    const container = containerRef.current
     const ro = new ResizeObserver(() => {
       try { fit.fit() } catch { /* ignore during teardown */ }
     })
-    ro.observe(containerRef.current)
+    ro.observe(container)
 
     return () => {
       ro.disconnect()
@@ -93,7 +112,8 @@ export function AnvilTerminal({ lines, onClear, onInput }: Props) {
       termRef.current = null
       fitRef.current = null
     }
-  }, [onInput])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Write new lines to xterm
   useEffect(() => {
@@ -140,13 +160,11 @@ export function AnvilTerminal({ lines, onClear, onInput }: Props) {
           </button>
         </div>
       </div>
-      {!collapsed && (
-        <div
-          ref={containerRef}
-          className="anvil-xterm-container"
-          style={{ height: 160, background: '#111111' }}
-        />
-      )}
+      <div
+        ref={containerRef}
+        className="anvil-xterm-container"
+        style={collapsed ? { display: 'none' } : undefined}
+      />
     </div>
   )
 }

@@ -205,7 +205,30 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 
 ---
 
-## Sprint 7 — Mode ASM : Éditeur & Compilation UI
+## Sprint 7+8 — Mode ASM : Éditeur, Compilation & Debug UI (21 avril 2026) ✅
+
+### Réalisé
+- [x] Layout 3 colonnes : éditeur | registres+terminal | panels droite (stack/memory/security)
+- [x] Éditeur ASM custom avec numéros de ligne, highlighting ligne active, support NASM/GAS/FASM
+- [x] Toolbar : Run (F5), Auto-step, Back/Into/Over/Out/Next
+- [x] Session GDB : compile → load → break _start → step interactif
+- [x] Panel Registres — copie fidèle ASMBLE (segments colorés, sub-registres, flags pills, flash, toggle delta/upper/hex)
+- [x] Panel Terminal — xterm.js avec output GDB, collapse/expand
+- [x] Panel Stack — visualisation compacte de la pile :
+  - Rows compactes : offset RSP-relatif + mini-barre bytes + valeur qword
+  - Click-to-expand pour détail byte-par-byte
+  - Zones groupées avec labels : **Locals** / **Stack frame** / **Caller**
+  - Annotations sémantiques : `saved rbp`, `ret addr`
+  - Bordures colorées par zone (teal locals, orange frame)
+  - Toggle hex/dec/bin
+  - Refresh automatique à chaque step
+- [x] Syscall snippets panel (write, exit)
+- [x] Rate limit augmenté à 600/min pour dev local
+- [x] Breakpoints visuels (click gutter)
+
+---
+
+## Sprint 7 — Mode ASM : Éditeur & Compilation UI (backlog)
 **Objectif** : Premier mode fonctionnel — écrire du code ASM, compiler, voir le résultat.
 **Agents** : @frontend → @architect → @testing
 

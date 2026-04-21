@@ -265,7 +265,7 @@ function App() {
 
         {/* Column 2: Registers + Terminal */}
         <div className="anvil-col anvil-col-regs" style={{ width: cols[1] + '%' }}>
-          <RegistersPane registers={session.registers} />
+          <RegistersPane registers={session.registers} prevRegisters={session.prevRegisters} />
           <AnvilTerminal lines={session.lines} onClear={session.clearTerminal} />
         </div>
 
@@ -294,7 +294,7 @@ function App() {
                   <i className="fa-solid fa-layer-group anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Stack</span>
                 </div>
-                {openPanels.stack && <StackPanel />}
+                {openPanels.stack && <StackPanel stackData={session.stackData} registers={session.registers} />}
               </div>
 
               <div className="anvil-panel-section">
