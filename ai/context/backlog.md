@@ -50,6 +50,14 @@
 - [x] Security tests (30 unit + E2E API injection/traversal tests)
 - [x] 631 tests, 0 failures
 
+### Sprint 7 — ASM Debugger UI ✅
+- [x] Frontend mode ASM fonctionnel (éditeur, registres, stack, terminal)
+- [x] Step into/over/out/back via GDB/MI
+- [x] Reverse debugging (GDB `record` + `reverse-stepi`)
+- [x] GDB/MI output parsing (program stdout extraction, protocol stripping)
+- [x] Triple fallback active line resolution (frame → stack → info line *$pc)
+- [x] 639 tests, 0 failures
+
 ---
 
 ## Phase A — Pwn lite web (mode ASM étendu)
@@ -125,8 +133,8 @@
 - [ ] Accessibilité (a11y)
 - [ ] Plugin system
 
-## Bugs ASMBLE à porter
-- [ ] B10: CALL step-into cassé (agit comme step-over)
+## Bugs Anvil à corriger
+- [ ] B10: ~~CALL step-into cassé~~ Fixed (reverse-step + record ajoutés)
 - [ ] B11: Tokens QWORD/DWORD/WORD/BYTE/PTR manquants
 - [ ] B12: Auto-close crochet `[` → `[]`
 - [ ] B13: Fidélité valeurs stack vs GDB

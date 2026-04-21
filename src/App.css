@@ -334,37 +334,6 @@ body {
   border-right: 0.5px solid var(--border-subtle);
 }
 
-/* Column headers */
-.anvil-col-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 var(--space-3);
-  height: 36px;
-  background: var(--bg-overlay);
-  border-bottom: 0.5px solid var(--border-subtle);
-  flex-shrink: 0;
-  transition: background 0.25s;
-}
-
-.anvil-col-header-icon {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.anvil-col-header-title {
-  font-size: 12px;
-  font-family: var(--font-code);
-  color: var(--text-primary);
-}
-
-.anvil-col-header-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .anvil-file-btn {
   display: flex;
   align-items: center;
@@ -410,15 +379,6 @@ body {
   letter-spacing: 0.1em;
 }
 
-/* ── Column content areas ────────────────────────────────────────────────── */
-
-.anvil-col-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-}
-
 /* ── Editor panel ────────────────────────────────────────────────────────── */
 
 .anvil-editor-area {
@@ -430,64 +390,6 @@ body {
   font-family: var(--font-code);
   font-size: 13px;
   line-height: 1.7;
-}
-
-.anvil-editor-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--text-muted);
-  font-family: var(--font-code);
-  font-size: 12px;
-  user-select: none;
-}
-
-.anvil-editor-placeholder-icon {
-  font-size: 32px;
-  color: var(--text-muted);
-  opacity: 0.4;
-}
-
-/* Template buttons grid */
-.anvil-template-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 12px;
-  width: 100%;
-  max-width: 280px;
-}
-
-.anvil-template-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--bg-raised);
-  border: 0.5px solid var(--border-base);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-family: var(--font-ui);
-  cursor: pointer;
-  transition: all 0.13s;
-}
-
-.anvil-template-btn:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
-  background: var(--accent-dim);
-}
-
-.anvil-template-icon {
-  font-size: 12px;
-  color: var(--accent);
-  opacity: 0.6;
-  width: 16px;
-  text-align: center;
 }
 
 /* ── File bar (above toolbar) ────────────────────────────────────────────── */
@@ -1013,10 +915,9 @@ body {
 }
 
 .anvil-terminal-line { white-space: pre-wrap; word-break: break-all; }
-.anvil-terminal-line.cmd { color: #e8e8e8; }
-.anvil-terminal-line.err, .anvil-terminal-line.error { color: var(--terminal-red); }
+.anvil-terminal-line.error { color: var(--terminal-red); }
 .anvil-terminal-line.step { color: var(--text-secondary); }
-.anvil-terminal-line.out, .anvil-terminal-line.output { color: var(--terminal-green); }
+.anvil-terminal-line.output { color: var(--terminal-green); }
 .anvil-terminal-line.info { color: var(--accent); }
 
 /* ── Right column — stacked panels ───────────────────────────────────────── */
@@ -1093,10 +994,6 @@ body {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
-}
-
-.anvil-panel-section-body {
-  padding: var(--space-2) var(--space-3);
 }
 
 /* Stack panel */

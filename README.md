@@ -53,7 +53,7 @@ npm run tauri dev
 # Backend
 cd backend && uvicorn app.main:app --reload --port 8000
 
-# Tests Python (637 tests)
+# Tests Python (639 tests)
 python -m pytest tests/ -v --tb=short
 
 # Lint
@@ -83,7 +83,7 @@ bandit -r backend/ -c backend/pyproject.toml
 ## Tests
 
 ```bash
-# Full suite (637 tests)
+# Full suite (639 tests)
 python -m pytest tests/ -v
 
 # Avec coverage

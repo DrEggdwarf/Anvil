@@ -112,7 +112,7 @@ AnvilError (code, message, details) → mapped to HTTP status in main.py excepti
 | Router | Prefix | Bridge | Key endpoints |
 |--------|--------|--------|---------------|
 | sessions | /api/sessions | all | CRUD sessions |
-| gdb | /api/gdb/{session_id} | pygdbmi | load, run, step, breakpoints, registers, memory, disassembly |
+| gdb | /api/gdb/{session_id} | pygdbmi | load, run, step (into/over/out/back), record, breakpoints, registers, memory, disassembly, current-line |
 | rizin | /api/re/{session_id} | rzpipe | analyze, functions, disasm, strings, imports, xrefs, decompile, emulate |
 | compile | /api/compile/{session_id} | nasm/gcc/ld | write/read source, compile ASM/C, checksec, readelf, objdump |
 | pwn | /api/pwn/{session_id} | pwntools | cyclic, shellcraft, ROP, format string, ELF analysis, encoding |

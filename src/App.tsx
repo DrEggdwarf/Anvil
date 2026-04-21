@@ -4,7 +4,7 @@ import { useColResize } from './hooks/useColResize'
 import { useAnvilSession } from './hooks/useAnvilSession'
 import { EditorPanel } from './components/EditorPanel'
 import { RegistersPane } from './components/RegistersPane'
-import { TerminalDrawer } from './components/TerminalDrawer'
+import { AnvilTerminal } from './components/AnvilTerminal'
 import { StackPanel } from './components/panels/StackPanel'
 import { MemoryPanel } from './components/panels/MemoryPanel'
 import { SecurityPanel } from './components/panels/SecurityPanel'
@@ -266,7 +266,7 @@ function App() {
         {/* Column 2: Registers + Terminal */}
         <div className="anvil-col anvil-col-regs" style={{ width: cols[1] + '%' }}>
           <RegistersPane registers={session.registers} />
-          <TerminalDrawer lines={session.lines} onClear={session.clearTerminal} />
+          <AnvilTerminal lines={session.lines} onClear={session.clearTerminal} />
         </div>
 
         {/* Resize handle 2 */}
