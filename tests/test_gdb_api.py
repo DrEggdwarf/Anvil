@@ -105,6 +105,18 @@ class TestGdbExecControl:
         resp = await gdb_client.post(f"/api/gdb/{sid}/step/out")
         assert resp.status_code == 200
 
+    @pytest.mark.asyncio
+    async def test_enable_record(self, gdb_client):
+        sid = gdb_client.session_id
+        resp = await gdb_client.post(f"/api/gdb/{sid}/record")
+        assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_step_back(self, gdb_client):
+        sid = gdb_client.session_id
+        resp = await gdb_client.post(f"/api/gdb/{sid}/step/back")
+        assert resp.status_code == 200
+
 
 class TestGdbBreakpoints:
     @pytest.mark.asyncio

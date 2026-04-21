@@ -14,14 +14,25 @@ export interface RegMap {
 // Parse source line number from GDB raw responses (*stopped frame info)
 function parseFrameLine(res: GdbRawResponse): number {
   for (const r of (res.responses || [])) {
-    // GDB/MI *stopped event includes payload with frame.line
     const payload = r.payload as Record<string, unknown> | undefined
-    if (payload?.frame) {
+    if (!payload || typeof payload !== 'object') continue
+
+    // 1. Standard *stopped event: payload.frame.line
+    if (payload.frame && typeof payload.frame === 'object') {
       const frame = payload.frame as Record<string, unknown>
       if (frame.line) return parseInt(String(frame.line), 10)
     }
-    // Also check top-level line field
-    if (payload?.line) return parseInt(String(payload.line), 10)
+
+    // 2. Stack-list-frames result: payload.stack[0].frame.line
+    const stack = payload.stack as unknown[] | undefined
+    if (Array.isArray(stack) && stack.length > 0) {
+      const entry = stack[0] as Record<string, unknown>
+      const frame = (entry?.frame ?? entry) as Record<string, unknown>
+      if (frame?.line) return parseInt(String(frame.line), 10)
+    }
+
+    // 3. Top-level line field (some GDB versions)
+    if (payload.line) return parseInt(String(payload.line), 10)
   }
   return 0
 }
@@ -43,18 +54,58 @@ function parseExitReason(res: GdbRawResponse): string | null {
   return null
 }
 
-// Extract console + program output from GDB raw responses
-// pygdbmi types: "console" = GDB messages, "target" = program stdout, "output" = GDB output
-function parseConsoleOutput(res: GdbRawResponse): string[] {
+// Extract ONLY program stdout (@target records from GDB/MI)
+// This filters out GDB internal console messages (register dumps, breakpoint info, etc.)
+// Extract program stdout from GDB/MI responses.
+// "target" = remote target stdout (@), "output" = local inferior stdout (raw non-MI data).
+// Inferior stdout and GDB/MI notifications share the same pipe, so we must
+// strip any GDB/MI protocol text that gets concatenated with program output.
+function parseProgramOutput(res: GdbRawResponse): string[] {
   const out: string[] = []
   for (const r of (res.responses || [])) {
     const type = r.type as string | undefined
-    const payload = r.payload as string | undefined
-    if ((type === 'console' || type === 'output' || type === 'target') && payload) {
-      out.push(payload.replace(/\\n$/, '').replace(/\\n/g, '\n'))
+    if (type !== 'target' && type !== 'output') continue
+    const payload = r.payload
+    if (typeof payload !== 'string' || !payload) continue
+    const cleaned = payload
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\n+$/, '')
+    if (!cleaned) continue
+    for (const part of cleaned.split('\n')) {
+      if (!part) continue
+      // Strip GDB/MI protocol data that may be appended to program output
+      // (happens when inferior stdout and GDB notification arrive on same line)
+      const stripped = part
+        .replace(/\*stopped,.*$/, '')
+        .replace(/\^done.*$/, '')
+        .replace(/\^running.*$/, '')
+        .replace(/\^error.*$/, '')
+        .replace(/=thread-.*$/, '')
+        .replace(/=library-.*$/, '')
+        .trim()
+      // Skip lines that are entirely GDB/MI protocol or empty after stripping
+      if (!stripped) continue
+      if (/^\*|^\^|^=|^~|^&|^@/.test(stripped)) continue
+      out.push(stripped)
     }
   }
   return out
+}
+
+// Parse source line from "info line *$pc" console output
+// Example: 'Line 25 of "program.asm" starts at address 0x401020...'
+function parseInfoLine(res: GdbRawResponse): number {
+  for (const r of (res.responses || [])) {
+    const type = r.type as string | undefined
+    if (type !== 'console') continue
+    const payload = r.payload
+    if (typeof payload !== 'string') continue
+    const match = payload.match(/Line\s+(\d+)\s+of/)
+    if (match) return parseInt(match[1], 10)
+  }
+  return 0
 }
 
 export function useAnvilSession() {
@@ -139,9 +190,8 @@ export function useAnvilSession() {
 
   // ── Refresh state from GDB ─────────────────────────────────
 
-  async function refreshState() {
+  async function refreshRegisters() {
     if (!sessionId.current) return
-    // Get registers
     try {
       const res = await api.gdbRegisters(sessionId.current)
       const map: RegMap = {}
@@ -155,24 +205,33 @@ export function useAnvilSession() {
       }
       setRegisters(map)
     } catch { /* ignore */ }
+  }
 
-    // Get current frame to find source line
+  // Resolve source line from GDB — tries 3 methods in order
+  async function resolveActiveLine(stepRes?: GdbRawResponse): Promise<number> {
+    if (!sessionId.current) return 0
+
+    // 1. From step response (*stopped frame.line)
+    if (stepRes) {
+      const frameLine = parseFrameLine(stepRes)
+      if (frameLine > 0) return frameLine
+    }
+
+    // 2. From stack-list-frames
     try {
       const stack = await api.gdbStack(sessionId.current, 1)
-      for (const r of (stack.responses || [])) {
-        const payload = r.payload as Record<string, unknown> | undefined
-        const stackFrames = payload?.stack as Array<Record<string, unknown>> | undefined
-        if (stackFrames?.[0]) {
-          const frame = stackFrames[0].frame
-            ? (stackFrames[0].frame as Record<string, unknown>)
-            : stackFrames[0]
-          if (frame?.line) {
-            setActiveLine(parseInt(String(frame.line), 10))
-            return
-          }
-        }
-      }
+      const stackLine = parseFrameLine(stack)
+      if (stackLine > 0) return stackLine
     } catch { /* ignore */ }
+
+    // 3. From info line *$pc (most reliable for calls/rets)
+    try {
+      const infoRes = await api.gdbCurrentLine(sessionId.current)
+      const infoLine = parseInfoLine(infoRes)
+      if (infoLine > 0) return infoLine
+    } catch { /* ignore */ }
+
+    return 0
   }
 
   // ── Build & Run ────────────────────────────────────────────
@@ -244,7 +303,7 @@ export function useAnvilSession() {
       log('info', '> Lancement (arret a _start)...')
       const runRes = await api.gdbRun(sid)
 
-      for (const line of parseConsoleOutput(runRes)) {
+      for (const line of parseProgramOutput(runRes)) {
         if (line.trim()) log('output', line)
       }
 
@@ -260,8 +319,15 @@ export function useAnvilSession() {
       const frameLine = parseFrameLine(runRes)
       if (frameLine > 0) setActiveLine(frameLine)
 
-      await refreshState()
+      await refreshRegisters()
       log('info', 'Arrete a _start. Utilisez les boutons step pour avancer.')
+
+      // Enable GDB execution recording for reverse stepping (Back button)
+      try {
+        await api.gdbEnableRecord(sid)
+      } catch {
+        // Recording may fail (e.g., target doesn't support it) — Back won't work but stepping still does
+      }
     } catch (e) {
       log('error', `GDB run: ${(e as Error).message}`)
     } finally {
@@ -280,7 +346,7 @@ export function useAnvilSession() {
       // Check if program exited
       const exitReason = parseExitReason(res)
       if (exitReason) {
-        for (const line of parseConsoleOutput(res)) {
+        for (const line of parseProgramOutput(res)) {
           if (line.trim()) log('output', line)
         }
         setActiveLine(0)
@@ -289,20 +355,20 @@ export function useAnvilSession() {
         return
       }
 
-      // Extract console output (program prints)
-      for (const line of parseConsoleOutput(res)) {
+      // Extract program output (only actual program stdout, not GDB messages)
+      for (const line of parseProgramOutput(res)) {
         if (line.trim()) log('output', line)
       }
 
-      // Parse frame line
-      const frameLine = parseFrameLine(res)
+      // Resolve source line (triple fallback: frame → stack → info line *$pc)
+      const frameLine = await resolveActiveLine(res)
       if (frameLine > 0) setActiveLine(frameLine)
 
-      setStepCount(c => {
-        log('step', `${label} (${c + 1})`)
-        return c + 1
-      })
-      await refreshState()
+      // Log step OUTSIDE state updater to avoid React StrictMode double-invoke
+      setStepCount(c => c + 1)
+      log('step', label)
+
+      await refreshRegisters()
     } catch (e) {
       const msg = (e as Error).message
       // Detect bridge crash / session gone
@@ -320,13 +386,14 @@ export function useAnvilSession() {
   async function stepInto() { return doStep(api.gdbStepInto, 'Step into') }
   async function stepOver() { return doStep(api.gdbStepOver, 'Step over') }
   async function stepOut() { return doStep(api.gdbStepOut, 'Step out') }
+  async function stepBack() { return doStep(api.gdbStepBack, 'Step back') }
 
   async function continueExec() {
     if (!sessionId.current) return
     setRunning(true)
     try {
       const res = await api.gdbContinue(sessionId.current)
-      for (const line of parseConsoleOutput(res)) {
+      for (const line of parseProgramOutput(res)) {
         if (line.trim()) log('output', line)
       }
       const exitReason = parseExitReason(res)
@@ -336,9 +403,9 @@ export function useAnvilSession() {
         setRunning(false)
         return
       }
-      const frameLine = parseFrameLine(res)
+      const frameLine = await resolveActiveLine(res)
       if (frameLine > 0) setActiveLine(frameLine)
-      await refreshState()
+      await refreshRegisters()
       log('info', 'Continue')
     } catch (e) {
       log('error', `Continue: ${(e as Error).message}`)
@@ -370,7 +437,7 @@ export function useAnvilSession() {
         // Check for program exit
         const exitReason = parseExitReason(res)
         if (exitReason) {
-          for (const line of parseConsoleOutput(res)) {
+          for (const line of parseProgramOutput(res)) {
             if (line.trim()) log('output', line)
           }
           setActiveLine(0)
@@ -378,13 +445,13 @@ export function useAnvilSession() {
           autoRef.current = false
           break
         }
-        for (const line of parseConsoleOutput(res)) {
+        for (const line of parseProgramOutput(res)) {
           if (line.trim()) log('output', line)
         }
-        const frameLine = parseFrameLine(res)
+        const frameLine = await resolveActiveLine(res)
         if (frameLine > 0) setActiveLine(frameLine)
         setStepCount(c => c + 1)
-        await refreshState()
+        await refreshRegisters()
       } catch {
         autoRef.current = false
         break
@@ -437,6 +504,7 @@ export function useAnvilSession() {
     stepInto,
     stepOver,
     stepOut,
+    stepBack,
     continueExec,
     stop,
     startAutoStep,

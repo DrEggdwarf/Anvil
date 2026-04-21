@@ -119,6 +119,14 @@ export function gdbStepOut(sessionId: string) {
   return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/step/out`)
 }
 
+export function gdbEnableRecord(sessionId: string) {
+  return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/record`)
+}
+
+export function gdbStepBack(sessionId: string) {
+  return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/step/back`)
+}
+
 export function gdbInterrupt(sessionId: string) {
   return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/interrupt`)
 }
@@ -149,4 +157,8 @@ export function gdbMemory(sessionId: string, address: string, size = 256) {
 
 export function gdbDisassemble(sessionId: string) {
   return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/disassemble`)
+}
+
+export function gdbCurrentLine(sessionId: string) {
+  return request<GdbRawResponse>('GET', `/api/gdb/${sessionId}/current-line`)
 }

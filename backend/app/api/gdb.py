@@ -119,6 +119,28 @@ async def step_out(
     return GdbRawResponse(responses=responses)
 
 
+@router.post("/{session_id}/record", response_model=GdbRawResponse)
+async def enable_record(
+    session_id: str,
+    sm: SessionManager = Depends(get_session_manager),
+):
+    """Enable execution recording for reverse debugging."""
+    bridge = _get_gdb_bridge(session_id, sm)
+    responses = await bridge.enable_record()
+    return GdbRawResponse(responses=responses)
+
+
+@router.post("/{session_id}/step/back", response_model=GdbRawResponse)
+async def step_back(
+    session_id: str,
+    sm: SessionManager = Depends(get_session_manager),
+):
+    """Reverse step (go back one instruction). Requires recording enabled."""
+    bridge = _get_gdb_bridge(session_id, sm)
+    responses = await bridge.reverse_step_into()
+    return GdbRawResponse(responses=responses)
+
+
 # ── Breakpoints ──────────────────────────────────────────
 
 
@@ -257,6 +279,17 @@ async def step_source_over(
     """Step over (source-level)."""
     bridge = _get_gdb_bridge(session_id, sm)
     responses = await bridge.next_source()
+    return GdbRawResponse(responses=responses)
+
+
+@router.get("/{session_id}/current-line", response_model=GdbRawResponse)
+async def get_current_line(
+    session_id: str,
+    sm: SessionManager = Depends(get_session_manager),
+):
+    """Get current source line via info line *$pc."""
+    bridge = _get_gdb_bridge(session_id, sm)
+    responses = await bridge.info_line_at_pc()
     return GdbRawResponse(responses=responses)
 
 
