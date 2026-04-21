@@ -209,7 +209,7 @@ function App() {
               <button
                 className="anvil-step-btn"
                 title="Instruction precedente"
-                onClick={() => { /* reverse step not yet wired */ }}
+                onClick={() => session.stepBack()}
               >
                 <i className="fa-solid fa-chevron-left" />
                 <span className="anvil-step-label">Back</span>

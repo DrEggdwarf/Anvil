@@ -138,6 +138,16 @@ class GdbBridge(BaseBridge):
         self._require_ready()
         return await self.execute("-exec-finish")
 
+    async def enable_record(self) -> list[dict]:
+        """Enable execution recording for reverse debugging."""
+        self._require_ready()
+        return await self.execute('-interpreter-exec console "record"')
+
+    async def reverse_step_into(self) -> list[dict]:
+        """Reverse step into (reverse-stepi — go back one instruction)."""
+        self._require_ready()
+        return await self.execute('-interpreter-exec console "reverse-stepi"')
+
     async def set_breakpoint(self, location: str) -> list[dict]:
         """Set a breakpoint. Location can be address, function, or file:line."""
         self._require_ready()
@@ -227,6 +237,11 @@ class GdbBridge(BaseBridge):
         """Step over (source-level)."""
         self._require_ready()
         return await self.execute("-exec-next")
+
+    async def info_line_at_pc(self) -> list[dict]:
+        """Get source line info for current PC via GDB CLI command."""
+        self._require_ready()
+        return await self.execute('-interpreter-exec console "info line *$pc"')
 
     async def until(self, location: str) -> list[dict]:
         """Continue until a specific location."""

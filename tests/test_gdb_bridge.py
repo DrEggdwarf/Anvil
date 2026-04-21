@@ -203,6 +203,18 @@ class TestGdbExecControl:
         cmd = gdb_bridge._controller.write.call_args[0][0]
         assert "-exec-finish" in cmd
 
+    @pytest.mark.asyncio
+    async def test_enable_record(self, gdb_bridge: GdbBridge):
+        await gdb_bridge.enable_record()
+        cmd = gdb_bridge._controller.write.call_args[0][0]
+        assert "record" in cmd
+
+    @pytest.mark.asyncio
+    async def test_reverse_step_into(self, gdb_bridge: GdbBridge):
+        await gdb_bridge.reverse_step_into()
+        cmd = gdb_bridge._controller.write.call_args[0][0]
+        assert "reverse-stepi" in cmd
+
 
 # ── Breakpoints ──────────────────────────────────────────
 
