@@ -228,6 +228,39 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 
 ---
 
+## Sprint 7+8b — Reference Modal Multi-Mode (22 avril 2026) ✅
+
+### Objectif
+Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pwn, Debug, Firmware, Protocols).
+
+### Réalisé
+- [x] CSS bugfix : stack frame diagram et patterns code blocks tronqués (flex-shrink: 0)
+- [x] `src/data/reference-re.ts` — 70 commandes rizin, ELF format/sections, RE patterns
+- [x] `src/data/reference-pwn.ts` — 7 protections+bypass, 6 techniques, format strings, pwntools cheatsheet
+- [x] `src/data/reference-dbg.ts` — 49 commandes GDB, 24 pwndbg, examine formats
+- [x] `src/data/reference-fw.ts` — 27 options binwalk, 23 magic signatures, entropie guide, FW patterns
+- [x] `src/data/reference-hw.ts` — 20 fonctions Modbus, 4 types registres, 9 exceptions, trames TCP/RTU, patterns
+- [x] `src/data/index.ts` — barrel exports pour les 5 nouveaux modules
+- [x] `src/components/ReferenceModal.tsx` — réécriture complète : mode-aware, 6 configurations d'onglets, recherche, filtres catégories
+- [x] `src/App.tsx` — wiring mode prop via MODE_CAT mapping
+- [x] `src/App.css` — styles bypass list (Pwn protections tab)
+- [x] Convention cleanup : inline prop types → named interfaces (FilterBarProps, SearchProps, PatternsViewProps, TabContentProps)
+- [x] Ruff auto-fix : 24 F841 (unused variables) nettoyés dans 5 fichiers test
+- [x] TypeScript clean : 0 erreurs tsc
+- [x] **639 tests passed** (2 pre-existing failures non liées)
+
+### Onglets par mode
+| Mode | Titre | Onglets |
+|------|-------|---------|
+| ASM | Reference x86-64 | Syscalls (174), Instructions, ABI, Directives, Patterns |
+| RE | Reference Reverse Engineering | Commandes (61), ELF, Sections, Patterns |
+| Pwn | Reference Exploitation | Protections, Techniques, Format String, pwntools, Syscalls |
+| Debug | Reference Debug (GDB) | GDB (49), pwndbg (24), x/ Format, ABI |
+| Firmware | Reference Firmware | Binwalk (27), Signatures (23), Entropie, Patterns |
+| Protocols | Reference Protocoles | Fonctions (20), Registres, Exceptions, Trames, Patterns |
+
+---
+
 ## Sprint 7 — Mode ASM : Éditeur & Compilation UI (backlog)
 **Objectif** : Premier mode fonctionnel — écrire du code ASM, compiler, voir le résultat.
 **Agents** : @frontend → @architect → @testing

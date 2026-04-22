@@ -138,7 +138,7 @@ class TestRizinBinaryInfo:
     @pytest.mark.asyncio
     async def test_file_info(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = {"core": {}, "bin": {}}
-        result = await rizin.file_info()
+        await rizin.file_info()
         rizin._pipe.cmdj.assert_called_with("ij")
 
     @pytest.mark.asyncio
@@ -215,13 +215,13 @@ class TestRizinDisassembly:
         rizin._pipe.cmdj.return_value = [
             {"offset": 0x401000, "opcode": "nop"},
         ]
-        result = await rizin.disassemble("0x401000", count=10)
+        await rizin.disassemble("0x401000", count=10)
         rizin._pipe.cmdj.assert_called_with("pdj 10 @ 0x401000")
 
     @pytest.mark.asyncio
     async def test_disassemble_bytes(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"offset": 0x401000, "opcode": "nop"}]
-        result = await rizin.disassemble_bytes("0x401000", nbytes=128)
+        await rizin.disassemble_bytes("0x401000", nbytes=128)
         rizin._pipe.cmdj.assert_called_with("pDj 128 @ 0x401000")
 
     @pytest.mark.asyncio
@@ -254,7 +254,7 @@ class TestRizinDecompile:
             return "decompiled output"
 
         rizin._pipe.cmd.side_effect = mock_cmd
-        result = await rizin.decompile("0x401000")
+        await rizin.decompile("0x401000")
         assert len(calls) == 2
         assert calls[1].startswith("pdd")
 
@@ -300,13 +300,13 @@ class TestRizinImportsExports:
         rizin._pipe.cmdj.return_value = [
             {"name": "main", "vaddr": 0x401060},
         ]
-        result = await rizin.exports()
+        await rizin.exports()
         rizin._pipe.cmdj.assert_called_with("iEj")
 
     @pytest.mark.asyncio
     async def test_symbols(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"name": "_start", "vaddr": 0x401000}]
-        result = await rizin.symbols()
+        await rizin.symbols()
         rizin._pipe.cmdj.assert_called_with("isj")
 
 
@@ -326,13 +326,13 @@ class TestRizinSections:
     @pytest.mark.asyncio
     async def test_segments(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"name": "LOAD0", "size": 0x1000}]
-        result = await rizin.segments()
+        await rizin.segments()
         rizin._pipe.cmdj.assert_called_with("iSSj")
 
     @pytest.mark.asyncio
     async def test_relocations(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"name": "puts", "type": "SET_64"}]
-        result = await rizin.relocations()
+        await rizin.relocations()
         rizin._pipe.cmdj.assert_called_with("irj")
 
 
@@ -343,19 +343,19 @@ class TestRizinMetadata:
     @pytest.mark.asyncio
     async def test_classes(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = []
-        result = await rizin.classes()
+        await rizin.classes()
         rizin._pipe.cmdj.assert_called_with("icj")
 
     @pytest.mark.asyncio
     async def test_headers(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = []
-        result = await rizin.headers()
+        await rizin.headers()
         rizin._pipe.cmdj.assert_called_with("ihj")
 
     @pytest.mark.asyncio
     async def test_libraries(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = ["libc.so.6"]
-        result = await rizin.libraries()
+        await rizin.libraries()
         rizin._pipe.cmdj.assert_called_with("ilj")
 
 
@@ -379,7 +379,7 @@ class TestRizinMemory:
     @pytest.mark.asyncio
     async def test_print_string(self, rizin: RizinBridge):
         rizin._pipe.cmd.return_value = "Hello, World!\n"
-        result = await rizin.print_string("0x402000")
+        await rizin.print_string("0x402000")
         rizin._pipe.cmd.assert_called_with("ps @ 0x402000")
 
 
@@ -422,7 +422,7 @@ class TestRizinSearch:
     @pytest.mark.asyncio
     async def test_search_string(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"offset": 0x402000}]
-        result = await rizin.search_string("password")
+        await rizin.search_string("password")
         rizin._pipe.cmdj.assert_called_with("/j password")
 
     @pytest.mark.asyncio
@@ -430,13 +430,13 @@ class TestRizinSearch:
         rizin._pipe.cmdj.return_value = [
             {"opcode": "pop rdi; ret", "offset": 0x401234},
         ]
-        result = await rizin.search_rop("pop rdi")
+        await rizin.search_rop("pop rdi")
         rizin._pipe.cmdj.assert_called_with("/Rj pop rdi")
 
     @pytest.mark.asyncio
     async def test_search_rop_all(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = []
-        result = await rizin.search_rop()
+        await rizin.search_rop()
         rizin._pipe.cmdj.assert_called_with("/Rj")
 
     @pytest.mark.asyncio
@@ -469,7 +469,7 @@ class TestRizinFlagsComments:
     @pytest.mark.asyncio
     async def test_get_comments(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"offset": 0x401000, "name": "test"}]
-        result = await rizin.get_comments()
+        await rizin.get_comments()
         rizin._pipe.cmdj.assert_called_with("CCj")
 
     @pytest.mark.asyncio
@@ -568,13 +568,13 @@ class TestRizinGraphs:
     @pytest.mark.asyncio
     async def test_function_callgraph(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"name": "main", "imports": ["puts"]}]
-        result = await rizin.function_callgraph("0x401000")
+        await rizin.function_callgraph("0x401000")
         rizin._pipe.cmdj.assert_called_with("agCj @ 0x401000")
 
     @pytest.mark.asyncio
     async def test_function_cfg(self, rizin: RizinBridge):
         rizin._pipe.cmdj.return_value = [{"offset": 0x401000, "blocks": []}]
-        result = await rizin.function_cfg("0x401000")
+        await rizin.function_cfg("0x401000")
         rizin._pipe.cmdj.assert_called_with("agj @ 0x401000")
 
     @pytest.mark.asyncio

@@ -8,6 +8,7 @@ import { AnvilTerminal } from './components/AnvilTerminal'
 import { StackPanel } from './components/panels/StackPanel'
 import { MemoryPanel } from './components/panels/MemoryPanel'
 import { SecurityPanel } from './components/panels/SecurityPanel'
+import { ReferenceModal } from './components/ReferenceModal'
 import './App.css'
 
 type Mode = 'ASM' | 'RE' | 'Pwn' | 'Debug' | 'Firmware' | 'Protocols'
@@ -56,6 +57,7 @@ function App() {
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [openPanels, setOpenPanels] = useState({ stack: true, memory: true, security: false })
   const [assembler, setAssembler] = useState<'nasm' | 'gas' | 'fasm'>('nasm')
+  const [refOpen, setRefOpen] = useState(false)
   const [fileName] = useState('source.asm')
   const [code, setCode] = useState(SAMPLE)
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set())
@@ -144,6 +146,9 @@ function App() {
 
         <div className="anvil-header-controls">
           <div className="anvil-ctrl-group">
+            <button className="anvil-theme-btn" onClick={() => setRefOpen(true)} title="Reference">
+              <i className="fa-solid fa-book" />
+            </button>
             <button className="anvil-theme-btn" onClick={toggleTheme} title="Toggle theme">
               <i className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'}`} />
             </button>
@@ -303,7 +308,14 @@ function App() {
                   <i className="fa-solid fa-memory anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Memory</span>
                 </div>
-                {openPanels.memory && <MemoryPanel />}
+                {openPanels.memory && <MemoryPanel
+                  memoryData={session.memoryData}
+                  memoryRegions={session.memoryRegions}
+                  registers={session.registers}
+                  readMemory={session.readMemory}
+                  writeMemory={session.writeMemory}
+                  fetchMemoryMap={session.fetchMemoryMap}
+                />}
               </div>
 
               <div className="anvil-panel-section">
@@ -312,12 +324,14 @@ function App() {
                   <i className="fa-solid fa-shield-halved anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Security</span>
                 </div>
-                {openPanels.security && <SecurityPanel />}
+                {openPanels.security && <SecurityPanel sessionId={session.sessionId} binaryPath={session.binaryPath} />}
               </div>
             </div>
           </div>
         )}
       </div>
+
+      <ReferenceModal open={refOpen} onClose={() => setRefOpen(false)} mode={MODE_CAT[mode] as import('./components/ReferenceModal').AppMode} />
 
       {/* ── Status Bar ────────────────────────────────────────── */}
       <footer className="anvil-statusbar">

@@ -16,6 +16,20 @@ export interface StackData {
   bytes: number[]
 }
 
+export interface MemoryData {
+  baseAddr: number
+  bytes: number[]
+}
+
+export interface MemoryRegion {
+  start: string
+  end: string
+  size: string
+  offset: string
+  perms: string
+  name: string
+}
+
 // Parse source line number from GDB raw responses (*stopped frame info)
 function parseFrameLine(res: GdbRawResponse): number {
   for (const r of (res.responses || [])) {
@@ -116,6 +130,7 @@ function parseInfoLine(res: GdbRawResponse): number {
 export function useAnvilSession() {
   const sessionId = useRef<string | null>(null)
   const autoRef = useRef(false)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
 
   const [registers, setRegisters] = useState<RegMap>({})
   const registersRef = useRef<RegMap>({})
@@ -129,6 +144,8 @@ export function useAnvilSession() {
   const [autoStepping, setAutoStepping] = useState(false)
   const [binaryPath, setBinaryPath] = useState<string | null>(null)
   const [stackData, setStackData] = useState<StackData | null>(null)
+  const [memoryData, setMemoryData] = useState<MemoryData | null>(null)
+  const [memoryRegions, setMemoryRegions] = useState<MemoryRegion[]>([])
 
   const log = useCallback((type: TermLine['type'], text: string) => {
     setLines(prev => [...prev, { type, text }])
@@ -145,9 +162,11 @@ export function useAnvilSession() {
     if (sessionId.current) {
       await api.deleteSession(sessionId.current).catch(() => {})
       sessionId.current = null
+      setCurrentSessionId(null)
     }
     const s = await api.createSession('gdb')
     sessionId.current = s.id
+    setCurrentSessionId(s.id)
     return s.id
   }
 
@@ -155,6 +174,7 @@ export function useAnvilSession() {
     if (sessionId.current) return sessionId.current
     const s = await api.createSession('gdb')
     sessionId.current = s.id
+    setCurrentSessionId(s.id)
     return s.id
   }
 
@@ -238,6 +258,72 @@ export function useAnvilSession() {
           return
         }
       }
+    } catch { /* ignore */ }
+  }
+
+  // ── Memory viewer ──────────────────────────────────────────
+
+  async function readMemory(address: string, size = 256) {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbMemory(sessionId.current, address, size)
+      for (const r of (res.responses || [])) {
+        const payload = r.payload as Record<string, unknown> | undefined
+        if (!payload) continue
+        const memory = payload.memory as Array<{ begin: string; contents: string }> | undefined
+        if (!Array.isArray(memory)) continue
+        for (const block of memory) {
+          const baseAddr = parseInt(block.begin, 16)
+          const hex = block.contents
+          const bytes: number[] = []
+          for (let i = 0; i + 2 <= hex.length; i += 2) {
+            bytes.push(parseInt(hex.slice(i, i + 2), 16))
+          }
+          setMemoryData({ baseAddr, bytes })
+          return
+        }
+      }
+    } catch (e) {
+      log('error', `Memory read: ${(e as Error).message}`)
+    }
+  }
+
+  async function writeMemory(address: string, hexData: string) {
+    if (!sessionId.current) return
+    try {
+      await api.gdbWriteMemory(sessionId.current, address, hexData)
+      log('info', `Memory write OK: ${address}`)
+    } catch (e) {
+      log('error', `Memory write: ${(e as Error).message}`)
+    }
+  }
+
+  async function fetchMemoryMap() {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbMemoryMap(sessionId.current)
+      const regions: MemoryRegion[] = []
+      for (const r of (res.responses || [])) {
+        const payload = r.payload
+        if (typeof payload !== 'string') continue
+        // Parse "info proc mappings" output lines
+        // Format: 0x400000 0x401000 0x1000 0x0 /path/to/binary
+        const lines = payload.replace(/\\n/g, '\n').split('\n')
+        for (const line of lines) {
+          const m = line.match(/\s*(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(\S*)?\s*(.*)/)
+          if (m) {
+            regions.push({
+              start: m[1],
+              end: m[2],
+              size: m[3],
+              offset: m[4],
+              perms: m[5] || '',
+              name: m[6]?.trim() || m[5] || '',
+            })
+          }
+        }
+      }
+      setMemoryRegions(regions)
     } catch { /* ignore */ }
   }
 
@@ -528,9 +614,12 @@ export function useAnvilSession() {
   }
 
   return {
+    sessionId: currentSessionId,
     registers,
     prevRegisters,
     stackData,
+    memoryData,
+    memoryRegions,
     lines,
     activeLine,
     errorLine,
@@ -552,6 +641,9 @@ export function useAnvilSession() {
     setBreakpoint,
     clearTerminal,
     destroySessions,
+    readMemory,
+    writeMemory,
+    fetchMemoryMap,
     log,
   }
 }

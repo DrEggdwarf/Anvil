@@ -84,15 +84,18 @@ export const StackPanel = memo(function StackPanel({ stackData, registers }: Pro
 
   // Classify each row into a zone
   const hasFrame = rbp > rsp && rbp > 0
-  type Zone = 'locals' | 'frame' | 'caller'
+  type Zone = 'frame' | 'caller'
   const classified = rows.map((row, idx) => {
     let zone: Zone = 'caller'
     if (hasFrame) {
-      if (row.addr >= rsp && row.addr < rbp) zone = 'locals'
-      else if (row.addr >= rbp && row.addr < rbp + 16) zone = 'frame'
+      // Everything from RSP to RBP+16 is the current stack frame (locals + saved rbp + ret addr)
+      if (row.addr >= rsp && row.addr < rbp + 16) zone = 'frame'
     }
     return { ...row, zone, idx }
   })
+
+  // Reverse so high addresses (caller) are at top, RSP at bottom — matches memory map convention
+  classified.reverse()
 
   // Group consecutive rows by zone
   const groups: { zone: Zone; rows: typeof classified }[] = []
@@ -105,8 +108,7 @@ export const StackPanel = memo(function StackPanel({ stackData, registers }: Pro
   }
 
   const ZONE_LABELS: Record<Zone, string> = {
-    locals: 'Locals',
-    frame: 'Stack frame',
+    frame: 'Current frame',
     caller: hasFrame ? 'Caller' : '',
   }
 
@@ -114,7 +116,7 @@ export const StackPanel = memo(function StackPanel({ stackData, registers }: Pro
     <div className="anvil-panel-section-body">
       <div className="anvil-stack">
         <div className="anvil-stack-head">
-          <span className="anvil-stack-label-high">Adresses hautes &uarr;</span>
+          <span className="anvil-stack-label-high">Caller &uarr; adresses hautes</span>
           <button className="anvil-regs-toggle on" onClick={cycleMode} title="Basculer hex / dec / bin">
             {displayMode.toUpperCase()}
           </button>
@@ -201,7 +203,7 @@ export const StackPanel = memo(function StackPanel({ stackData, registers }: Pro
         </div>
 
         <div className="anvil-stack-footer">
-          <span className="anvil-stack-grow">&darr; PUSH decremente RSP</span>
+          <span className="anvil-stack-grow">RSP &darr; croissance de la stack</span>
         </div>
       </div>
     </div>

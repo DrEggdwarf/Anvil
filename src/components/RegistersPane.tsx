@@ -114,9 +114,9 @@ const RegCard = memo(function RegCard({ name, val, prevVal, changed, showUpper, 
         <span className="anvil-regcard-val" title={fmtTooltip(val)}>{fmtMain(val, displayMode)}</span>
         {changed && prevVal !== null && (
           <span className="anvil-regcard-delta">
-            <span className="anvil-delta-old">{fmtMain(prevVal, 'hex')}</span>
+            <span className="anvil-delta-old">{fmtMain(prevVal, displayMode)}</span>
             <span className="anvil-delta-arrow">&rarr;</span>
-            <span className="anvil-delta-new">{fmtMain(val, 'hex')}</span>
+            <span className="anvil-delta-new">{fmtMain(val, displayMode)}</span>
             <span className="anvil-delta-diff">{(() => {
               const d = BigInt(val) - BigInt(prevVal)
               return d >= 0n ? `+${d}` : String(d)

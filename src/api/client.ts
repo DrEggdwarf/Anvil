@@ -155,10 +155,68 @@ export function gdbMemory(sessionId: string, address: string, size = 256) {
   return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/memory`, { address, size })
 }
 
+export function gdbWriteMemory(sessionId: string, address: string, hex_data: string) {
+  return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/memory/write`, { address, hex_data })
+}
+
+export function gdbMemoryMap(sessionId: string) {
+  return request<GdbRawResponse>('GET', `/api/gdb/${sessionId}/memory-map`)
+}
+
 export function gdbDisassemble(sessionId: string) {
   return request<GdbRawResponse>('POST', `/api/gdb/${sessionId}/disassemble`)
 }
 
 export function gdbCurrentLine(sessionId: string) {
   return request<GdbRawResponse>('GET', `/api/gdb/${sessionId}/current-line`)
+}
+
+// ── Binary Analysis ──────────────────────────────────────
+
+export interface ChecksecData {
+  path: string
+  relro: string
+  canary: boolean
+  nx: boolean
+  pie: boolean
+  rpath: boolean
+  runpath: boolean
+  symbols: boolean
+  fortify: boolean
+}
+
+export interface SectionInfo {
+  name: string
+  type: string
+  address: string
+  offset: string
+  size: number
+  flags: string
+}
+
+export interface StringEntry {
+  offset: string
+  string: string
+}
+
+export interface DependencyEntry {
+  name: string
+  path: string
+  address: string
+}
+
+export function checksec(sessionId: string, filename: string) {
+  return request<ChecksecData>('GET', `/api/compile/${sessionId}/checksec/${filename}`)
+}
+
+export function sections(sessionId: string, filename: string) {
+  return request<{ sections: SectionInfo[] }>('GET', `/api/compile/${sessionId}/sections/${filename}`)
+}
+
+export function strings(sessionId: string, filename: string, minLength = 4) {
+  return request<{ strings: StringEntry[] }>('GET', `/api/compile/${sessionId}/strings/${filename}?min_length=${minLength}`)
+}
+
+export function dependencies(sessionId: string, filename: string) {
+  return request<{ dependencies: DependencyEntry[] }>('GET', `/api/compile/${sessionId}/dependencies/${filename}`)
 }
