@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import base64
+from pathlib import Path
+
 from backend.app.api.deps import get_session_manager
 from backend.app.bridges.pwn_bridge import PwnBridge
 from backend.app.core.exceptions import ValidationError
+from backend.app.core.subprocess_manager import SubprocessManager
+from backend.app.core.workspace import WorkspaceManager
 from backend.app.models.pwn import (
     PwnAsmRequest,
+    PwnCompileRequest,
     PwnConstantRequest,
     PwnContextRequest,
     PwnContextResponse,
@@ -43,6 +49,7 @@ from backend.app.models.pwn import (
     PwnSropRequest,
     PwnStringResponse,
     PwnUnpackRequest,
+    PwnUploadRequest,
     PwnXorKeyRequest,
     PwnXorRequest,
 )
@@ -51,12 +58,116 @@ from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/api/pwn", tags=["pwn"])
 
+_workspace = WorkspaceManager()
+_subprocess = SubprocessManager()
+
 
 def _get_pwn_bridge(session_id: str, sm: SessionManager) -> PwnBridge:
     session = sm.get(session_id)
     if not isinstance(session.bridge, PwnBridge):
         raise ValidationError(f"Session '{session_id}' is not a pwn session", code="WRONG_SESSION_TYPE")
     return session.bridge
+
+
+# ── File upload ──────────────────────────────────────────
+
+@router.post("/{session_id}/upload")
+async def upload_binary(
+    session_id: str,
+    body: PwnUploadRequest,
+    sm: SessionManager = Depends(get_session_manager),
+) -> dict:
+    """Upload a binary file (base64-encoded) to the session workspace."""
+    _get_pwn_bridge(session_id, sm)  # validate session type
+    workspace = _workspace.get_workspace(session_id)
+    filepath = Path(workspace) / body.filename
+    if not filepath.resolve().is_relative_to(Path(workspace).resolve()):
+        raise ValidationError("Path traversal detected", code="PATH_TRAVERSAL")
+    try:
+        data = base64.b64decode(body.data_b64)
+    except Exception as exc:
+        raise ValidationError(f"Invalid base64 data: {exc}", code="INVALID_BASE64") from exc
+    filepath.write_bytes(data)
+    filepath.chmod(0o755)
+    return {"path": str(filepath), "size": len(data)}
+
+
+# ── Compile source → binary ──────────────────────────────
+
+_LANG_MAP: dict[str, str] = {
+    "c": "gcc",
+    "cpp": "g++",
+    "cc": "g++",
+    "cxx": "g++",
+    "asm": "nasm",
+    "s": "gcc",  # GAS syntax via gcc
+    "rs": "rustc",
+    "go": "go",
+}
+
+_ALLOWED_LANGS = set(_LANG_MAP.keys())
+
+
+@router.post("/{session_id}/compile")
+async def compile_source(
+    session_id: str,
+    body: PwnCompileRequest,
+    sm: SessionManager = Depends(get_session_manager),
+) -> dict:
+    """Compile a source file in the session workspace and return the binary path."""
+    _get_pwn_bridge(session_id, sm)  # validate session type
+    workspace = _workspace.get_workspace(session_id)
+
+    lang = body.language.lower().strip(".")
+    if lang not in _ALLOWED_LANGS:
+        raise ValidationError(
+            f"Unsupported language '{lang}'. Supported: {', '.join(sorted(_ALLOWED_LANGS))}",
+            code="UNSUPPORTED_LANGUAGE",
+        )
+
+    src = Path(body.path)
+    if not src.resolve().is_relative_to(Path(workspace).resolve()):
+        raise ValidationError("Path traversal detected", code="PATH_TRAVERSAL")
+    if not src.exists():
+        raise ValidationError(f"Source file not found: {body.path}", code="FILE_NOT_FOUND")
+
+    output = src.with_suffix("")  # strip extension → binary name
+    compiler = _LANG_MAP[lang]
+
+    if compiler == "gcc":
+        cmd = ["gcc"]
+        if body.vuln_flags:
+            cmd += ["-no-pie", "-fno-stack-protector", "-z", "execstack"]
+        cmd += ["-g", "-o", str(output), str(src)]
+    elif compiler == "g++":
+        cmd = ["g++"]
+        if body.vuln_flags:
+            cmd += ["-no-pie", "-fno-stack-protector", "-z", "execstack"]
+        cmd += ["-g", "-o", str(output), str(src)]
+    elif compiler == "nasm":
+        obj = src.with_suffix(".o")
+        # Two-step: assemble then link
+        asm_cmd = ["nasm", "-f", "elf64", "-g", "-F", "dwarf", str(src), "-o", str(obj)]
+        stdout, stderr, rc = await _subprocess.execute(asm_cmd, timeout=30.0, cwd=workspace)
+        if rc != 0:
+            raise ValidationError(f"NASM error:\n{stderr.strip()}", code="COMPILE_ERROR")
+        cmd = ["ld", "-m", "elf_x86_64", str(obj), "-o", str(output)]
+    elif compiler == "rustc":
+        cmd = ["rustc", "-g", "-o", str(output), str(src)]
+    elif compiler == "go":
+        cmd = ["go", "build", "-o", str(output), str(src)]
+    else:
+        raise ValidationError(f"Compiler not configured: {compiler}", code="COMPILE_ERROR")
+
+    stdout, stderr, rc = await _subprocess.execute(cmd, timeout=60.0, cwd=workspace)
+    if rc != 0:
+        raise ValidationError(f"Compilation error:\n{stderr.strip()}", code="COMPILE_ERROR")
+
+    if not output.exists():
+        raise ValidationError("Compilation succeeded but no binary produced", code="COMPILE_ERROR")
+
+    output.chmod(0o755)
+    return {"binary_path": str(output), "size": output.stat().st_size}
 
 
 # ── Context ──────────────────────────────────────────────

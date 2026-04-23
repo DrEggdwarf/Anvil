@@ -57,7 +57,7 @@ Note: pytest asyncio_mode is set to "auto" in pyproject.toml — no need for `@p
 
 ```
 src-tauri/src/     Rust shell: spawns backend as subprocess, 2 IPC commands (check_backend, check_dependencies)
-src/               React UI — 3-column layout: ASM editor | registers+terminal | stack/memory/security panels
+src/               React UI — multi-mode: ASM (3-col editor+debug), Pwn (split editors+terminal+tools)
 backend/app/       FastAPI: main.py → 8 routers, core/, bridges/, models/, sessions/
 tests/             24 pytest modules, all use MockBridge (no real tools needed in CI)
 ai/                12 Claude Code agents + 2 workflows (see ai/README.md)
@@ -106,6 +106,29 @@ AnvilError (code, message, details) → mapped to HTTP status in main.py excepti
 ├── ValidationError → InvalidFile, InvalidCommand
 └── SubprocessError → SubprocessTimeout, SubprocessCrash
 ```
+
+## Frontend modes
+
+### ASM mode (default)
+3-column layout: ASM editor | registers+terminal | stack/memory/security panels.
+Custom syntax-highlighted editor with breakpoint gutter, register pane with sub-register breakdown, xterm.js terminal.
+
+### Pwn mode
+Split layout: topbar (binary loader + checksec badges + tool buttons) → side-by-side editors (Source viewer + exploit.py Monaco) → bottom panel (Terminal/Symbols/GOT/PLT/Strings tabs).
+
+Key components:
+- `PwnMode.tsx` — main layout with resizable panels (col + row resize handles)
+- `PwnEditor.tsx` — Monaco editor for Python with `anvil-dark` theme and pwntools autocompletion
+- `SourceViewer.tsx` — read-only Monaco with vulnerability pattern detection (gets/sprintf/strcpy/system highlighted)
+- `editor/pwnCompletions.ts` — ~150 completion items (pwntools API + Python stdlib + exploit templates)
+- `hooks/usePwnSession.ts` — session hook: load binary (auto-compile if source), fetch checksec/symbols/GOT/PLT
+
+Pipeline: drop source (.c/.cpp/.rs/.go/.asm) → auto-compile via backend → load ELF → analyze → display.
+
+### Shared components
+- `AnvilTerminal.tsx` — xterm.js terminal (used by ASM and Pwn modes)
+- `hooks/useColResize.ts` — column resize hook (2 or 3 column modes)
+- `api/client.ts` — typed REST client wrapping fetch
 
 ## API Routes
 

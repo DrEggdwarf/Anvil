@@ -24,7 +24,7 @@ See [CLAUDE.md](CLAUDE.md) for full architecture details, bridge pattern, securi
 
 ```
 src-tauri/src/     Rust shell (thin — no business logic, just IPC + subprocess spawn)
-src/               React 19 + TypeScript 5 — 6-mode UI with custom ASM editor
+src/               React 19 + TypeScript 5 — 6-mode UI: ASM (3-col debug), Pwn (split editors+terminal)
 backend/app/       FastAPI — main.py → 8 routers, core/, bridges/, models/, sessions/
 tests/             pytest modules — all use MockBridge (no real tools needed)
 ```
@@ -34,7 +34,8 @@ tests/             pytest modules — all use MockBridge (no real tools needed)
 - **Sessions**: every API call scoped to a `session_id` (16 hex chars). Session owns one bridge + workspace dir.
 - **Bridges**: subclass `BaseBridge`, implement `start/stop/health/execute`, register via `bridge_registry`.
 - **WebSocket**: single endpoint `/ws/{session_type}/{session_id}`, typed `WSMessage`, handlers registered by command name.
-- **Frontend state**: `useAnvilSession()` hook manages GDB lifecycle; mode system via `data-cat` attribute.
+- **Frontend state**: `useAnvilSession()` hook manages GDB lifecycle; `usePwnSession()` manages Pwn mode; mode system via `data-cat` attribute.
+- **Pwn pipeline**: drop source file → auto-compile backend → load ELF → checksec/symbols/GOT/PLT → side-by-side editors (SourceViewer + PwnEditor) + bottom panel (Terminal/data tabs).
 
 ## Conventions
 

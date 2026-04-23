@@ -89,6 +89,25 @@ class PwnShellcraftRequest(BaseModel):
 
 # ── ELF ──────────────────────────────────────────────────
 
+class PwnUploadRequest(BaseModel):
+    filename: str = Field(..., max_length=255)
+    data_b64: str = Field(..., max_length=104_857_600)  # ~75 MB base64 → ~56 MB binary
+
+    @field_validator("filename")
+    @classmethod
+    def validate_filename(cls, v: str) -> str:
+        if "/" in v or "\\" in v or "\x00" in v:
+            msg = "Filename must not contain path separators or null bytes"
+            raise ValueError(msg)
+        return v
+
+
+class PwnCompileRequest(BaseModel):
+    path: str = Field(..., max_length=4096)
+    language: str = Field(..., max_length=16)
+    vuln_flags: bool = Field(default=True)
+
+
 class PwnElfLoadRequest(BaseModel):
     path: str = Field(..., max_length=4096)
 

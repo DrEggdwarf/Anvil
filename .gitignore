@@ -37,3 +37,13 @@ __pycache__/
 .coverage
 htmlcov/
 .ruff_cache/
+
+# Compiled test binaries
+samples/pwn/bof_basic
+samples/pwn/fmt_string
+samples/pwn/ret2libc
+samples/pwn/use_after_free
+samples/pwn/bof_cpp
+samples/pwn/bof_go
+samples/pwn/bof_rust
+samples/pwn/*.o

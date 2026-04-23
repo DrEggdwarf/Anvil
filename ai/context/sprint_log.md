@@ -318,7 +318,50 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
-## Sprint 9 — Mode RE : Frontend reverse engineering
+## Sprint 9 — Mode Pwn : UI Complète (23 avril 2026) ✅
+
+### Objectif
+Mode Pwn fonctionnel — charger un binaire/source, analyser, éditer un exploit Python avec autocomplétion pwntools.
+**Agents** : @frontend → @pentester → @testing
+
+### Réalisé — Frontend Pwn Mode
+- [x] `PwnMode.tsx` — layout complet : topbar (dropzone + checksec badges + tools inline) → split editors → bottom panel tabbé
+- [x] `PwnEditor.tsx` — Monaco Editor pour Python avec thème `anvil-dark`, font Geist Mono, snippets pwntools
+- [x] `SourceViewer.tsx` — Monaco read-only avec détection patterns vulnérables (gets/sprintf/strcpy/printf/system/malloc par langage)
+- [x] `editor/pwnCompletions.ts` — ~150 items autocomplétion (pwntools API complète + Python stdlib + templates exploit)
+- [x] `hooks/usePwnSession.ts` — hook session : load binary, auto-compile si source, fetch checksec/symbols/GOT/PLT
+- [x] `ChecksecBadges` — badges inline colorés (ok=vert, vuln=rouge) pour RELRO/Canary/NX/PIE/Fortify
+- [x] `BottomPanel` — onglets Terminal (xterm.js via AnvilTerminal) | Symbols | GOT | PLT | Strings
+- [x] Resize handles : vertical (col-resize entre Source et exploit.py) + horizontal (row-resize éditeurs ↔ bottom panel)
+- [x] Pipeline : drop source (.c/.cpp/.rs/.go/.asm) → auto-compile backend → load ELF → analyse → affichage
+
+### Réalisé — Backend Pwn Compile
+- [x] `POST /api/pwn/{session_id}/compile` — compile source C/C++/ASM/Rust/Go avec flags vulnérables optionnels
+- [x] `PwnCompileRequest` model Pydantic (path, language, vuln_flags)
+- [x] Support multi-langage : gcc, g++, nasm+ld, rustc, go build
+- [x] Vuln flags par défaut : `-no-pie -fno-stack-protector -z execstack`
+
+### Réalisé — Samples
+- [x] `samples/pwn/` — 7 fichiers exemples : bof_basic.c, fmt_string.c, ret2libc.c, use_after_free.c, bof_cpp.cpp, bof_rust.rs, bof_go.go + Makefile
+
+### Réalisé — Shared
+- [x] `api/client.ts` — ajout `pwnCompile()` dans le client REST typé
+- [x] `useColResize.ts` — support mode 2 colonnes (50/50)
+- [x] `App.tsx` — routing Pwn mode conditionnel avec props dédiés
+- [x] `App.css` — ~500 lignes CSS Pwn mode (layout, badges, tools, editors, bottom panel, resize handles)
+- [x] Resize handles col + row avec indicateur grip et highlight accent au hover
+
+### Dependencies
+- [x] `@monaco-editor/react` ajouté (éditeur Monaco pour Source + Exploit)
+- [x] `@fortawesome/fontawesome-free` ajouté (icônes)
+
+### Tests
+- [x] TypeScript : 0 erreurs (`npx tsc --noEmit`)
+- [x] **658 tests passed** (2 pre-existing failures non liées)
+
+---
+
+## Sprint 9 — Mode RE : Frontend reverse engineering (backlog)
 **Objectif** : Interface complète d'analyse statique de binaires via le bridge Rizin.
 **Agents** : @frontend → @architect → @testing
 > Backend 100% prêt (Sprint 4 : 50 méthodes, 70 endpoints).
@@ -356,10 +399,8 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
-## Sprint 10 — Mode Pwn : Exploit development
-**Objectif** : Éditeur Python + templates exploits + outils pwntools intégrés.
-**Agents** : @frontend → @pentester → @testing
-> Backend 100% prêt (Sprint 5 : 40 méthodes, ~40 routes).
+## Sprint 10 — Mode Pwn : Exploit development (completed in Sprint 9) ✅
+> Réalisé dans Sprint 9 — Mode Pwn UI Complète (23 avril 2026).
 
 ### 10.1 — Éditeur exploit
 - [ ] CodeMirror 6 avec coloration Python
