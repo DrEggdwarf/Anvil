@@ -67,12 +67,15 @@
 - [ ] GDB stepping sur binaire C (adapter entry point)
 - [ ] VMmap, GOT, ROP, cyclic sur binaire C
 
-## Phase B — Tauri packaging
-- [ ] Lancer FastAPI en subprocess Rust (spawn, health check, kill)
+## Phase B — Tauri packaging + Docker cross-platform
+- [ ] Dockerfile backend (Python 3.12 + FastAPI + nasm/ld/gcc/gdb/rizin/pwntools/binwalk/pymodbus)
+- [ ] Tauri : détecter Docker, pull image au premier lancement, `docker run` au start, kill au close
+- [ ] Fallback : subprocess local si Linux natif (pas de Docker requis)
 - [ ] File dialogs natifs (ouvrir .c / .bin / .elf / .hex)
-- [ ] Dependency checker au premier lancement (gdb, rizin, gcc, python)
-- [ ] Build AppImage Linux
+- [ ] Dependency checker au premier lancement (Docker ou outils natifs)
+- [ ] Build AppImage Linux + MSI Windows
 - [ ] Auto-update (tauri-plugin-updater)
+- [ ] Volume mount ~/.anvil/workspaces pour persistance entre sessions Docker
 
 ## Phase C — Mode RE
 > Note : Le bridge backend (`rizin_bridge.py`) est terminé depuis Sprint 4. Cette phase concerne le **frontend** RE.

@@ -180,13 +180,14 @@ export function useAnvilSession() {
 
   // ── Compile ────────────────────────────────────────────────
 
-  async function compile(sourceCode: string) {
+  async function compile(sourceCode: string, assembler: 'nasm' | 'gas' | 'fasm' = 'nasm') {
     setCompiling(true)
     log('info', '> Compilation...')
     try {
       const sid = await ensureSession()
       const res = await api.compileAsm(sid, {
         source_code: sourceCode,
+        assembler,
         debug: true,
         link: true,
       })
@@ -356,7 +357,7 @@ export function useAnvilSession() {
 
   // ── Build & Run ────────────────────────────────────────────
 
-  async function buildAndRun(sourceCode: string) {
+  async function buildAndRun(sourceCode: string, assembler: 'nasm' | 'gas' | 'fasm' = 'nasm') {
     // Fresh session each run (clean GDB state)
     let sid: string
     try {
@@ -373,6 +374,7 @@ export function useAnvilSession() {
     try {
       const res = await api.compileAsm(sid, {
         source_code: sourceCode,
+        assembler,
         debug: true,
         link: true,
       })

@@ -194,7 +194,7 @@ function App() {
               className="anvil-tb-run"
               title="Compiler et lancer (F5)"
               disabled={session.compiling || session.running}
-              onClick={() => session.buildAndRun(code)}
+              onClick={() => session.buildAndRun(code, assembler)}
             >
               {session.compiling
                 ? <i className="fa-solid fa-spinner fa-spin" />

@@ -84,6 +84,7 @@ export function deleteSession(id: string) {
 export interface CompileAsmOpts {
   source_code: string
   filename?: string
+  assembler?: 'nasm' | 'gas' | 'fasm'
   fmt?: string
   debug?: boolean
   link?: boolean

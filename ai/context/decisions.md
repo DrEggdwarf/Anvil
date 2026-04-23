@@ -201,6 +201,31 @@ L'architecture backend doit être :
 
 ---
 
+## ADR-012 : Docker container pour cross-platform (Tauri + Docker)
+
+**Date** : 23 avril 2026
+**Statut** : Planifié
+
+**Contexte** : Les outils backend (nasm, ld, gdb, rizin, pwntools, binwalk) sont Linux-only. Un binaire Tauri cross-platform ne suffit pas — le backend ne tourne pas nativement sur Windows.
+
+**Décision** : Packager le backend FastAPI + tous les outils dans un container Docker Linux. Tauri lance le container au démarrage (`docker run`) et le kill à la fermeture. Le frontend communique toujours via localhost:8000.
+
+**Architecture** :
+```
+Tauri (natif Win/Linux) → docker run anvil-backend → FastAPI + outils Linux
+React frontend ↔ localhost:8000 (HTTP/WS)
+```
+
+**Conséquences** :
+- Fonctionne identiquement sur Linux et Windows (Docker Desktop + WSL2)
+- Prérequis Windows : Docker Desktop installé
+- Image Docker ~500 MB (une seule fois, pull au premier lancement)
+- Startup container ~2s
+- Garde les features Tauri natives (file dialogs, serial port)
+- Un seul Dockerfile à maintenir
+
+---
+
 ## ADR-012 : Modbus full FC coverage (protocol bridge)
 
 **Date** : 19 avril 2026

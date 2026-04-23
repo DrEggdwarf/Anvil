@@ -1,4 +1,4 @@
-"""Tests for the compilation bridge — ASM (nasm+ld) and C (gcc)."""
+"""Tests for the compilation bridge — ASM (nasm/gas/fasm+ld) and C (gcc)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock
 
 from backend.app.bridges.compilation import (
     CompilationBridge,
+    parse_fasm_errors,
+    parse_gas_errors,
     parse_gcc_errors,
     parse_nasm_errors,
     SECURITY_FLAGS,
@@ -326,3 +328,257 @@ class TestSecurityFlagsMapping:
     def test_pie_flags(self):
         assert "-pie" in SECURITY_FLAGS["pie"]
         assert "-fPIE" in SECURITY_FLAGS["pie"]
+
+
+# ── GAS error parser tests ───────────────────────────────
+
+
+class TestParseGasErrors:
+    def test_gcc_style_error(self):
+        stderr = "program.s:10:5: error: expected register"
+        errors = parse_gas_errors(stderr)
+        assert len(errors) == 1
+        assert errors[0] == {
+            "file": "program.s",
+            "line": 10,
+            "column": 5,
+            "severity": "error",
+            "message": "expected register",
+        }
+
+    def test_gas_native_error(self):
+        stderr = "program.s:3: Error: no such instruction: `movq %rax'"
+        errors = parse_gas_errors(stderr)
+        assert len(errors) == 1
+        assert errors[0]["line"] == 3
+        assert errors[0]["severity"] == "error"
+        assert "no such instruction" in errors[0]["message"]
+
+    def test_gas_warning(self):
+        stderr = "program.s:7: Warning: end of file not at end of a line"
+        errors = parse_gas_errors(stderr)
+        assert len(errors) == 1
+        assert errors[0]["severity"] == "warning"
+
+    def test_multiple_errors(self):
+        stderr = (
+            "prog.s:1: Error: bad expression\n"
+            "prog.s:5: Error: operand mismatch\n"
+        )
+        errors = parse_gas_errors(stderr)
+        assert len(errors) == 2
+
+    def test_empty(self):
+        assert parse_gas_errors("") == []
+
+
+# ── FASM error parser tests ──────────────────────────────
+
+
+class TestParseFasmErrors:
+    def test_standard_error(self):
+        stderr = "program.asm [5]:\n  error: illegal instruction."
+        errors = parse_fasm_errors(stderr)
+        assert len(errors) == 1
+        assert errors[0] == {
+            "file": "program.asm",
+            "line": 5,
+            "severity": "error",
+            "message": "illegal instruction.",
+        }
+
+    def test_no_location(self):
+        stderr = "  error: source file not found."
+        errors = parse_fasm_errors(stderr)
+        assert len(errors) == 1
+        assert errors[0]["line"] == 0
+        assert errors[0]["message"] == "source file not found."
+
+    def test_empty(self):
+        assert parse_fasm_errors("") == []
+
+
+# ── GAS compilation tests ────────────────────────────────
+
+
+class TestCompileGas:
+    @pytest_asyncio.fixture
+    async def bridge(self, tmp_path):
+        spm = SubprocessManager()
+        return CompilationBridge(spm), str(tmp_path)
+
+    @pytest.mark.asyncio
+    async def test_gas_compile_success(self, bridge):
+        cb, workspace = bridge
+        cb._spm.execute = AsyncMock(
+            side_effect=[
+                ("", "", 0),  # as succeeds
+                ("", "", 0),  # ld succeeds
+            ]
+        )
+        result = await cb.compile_asm(
+            ".text\n.globl _start\n_start: movq $60, %rax\nsyscall\n",
+            workspace=workspace,
+            assembler="gas",
+        )
+        assert result["success"] is True
+        assert result["stage"] == "link"
+
+    @pytest.mark.asyncio
+    async def test_gas_assemble_error(self, bridge):
+        cb, workspace = bridge
+        cb._spm.execute = AsyncMock(
+            return_value=("", "program.asm:3: Error: no such instruction", 1)
+        )
+        result = await cb.compile_asm(
+            "bad code", workspace=workspace, assembler="gas",
+        )
+        assert result["success"] is False
+        assert result["stage"] == "assemble"
+        assert len(result["errors"]) == 1
+        assert result["errors"][0]["line"] == 3
+
+    @pytest.mark.asyncio
+    async def test_gas_uses_as_command(self, bridge):
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm("code", workspace=workspace, assembler="gas")
+        assert calls[0][0] == "as"
+        assert "--64" in calls[0]
+
+    @pytest.mark.asyncio
+    async def test_gas_32bit(self, bridge):
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm(
+            "code", workspace=workspace, assembler="gas", fmt="elf32",
+        )
+        assert "--32" in calls[0]
+
+    @pytest.mark.asyncio
+    async def test_gas_debug_flags(self, bridge):
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm(
+            "code", workspace=workspace, assembler="gas", debug=True,
+        )
+        assert "-g" in calls[0]
+
+    @pytest.mark.asyncio
+    async def test_gas_no_debug(self, bridge):
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm(
+            "code", workspace=workspace, assembler="gas", debug=False,
+        )
+        assert "-g" not in calls[0]
+
+
+# ── FASM compilation tests ───────────────────────────────
+
+
+class TestCompileFasm:
+    @pytest_asyncio.fixture
+    async def bridge(self, tmp_path):
+        spm = SubprocessManager()
+        return CompilationBridge(spm), str(tmp_path)
+
+    @pytest.mark.asyncio
+    async def test_fasm_compile_success(self, bridge):
+        cb, workspace = bridge
+        cb._spm.execute = AsyncMock(
+            side_effect=[
+                ("", "", 0),  # fasm succeeds
+                ("", "", 0),  # ld succeeds
+            ]
+        )
+        result = await cb.compile_asm(
+            "format ELF64\nsection '.text'\npublic _start\n_start: mov eax, 60\nsyscall\n",
+            workspace=workspace,
+            assembler="fasm",
+        )
+        assert result["success"] is True
+        assert result["stage"] == "link"
+
+    @pytest.mark.asyncio
+    async def test_fasm_assemble_error(self, bridge):
+        cb, workspace = bridge
+        cb._spm.execute = AsyncMock(
+            return_value=("", "program.asm [5]:\n  error: illegal instruction.", 1)
+        )
+        result = await cb.compile_asm(
+            "bad code", workspace=workspace, assembler="fasm",
+        )
+        assert result["success"] is False
+        assert result["stage"] == "assemble"
+        assert len(result["errors"]) == 1
+        assert result["errors"][0]["line"] == 5
+
+    @pytest.mark.asyncio
+    async def test_fasm_uses_fasm_command(self, bridge):
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm("code", workspace=workspace, assembler="fasm")
+        assert calls[0][0] == "fasm"
+
+    @pytest.mark.asyncio
+    async def test_fasm_no_debug_flags(self, bridge):
+        """FASM doesn't support -g style debug flags."""
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm(
+            "code", workspace=workspace, assembler="fasm", debug=True,
+        )
+        # FASM command should be simple: fasm <src> <obj>
+        assert len(calls[0]) == 3
+        assert "-g" not in calls[0]
+
+    @pytest.mark.asyncio
+    async def test_default_assembler_is_nasm(self, bridge):
+        """Verify backward compat: default assembler remains nasm."""
+        cb, workspace = bridge
+        calls = []
+
+        async def mock_execute(cmd, **kw):
+            calls.append(cmd)
+            return ("", "", 0)
+
+        cb._spm.execute = mock_execute
+        await cb.compile_asm("code", workspace=workspace)
+        assert calls[0][0] == "nasm"

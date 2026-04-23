@@ -149,6 +149,7 @@ async def compile_asm(
         source_code=body.source_code,
         workspace=workspace,
         filename=body.filename,
+        assembler=body.assembler,
         fmt=body.fmt,
         debug=body.debug,
         link=body.link,

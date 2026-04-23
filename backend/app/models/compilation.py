@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class CompileAsmRequest(BaseModel):
     source_code: str = Field(..., max_length=1_000_000)
     filename: str = Field(default="program.asm", max_length=255)
+    assembler: str = Field(default="nasm", pattern=r"^(nasm|gas|fasm)$", max_length=8)
     fmt: str | None = Field(default=None, max_length=32)
     debug: bool = True
     link: bool = True
