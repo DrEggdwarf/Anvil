@@ -50,8 +50,8 @@ npm run dev
 # Tauri (frontend + Rust shell)
 npm run tauri dev
 
-# Backend
-cd backend && uvicorn app.main:app --reload --port 8000
+# Backend (always from repo root — imports use `from backend.app.X`)
+uvicorn backend.app.main:app --reload --port 8000
 
 # Tests Python (~664 tests)
 python -m pytest tests/ -v --tb=short

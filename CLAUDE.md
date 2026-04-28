@@ -26,20 +26,21 @@ npm run tauri dev
 # Build desktop app
 npm run tauri build
 
-# Backend standalone
-cd backend && uvicorn app.main:app --reload --port 8000
+# Backend standalone (always from repo root — imports use `from backend.app.X`)
+uvicorn backend.app.main:app --reload --port 8000
 
-# Run all Python tests
-cd backend && pytest ../tests/ -v
+# Run all Python tests (`python -m` puts the repo root on sys.path so
+# `from backend.app...` resolves; plain `pytest tests/` will fail otherwise)
+python -m pytest tests/ -v
 
 # Run a single test file
-cd backend && pytest ../tests/test_gdb_bridge.py -v
+python -m pytest tests/test_gdb_bridge.py -v
 
 # Run a single test by name
-cd backend && pytest ../tests/test_gdb_bridge.py -k "test_load_binary" -v
+python -m pytest tests/test_gdb_bridge.py -k "test_load_binary" -v
 
 # Run with coverage
-cd backend && pytest ../tests/ --cov=app --cov-report=term-missing
+python -m pytest tests/ --cov=backend/app --cov-report=term-missing
 
 # Frontend tests
 npx vitest

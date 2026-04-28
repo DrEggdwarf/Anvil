@@ -9,9 +9,9 @@ Desktop app (Tauri v2) with React frontend and FastAPI backend wrapping 6 tool b
 |---------|---------|
 | `npm run dev` | Frontend dev server (port 1420) |
 | `npm run tauri dev` | Full desktop dev (Tauri + frontend + backend) |
-| `cd backend && uvicorn app.main:app --reload --port 8000` | Backend standalone |
-| `cd backend && pytest ../tests/ -v` | Run all ~664 Python tests (24 modules) |
-| `cd backend && pytest ../tests/test_gdb_bridge.py -k "test_load"` | Single test |
+| `uvicorn backend.app.main:app --reload --port 8000` | Backend standalone (run from repo root) |
+| `python -m pytest tests/ -v` | Run all ~664 Python tests (24 modules) |
+| `python -m pytest tests/test_gdb_bridge.py -k "test_load"` | Single test |
 | `npx vitest` | Frontend tests |
 | `ruff check backend/ tests/` | Python lint |
 | `bandit -r backend/ -c backend/pyproject.toml` | Security scan |
