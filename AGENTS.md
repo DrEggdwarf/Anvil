@@ -10,7 +10,7 @@ Desktop app (Tauri v2) with React frontend and FastAPI backend wrapping 6 tool b
 | `npm run dev` | Frontend dev server (port 1420) |
 | `npm run tauri dev` | Full desktop dev (Tauri + frontend + backend) |
 | `cd backend && uvicorn app.main:app --reload --port 8000` | Backend standalone |
-| `cd backend && pytest ../tests/ -v` | Run all 637 Python tests |
+| `cd backend && pytest ../tests/ -v` | Run all ~664 Python tests (24 modules) |
 | `cd backend && pytest ../tests/test_gdb_bridge.py -k "test_load"` | Single test |
 | `npx vitest` | Frontend tests |
 | `ruff check backend/ tests/` | Python lint |
@@ -25,7 +25,7 @@ See [CLAUDE.md](CLAUDE.md) for full architecture details, bridge pattern, securi
 ```
 src-tauri/src/     Rust shell (thin — no business logic, just IPC + subprocess spawn)
 src/               React 19 + TypeScript 5 — 6-mode UI: ASM (3-col debug), Pwn (split editors+terminal)
-backend/app/       FastAPI — main.py → 8 routers, core/, bridges/, models/, sessions/
+backend/app/       FastAPI — main.py → 9 routers, core/, bridges/, models/, sessions/
 tests/             pytest modules — all use MockBridge (no real tools needed)
 ```
 
