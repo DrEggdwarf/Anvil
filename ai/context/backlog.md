@@ -113,6 +113,74 @@
 - PR auto-labeling par chemin — gadget, peu de valeur sur repo solo
 - Branch protection rules — config UI GitHub, pas dans le repo (juste documenté)
 
+### Sprint 22 — Resilience & UX hardening ⏸ PLANIFIÉ (~3-4 jours)
+
+> Ferme les angles morts opérationnels qui apparaissent dès qu'un user externe
+> teste Anvil ou qu'un bug remonte. Pas de feature visible nouvelle, mais l'app
+> devient *réellement utilisable au quotidien* au lieu de "marche si tu es prudent".
+
+#### Indispensables (~2 jours)
+- [ ] **Error boundaries React** — un crash dans un mode ne doit pas tuer toute l'app.
+      `<ErrorBoundary>` par mode (ASM/Pwn/RE/...) + fallback racine. ~30 LOC, hook `useErrorBoundary`.
+- [ ] **Logging structuré backend** — `structlog` ou `loguru` avec champs corrélés
+      (`session_id`, `bridge_type`, `request_id`). Rotation `~/.anvil/logs/anvil-YYYY-MM-DD.log`
+      capés à 100 MB. Niveau configurable via env `ANVIL_LOG_LEVEL`.
+- [ ] **Capture erreurs frontend** — `window.onerror` + `unhandledrejection` →
+      POST `/api/telemetry/error` avec opt-in (toggle dans settings).
+      **Privacy-first** : pas de payload utilisateur, juste stack + URL + version.
+- [ ] **Settings persistés (`localStorage`)** — hook `usePersistedState<T>(key, default)`
+      réutilisable. Persiste : theme, mode actif, col/row widths, breakpoints,
+      draft du code éditeur (auto-save debounce).
+
+#### Important (~1.5 jours, à faire dans le même sprint pour cohérence UX)
+- [ ] **Toast notifications** — composant `<Toaster>` global, hook `useToast()`.
+      Remplace les `log('error', ...)` qui finissent dans le terminal en bas
+      par une notif visible quel que soit l'écran utilisateur.
+- [ ] **Loading states uniformes** — composant `<Spinner>` + skeleton screens
+      pour les listes (FilterableList, panels). Aujourd'hui mix de "compiling..."
+      texte / spinner FontAwesome / rien.
+- [ ] **Auto-save éditeur** (localStorage debounced 2s) — recovery après crash navigateur
+
+#### Optionnel / à étoffer ensuite (~0.5 jour si combiné)
+- [ ] **Page `/diagnostics`** — status backend + versions outils détectés + sessions
+      actives + capabilities. Accessible via raccourci ou status bar. Aide debug user.
+- [ ] **Bundle analyzer** (`rollup-plugin-visualizer`) — un job CI qui produit
+      un treemap pour identifier ce qui pèse dans les 608 KB. Output en artifact.
+- [ ] **Cleanup workspace orphelins** — script `cleanup_orphans.py` lancé au start
+      lifecycle (workspaces sans session active + > 24h)
+
+#### Reportés / triggers d'activation
+- **a11y (Phase H)** — audit WCAG, navigation clavier complète, ARIA. Activer si
+  user externe / contributeur a11y signale un blocage, ou avant release publique.
+- **i18n (Phase H)** — strings actuellement mix FR/EN. Activer quand le projet vise
+  un public anglophone explicitement.
+- **Plugin system (Phase H)** — extension third-party. Activer si demande forte.
+
+---
+
+## Sprints futurs sans planning fixe (déclencheurs documentés)
+
+### Hardening sécu runtime ⏸ TRIGGER : déploiement web ou multi-user
+> Aucun de ces items n'a de valeur en mode desktop solo localhost.
+- Sandbox subprocess (`nsjail` / `firejail`) pour isoler GDB/pwntools/gcc par session
+- Authentification utilisateur (au-delà du WS token de session ADR-016)
+- Quotas par user (CPU, RAM, sessions, subprocesses)
+- Audit trail des actions sensibles (compile, write_memory, exec)
+- TLS WebSocket (`wss://`) + cert management
+- Signature/integrity check des binaires uploadés (anti-tampering workspace)
+
+### Qualité code avancée ⏸ TRIGGER : >2 contributeurs ou bugs subtils répétés
+- `mypy --strict` côté Python (type-checking réel, pas juste hints)
+- `hypothesis` (property-based testing) — sanitization stress-tested avec inputs random
+- `mutmut` (mutation testing) — détecter les tests de complaisance
+- OpenAPI versionné + Postman collection (onboarding contributeurs)
+
+### Infrastructure SaaS ⏸ TRIGGER : passage à un service hébergé
+- Prometheus/Grafana metrics
+- Backup/export workspaces
+- Multi-user shared instance avec isolation forte
+- Billing/quotas si modèle commercial
+
 ---
 
 ## Phase 0 — API Engine (Sprints 1-6) 🔴 CRITIQUE
