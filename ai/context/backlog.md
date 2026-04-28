@@ -38,15 +38,18 @@
 - [ ] Outils invoqués par nom (PATH), pas par chemin absolu
 - [ ] Capabilities Tauri restent minimales
 
-### Sprint 17 — Frontend tests + WS wiring + restant cleanup ⏸ PLANIFIÉ
-- [ ] Bootstrap stack vitest + RTL (`src/__tests__/setup.ts`, smoke test PwnMode + usePwnSession)
-- [ ] Câbler `useAnvilSession` sur `/ws/gdb/{session_id}?token=...` (gain -50ms/step, ferme Perf#3)
-- [ ] Splitter `useAnvilSession.ts` en `useGdbStepping` + `useGdbMemory` + orchestrateur
-- [ ] `useCallback`/`useMemo` massif sur les fns retournées (gain -30-50% renders)
-- [ ] Extraire `<FilterableList>` (gain -80 L de duplication)
-- [ ] Typer `PwnDictResponse` génériquement + `fetchAndSet` helper (supprime 4 `as any`)
-- [ ] Splitter `ReferenceModal.tsx` par mode + dynamic import data par tab
-- [ ] CI : ajouter `pip-audit` + `cargo audit` + `npm audit --audit-level=high` (Sec A9)
+### Sprint 17 — Frontend tests + WS groundwork + cleanup ✅ (28 avril)
+- [x] A — Bootstrap vitest + RTL + jsdom (27 tests)
+- [x] B — CI audits (pip-audit + npm audit + cargo audit) — closes Sec A9
+- [x] C — `<FilterableList>` extrait (-80 L duplication)
+- [x] D — `PwnDict<T>` typé + `fetchAndSet` helper (4 `as any` éliminés)
+- [x] E — `useAnvilSession` 651 → 499 L + parsers memory extraits + useCallback ×23
+- [x] F (groundwork) — `AnvilWS` production-ready (token ADR-016 + `request()` Promise)
+
+### Sprint 18 — WS migration + ReferenceModal split + Mode RE frontend ⏸ PLANIFIÉ
+- [ ] **F.2** Migrer `useAnvilSession` vers `AnvilWS.request()` pour stepping (-50ms/step) — needs e2e harness first
+- [ ] **G** Splitter `ReferenceModal.tsx` par mode (Asm/Re/Pwn/Dbg/Fw/Hw) si latence d'ouverture devient bloquante
+- [ ] **Mode RE frontend** (gros chantier 8-10 jours) : layout 3 cols (fonctions | décompilé | info), CFG canvas, strings/imports/exports/xrefs (backend déjà prêt depuis Sprint 4, ~70 endpoints rzpipe)
 
 ---
 

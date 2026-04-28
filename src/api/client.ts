@@ -35,6 +35,12 @@ export interface SessionInfo {
   last_activity: string
 }
 
+/** Returned by POST /api/sessions only — the WS auth token is exposed once at creation
+ *  (ADR-016). Subsequent GET /api/sessions/{id} calls return the SessionInfo shape. */
+export interface SessionCreated extends SessionInfo {
+  token: string
+}
+
 export interface CompileError {
   file: string
   line: number
@@ -72,7 +78,7 @@ export interface RegistersResponse {
 // ── Sessions ─────────────────────────────────────────────────
 
 export function createSession(bridge_type: string) {
-  return request<SessionInfo>('POST', '/api/sessions', { bridge_type })
+  return request<SessionCreated>('POST', '/api/sessions', { bridge_type })
 }
 
 export function deleteSession(id: string) {

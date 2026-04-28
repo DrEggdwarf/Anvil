@@ -318,6 +318,35 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
+## Sprint 17 — Frontend tests + WS groundwork + cleanup (28 avril 2026) ✅
+**Objectif** : poser le socle test frontend (vitest + RTL), durcir la CI (audits deps),
+fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth.
+**Agents** : @testing → @frontend → @architect
+
+### Réalisé
+- **A — Stack vitest + RTL + jsdom** : `vitest.config.ts` séparé (Tauri-safe), `src/test/setup.ts` avec jest-dom matchers + cleanup auto. Scripts `npm test`/`test:run`/`test:ui`. **27 tests** au total :
+  - 11 sur `parseGdbResponse` (parsers GDB/MI extraits Sprint 15)
+  - 8 sur `parseGdbMemory` (parseMemoryBlock/Map + parseRegisters extraits Sprint 17-E)
+  - 5 sur `<FilterableList>` (filter, maxDisplay cap, placeholder)
+  - 3 sur `<RegistersPane>` (smoke RTL + jsdom)
+- **B — CI audits (closes Sec A9)** : nouveau job `audit` avec `pip-audit` (env installé via pyproject), `npm audit --audit-level=high`, `cargo-audit` sur `src-tauri/Cargo.lock`. `continue-on-error: true` pour ne pas bloquer un hotfix sur CVE upstream fraîche.
+- **C — `<FilterableList>` extrait** : composant générique typé `<T>`, owns `filter` state, supporte `placeholder`/`maxDisplay`/clipped count. SymbolsList et StringsList migrent en wrappers (~80 L de duplication tuée).
+- **D — `PwnDict<T>` typé + `fetchAndSet` helper** : 6 endpoints pwn rétypés (checksec/symbols/got/plt/sections/functions). `fetchAndSet<R, U>(call, map, setter, errorLabel?)` absorbe l'unwrap `{data:...}`, le mapping et le log d'erreur optionnel. **4 `as any` éliminés** dans `usePwnSession`.
+- **E — `useAnvilSession` allégé** : parsers memory extraits dans `hooks/gdb/parseGdbMemory.ts` (parseMemoryBlock, parseMemoryMap, parseRegisters). `useCallback` posé sur les **23 fonctions retournées** par le hook (compile, buildAndRun, stepInto/Over/Out/Back, continueExec, stop, startAutoStep, stopAutoStep, setBreakpoint, freshSession, ensureSession, refreshRegisters, refreshStack, readMemory, writeMemory, fetchMemoryMap, resolveActiveLine, doStep, destroySessions, log, clearTerminal). Hook racine : 651 → 499 LOC.
+- **F (groundwork) — `AnvilWS` production-ready** : token ADR-016 plumbé dans `connect()` (`?token=...` + `encodeURIComponent`), `request(command, args): Promise<WSMessage>` avec corrélation `request_id`, timeout 30s, rejection propre des pending au `disconnect()`. Type `SessionCreated` exposé côté client. **Migration de useAnvilSession sur WS reportée Sprint 18** (besoin de tests e2e pour valider le flux `step → registers → stack`).
+
+### Reportés Sprint 18
+- Migration `useAnvilSession` du REST GDB vers `AnvilWS.request()` — gain estimé -50ms/step, infra prête, manque le harness e2e
+- Splitter `ReferenceModal.tsx` (877 L) par mode + dynamic `import('../data/reference-X')` par tab — bénéfice marginal après le `React.lazy(ReferenceModal)` du Sprint 15 #1 (la cascade Vite extrait déjà 102 KB en chunk séparé). À faire **si** la latence d'ouverture initiale du modal devient un problème.
+
+### Mesures
+- Tests frontend : **0 → 27** ✅
+- `useAnvilSession.ts` : 651 → **499 LOC** (-23%)
+- `as any` dans `usePwnSession` : 4 → **0**
+- Bundle inchangé (608 KB / 170 KB gzip)
+
+---
+
 ## Sprint 14 — Hardening sécu post-merge (28 avril 2026) 🔴 IN PROGRESS
 **Objectif** : Corriger les findings critiques identifiés par l'audit multi-agent (Security + Pentester) après le merge `asm-dev → main`. Anticiper le déploiement Docker/web.
 **Agents** : @security → @pentester → @backend → @testing

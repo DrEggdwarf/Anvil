@@ -1,3 +1,9 @@
+// Sprint 17-E: useAnvilSession is the orchestrator for the ASM-mode GDB session.
+// Memory-response parsing lives in hooks/gdb/parseGdbMemory.ts; pure GDB/MI
+// parsers live in hooks/gdb/parseGdbResponse.ts. Every public function is wrapped
+// in useCallback so consumers (RegistersPane, StackPanel, MemoryPanel, exec
+// toolbar) can safely use React.memo without busting on every render.
+
 import { useState, useRef, useCallback } from 'react'
 import * as api from '../api/client'
 import type { GdbRawResponse } from '../api/client'
@@ -7,14 +13,17 @@ import {
   parseInfoLine,
   parseProgramOutput,
 } from './gdb/parseGdbResponse'
+import {
+  parseMemoryBlock,
+  parseMemoryMap,
+  parseRegisters,
+  type MemoryRegion,
+  type RegMap,
+} from './gdb/parseGdbMemory'
 
 export interface TermLine {
   type: 'info' | 'error' | 'step' | 'output'
   text: string
-}
-
-export interface RegMap {
-  [name: string]: string
 }
 
 export interface StackData {
@@ -27,14 +36,11 @@ export interface MemoryData {
   bytes: number[]
 }
 
-export interface MemoryRegion {
-  start: string
-  end: string
-  size: string
-  offset: string
-  perms: string
-  name: string
-}
+export type { RegMap, MemoryRegion }
+
+const STACK_BYTES = 64       // 8 rows × 8 bytes — enough for a typical frame
+const MEMORY_DEFAULT = 256   // bytes read by readMemory() if size omitted
+const AUTOSTEP_DEFAULT_MS = 500
 
 export function useAnvilSession() {
   const sessionId = useRef<string | null>(null)
@@ -44,7 +50,9 @@ export function useAnvilSession() {
   const [registers, setRegisters] = useState<RegMap>({})
   const registersRef = useRef<RegMap>({})
   const [prevRegisters, setPrevRegisters] = useState<RegMap>({})
-  const [lines, setLines] = useState<TermLine[]>([{ type: 'info', text: 'Pret. Compilez du code pour commencer...' }])
+  const [lines, setLines] = useState<TermLine[]>([
+    { type: 'info', text: 'Pret. Compilez du code pour commencer...' },
+  ])
   const [activeLine, setActiveLine] = useState(0)
   const [errorLine, setErrorLine] = useState(0)
   const [stepCount, setStepCount] = useState(0)
@@ -66,8 +74,7 @@ export function useAnvilSession() {
 
   // ── Session ────────────────────────────────────────────────
 
-  async function freshSession() {
-    // Kill old session if any
+  const freshSession = useCallback(async () => {
     if (sessionId.current) {
       await api.deleteSession(sessionId.current).catch(() => {})
       sessionId.current = null
@@ -77,19 +84,99 @@ export function useAnvilSession() {
     sessionId.current = s.id
     setCurrentSessionId(s.id)
     return s.id
-  }
+  }, [])
 
-  async function ensureSession() {
+  const ensureSession = useCallback(async () => {
     if (sessionId.current) return sessionId.current
     const s = await api.createSession('gdb')
     sessionId.current = s.id
     setCurrentSessionId(s.id)
     return s.id
-  }
+  }, [])
+
+  // ── Refresh state from GDB ─────────────────────────────────
+
+  const refreshRegisters = useCallback(async () => {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbRegisters(sessionId.current)
+      const map = parseRegisters(res.registers)
+      setPrevRegisters(registersRef.current)
+      registersRef.current = map
+      setRegisters(map)
+    } catch { /* ignore — a transient failure shouldn't blank the panel */ }
+  }, [])
+
+  const refreshStack = useCallback(async () => {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbMemory(sessionId.current, '$rsp', STACK_BYTES)
+      const block = parseMemoryBlock(res)
+      if (block) setStackData(block)
+    } catch { /* ignore */ }
+  }, [])
+
+  // ── Memory viewer ──────────────────────────────────────────
+
+  const readMemory = useCallback(async (address: string, size = MEMORY_DEFAULT) => {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbMemory(sessionId.current, address, size)
+      const block = parseMemoryBlock(res)
+      if (block) setMemoryData(block)
+    } catch (e) {
+      log('error', `Memory read: ${(e as Error).message}`)
+    }
+  }, [log])
+
+  const writeMemory = useCallback(async (address: string, hexData: string) => {
+    if (!sessionId.current) return
+    try {
+      await api.gdbWriteMemory(sessionId.current, address, hexData)
+      log('info', `Memory write OK: ${address}`)
+    } catch (e) {
+      log('error', `Memory write: ${(e as Error).message}`)
+    }
+  }, [log])
+
+  const fetchMemoryMap = useCallback(async () => {
+    if (!sessionId.current) return
+    try {
+      const res = await api.gdbMemoryMap(sessionId.current)
+      setMemoryRegions(parseMemoryMap(res))
+    } catch { /* ignore */ }
+  }, [])
+
+  // Resolve the source line of the current PC. Tries 3 sources in priority order:
+  //   1. *stopped frame.line from the step response
+  //   2. -stack-list-frames result
+  //   3. console output of `info line *$pc`
+  const resolveActiveLine = useCallback(async (stepRes?: GdbRawResponse): Promise<number> => {
+    if (!sessionId.current) return 0
+
+    if (stepRes) {
+      const frameLine = parseFrameLine(stepRes)
+      if (frameLine > 0) return frameLine
+    }
+    try {
+      const stack = await api.gdbStack(sessionId.current, 1)
+      const stackLine = parseFrameLine(stack)
+      if (stackLine > 0) return stackLine
+    } catch { /* ignore */ }
+    try {
+      const infoRes = await api.gdbCurrentLine(sessionId.current)
+      const infoLine = parseInfoLine(infoRes)
+      if (infoLine > 0) return infoLine
+    } catch { /* ignore */ }
+    return 0
+  }, [])
 
   // ── Compile ────────────────────────────────────────────────
 
-  async function compile(sourceCode: string, assembler: 'nasm' | 'gas' | 'fasm' = 'nasm') {
+  const compile = useCallback(async (
+    sourceCode: string,
+    assembler: 'nasm' | 'gas' | 'fasm' = 'nasm',
+  ) => {
     setCompiling(true)
     log('info', '> Compilation...')
     try {
@@ -106,168 +193,29 @@ export function useAnvilSession() {
         setBinaryPath(res.binary_path)
         setErrorLine(0)
         setActiveLine(0)
-        return res
       } else {
         log('error', `Compilation echouee (stage: ${res.stage})`)
         const firstErr = res.errors.find(e => e.line > 0)
         setErrorLine(firstErr?.line || 0)
         setActiveLine(0)
-        for (const e of res.errors) {
-          log('error', `  L${e.line}: ${e.message}`)
-        }
+        for (const e of res.errors) log('error', `  L${e.line}: ${e.message}`)
         if (res.stderr) log('error', res.stderr)
-        return res
       }
+      return res
     } catch (e) {
       log('error', `Erreur: ${(e as Error).message}`)
       return null
     } finally {
       setCompiling(false)
     }
-  }
-
-  // ── Refresh state from GDB ─────────────────────────────────
-
-  async function refreshRegisters() {
-    if (!sessionId.current) return
-    try {
-      const res = await api.gdbRegisters(sessionId.current)
-      const map: RegMap = {}
-      if (Array.isArray(res.registers)) {
-        for (const r of res.registers) {
-          const entry = r as { name?: string; value?: string }
-          if (entry.name && entry.value) map[entry.name] = entry.value
-        }
-      } else if (typeof res.registers === 'object') {
-        Object.assign(map, res.registers)
-      }
-      setPrevRegisters(registersRef.current)
-      registersRef.current = map
-      setRegisters(map)
-    } catch { /* ignore */ }
-  }
-
-  async function refreshStack() {
-    if (!sessionId.current) return
-    try {
-      // Read 64 bytes (8 rows of 8) starting at $rsp
-      const res = await api.gdbMemory(sessionId.current, '$rsp', 64)
-      for (const r of (res.responses || [])) {
-        const payload = r.payload as Record<string, unknown> | undefined
-        if (!payload) continue
-        const memory = payload.memory as Array<{ begin: string; contents: string }> | undefined
-        if (!Array.isArray(memory)) continue
-        for (const block of memory) {
-          const baseAddr = parseInt(block.begin, 16)
-          const hex = block.contents
-          const bytes: number[] = []
-          for (let i = 0; i + 2 <= hex.length; i += 2) {
-            bytes.push(parseInt(hex.slice(i, i + 2), 16))
-          }
-          setStackData({ baseAddr, bytes })
-          return
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  // ── Memory viewer ──────────────────────────────────────────
-
-  async function readMemory(address: string, size = 256) {
-    if (!sessionId.current) return
-    try {
-      const res = await api.gdbMemory(sessionId.current, address, size)
-      for (const r of (res.responses || [])) {
-        const payload = r.payload as Record<string, unknown> | undefined
-        if (!payload) continue
-        const memory = payload.memory as Array<{ begin: string; contents: string }> | undefined
-        if (!Array.isArray(memory)) continue
-        for (const block of memory) {
-          const baseAddr = parseInt(block.begin, 16)
-          const hex = block.contents
-          const bytes: number[] = []
-          for (let i = 0; i + 2 <= hex.length; i += 2) {
-            bytes.push(parseInt(hex.slice(i, i + 2), 16))
-          }
-          setMemoryData({ baseAddr, bytes })
-          return
-        }
-      }
-    } catch (e) {
-      log('error', `Memory read: ${(e as Error).message}`)
-    }
-  }
-
-  async function writeMemory(address: string, hexData: string) {
-    if (!sessionId.current) return
-    try {
-      await api.gdbWriteMemory(sessionId.current, address, hexData)
-      log('info', `Memory write OK: ${address}`)
-    } catch (e) {
-      log('error', `Memory write: ${(e as Error).message}`)
-    }
-  }
-
-  async function fetchMemoryMap() {
-    if (!sessionId.current) return
-    try {
-      const res = await api.gdbMemoryMap(sessionId.current)
-      const regions: MemoryRegion[] = []
-      for (const r of (res.responses || [])) {
-        const payload = r.payload
-        if (typeof payload !== 'string') continue
-        // Parse "info proc mappings" output lines
-        // Format: 0x400000 0x401000 0x1000 0x0 /path/to/binary
-        const lines = payload.replace(/\\n/g, '\n').split('\n')
-        for (const line of lines) {
-          const m = line.match(/\s*(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+(\S*)?\s*(.*)/)
-          if (m) {
-            regions.push({
-              start: m[1],
-              end: m[2],
-              size: m[3],
-              offset: m[4],
-              perms: m[5] || '',
-              name: m[6]?.trim() || m[5] || '',
-            })
-          }
-        }
-      }
-      setMemoryRegions(regions)
-    } catch { /* ignore */ }
-  }
-
-  // Resolve source line from GDB — tries 3 methods in order
-  async function resolveActiveLine(stepRes?: GdbRawResponse): Promise<number> {
-    if (!sessionId.current) return 0
-
-    // 1. From step response (*stopped frame.line)
-    if (stepRes) {
-      const frameLine = parseFrameLine(stepRes)
-      if (frameLine > 0) return frameLine
-    }
-
-    // 2. From stack-list-frames
-    try {
-      const stack = await api.gdbStack(sessionId.current, 1)
-      const stackLine = parseFrameLine(stack)
-      if (stackLine > 0) return stackLine
-    } catch { /* ignore */ }
-
-    // 3. From info line *$pc (most reliable for calls/rets)
-    try {
-      const infoRes = await api.gdbCurrentLine(sessionId.current)
-      const infoLine = parseInfoLine(infoRes)
-      if (infoLine > 0) return infoLine
-    } catch { /* ignore */ }
-
-    return 0
-  }
+  }, [ensureSession, log])
 
   // ── Build & Run ────────────────────────────────────────────
 
-  async function buildAndRun(sourceCode: string, assembler: 'nasm' | 'gas' | 'fasm' = 'nasm') {
-    // Fresh session each run (clean GDB state)
+  const buildAndRun = useCallback(async (
+    sourceCode: string,
+    assembler: 'nasm' | 'gas' | 'fasm' = 'nasm',
+  ) => {
     let sid: string
     try {
       sid = await freshSession()
@@ -276,7 +224,6 @@ export function useAnvilSession() {
       return
     }
 
-    // Compile
     setCompiling(true)
     log('info', '> Compilation...')
     let binPath: string | null = null
@@ -309,7 +256,6 @@ export function useAnvilSession() {
 
     if (!binPath) return
 
-    // Load + run to _start
     setRunning(true)
     setStepCount(0)
     setActiveLine(0)
@@ -338,7 +284,6 @@ export function useAnvilSession() {
         if (line.trim()) log('output', line)
       }
 
-      // Check if program exited immediately (e.g., crash on syscall)
       const exitReason = parseExitReason(runRes)
       if (exitReason) {
         setActiveLine(0)
@@ -354,28 +299,29 @@ export function useAnvilSession() {
       await refreshStack()
       log('info', 'Arrete a _start. Utilisez les boutons step pour avancer.')
 
-      // Enable GDB execution recording for reverse stepping (Back button)
+      // Enable execution recording so the Back button can reverse-step.
+      // Some targets don't support it — log only the failure that matters.
       try {
         await api.gdbEnableRecord(sid)
-      } catch {
-        // Recording may fail (e.g., target doesn't support it) — Back won't work but stepping still does
-      }
+      } catch { /* recording optional */ }
     } catch (e) {
       log('error', `GDB run: ${(e as Error).message}`)
     } finally {
       setRunning(false)
     }
-  }
+  }, [freshSession, log, refreshRegisters, refreshStack])
 
   // ── Step operations ────────────────────────────────────────
 
-  async function doStep(stepFn: (sid: string) => Promise<GdbRawResponse>, label: string) {
+  const doStep = useCallback(async (
+    stepFn: (sid: string) => Promise<GdbRawResponse>,
+    label: string,
+  ) => {
     if (!sessionId.current) return
     setRunning(true)
     try {
       const res = await stepFn(sessionId.current)
 
-      // Check if program exited
       const exitReason = parseExitReason(res)
       if (exitReason) {
         for (const line of parseProgramOutput(res)) {
@@ -383,20 +329,17 @@ export function useAnvilSession() {
         }
         setActiveLine(0)
         log('info', `Programme termine (${exitReason})`)
-        setRunning(false)
         return
       }
 
-      // Extract program output (only actual program stdout, not GDB messages)
       for (const line of parseProgramOutput(res)) {
         if (line.trim()) log('output', line)
       }
 
-      // Resolve source line (triple fallback: frame → stack → info line *$pc)
       const frameLine = await resolveActiveLine(res)
       if (frameLine > 0) setActiveLine(frameLine)
 
-      // Log step OUTSIDE state updater to avoid React StrictMode double-invoke
+      // setStepCount + log outside the same updater to avoid double-invoke under StrictMode.
       setStepCount(c => c + 1)
       log('step', label)
 
@@ -404,7 +347,6 @@ export function useAnvilSession() {
       await refreshStack()
     } catch (e) {
       const msg = (e as Error).message
-      // Detect bridge crash / session gone
       if (msg.includes('BRIDGE_CRASH') || msg.includes('BRIDGE_NOT_READY')) {
         log('error', 'GDB a crashe. Relancez avec Run.')
         sessionId.current = null
@@ -414,14 +356,14 @@ export function useAnvilSession() {
     } finally {
       setRunning(false)
     }
-  }
+  }, [log, refreshRegisters, refreshStack, resolveActiveLine])
 
-  async function stepInto() { return doStep(api.gdbStepInto, 'Step into') }
-  async function stepOver() { return doStep(api.gdbStepOver, 'Step over') }
-  async function stepOut() { return doStep(api.gdbStepOut, 'Step out') }
-  async function stepBack() { return doStep(api.gdbStepBack, 'Step back') }
+  const stepInto = useCallback(() => doStep(api.gdbStepInto, 'Step into'), [doStep])
+  const stepOver = useCallback(() => doStep(api.gdbStepOver, 'Step over'), [doStep])
+  const stepOut = useCallback(() => doStep(api.gdbStepOut, 'Step out'), [doStep])
+  const stepBack = useCallback(() => doStep(api.gdbStepBack, 'Step back'), [doStep])
 
-  async function continueExec() {
+  const continueExec = useCallback(async () => {
     if (!sessionId.current) return
     setRunning(true)
     try {
@@ -433,7 +375,6 @@ export function useAnvilSession() {
       if (exitReason) {
         setActiveLine(0)
         log('info', `Programme termine (${exitReason})`)
-        setRunning(false)
         return
       }
       const frameLine = await resolveActiveLine(res)
@@ -446,20 +387,20 @@ export function useAnvilSession() {
     } finally {
       setRunning(false)
     }
-  }
+  }, [log, refreshRegisters, refreshStack, resolveActiveLine])
 
-  async function stop() {
+  const stop = useCallback(async () => {
     if (!sessionId.current) return
     try {
       await api.gdbInterrupt(sessionId.current)
       log('info', 'Interrompu.')
     } catch { /* ignore */ }
     setRunning(false)
-  }
+  }, [log])
 
   // ── Auto-step (play/pause) ─────────────────────────────────
 
-  async function startAutoStep(delayMs = 500) {
+  const startAutoStep = useCallback(async (delayMs = AUTOSTEP_DEFAULT_MS) => {
     if (!sessionId.current) return
     autoRef.current = true
     setAutoStepping(true)
@@ -468,7 +409,6 @@ export function useAnvilSession() {
     while (autoRef.current && sessionId.current) {
       try {
         const res = await api.gdbStepInto(sessionId.current)
-        // Check for program exit
         const exitReason = parseExitReason(res)
         if (exitReason) {
           for (const line of parseProgramOutput(res)) {
@@ -496,33 +436,32 @@ export function useAnvilSession() {
 
     setAutoStepping(false)
     log('info', 'Auto-step arrete')
-  }
+  }, [log, refreshRegisters, refreshStack, resolveActiveLine])
 
-  function stopAutoStep() {
+  const stopAutoStep = useCallback(() => {
     autoRef.current = false
-  }
+  }, [])
 
   // ── Breakpoints ────────────────────────────────────────────
 
-  async function setBreakpoint(line: number) {
+  const setBreakpoint = useCallback(async (line: number) => {
     if (!sessionId.current) return
     try {
-      // Use source line breakpoint format (file:line)
       await api.gdbSetBreakpoint(sessionId.current, `program.asm:${line}`)
     } catch (e) {
       log('error', `BP: ${(e as Error).message}`)
     }
-  }
+  }, [log])
 
   // ── Cleanup ────────────────────────────────────────────────
 
-  async function destroySessions() {
+  const destroySessions = useCallback(async () => {
     autoRef.current = false
     if (sessionId.current) {
       await api.deleteSession(sessionId.current).catch(() => {})
       sessionId.current = null
     }
-  }
+  }, [])
 
   return {
     sessionId: currentSessionId,
