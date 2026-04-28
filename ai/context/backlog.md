@@ -6,13 +6,13 @@
 > Verdict global : **fondation saine, dette localisée** — bloquant uniquement pour déploiement web/multi-user.
 > Mode desktop local (Docker localhost final) : acceptable temporairement.
 
-### Sprint 14 — Hardening sécu 🔴 IN PROGRESS
-- [ ] #1 `sanitize_gdb_input` sur `gdb.execute` raw WS (RCE Critique 1 ligne)
-- [ ] #2 `"` aux GDB chars bloqués + restreindre allowlist GCC `-W*`/`-l/path`/`-D`/`-I`
-- [ ] #3 Converger `api/pwn.py:compile_source` → `CompilationBridge` + paths via `WorkspaceManager`
-- [ ] #4 Token + Origin check sur WebSocket `/ws/{type}/{id}`
-- [ ] #5 CSP stricte `tauri.conf.json` + CORS limité à `localhost:1420`
-- [ ] #6 Tests sécu : `test_pwn_api.py`, `test_pwn_models.py`, `test_compile_api_assemblers.py`
+### Sprint 14 — Hardening sécu ✅ (28 avril)
+- [x] #1 `sanitize_gdb_input` sur `gdb.execute` raw WS (RCE Critique 1 ligne)
+- [x] #2 `"` aux GDB chars bloqués + restreindre allowlist GCC `-W*`/`-l/path`/`-D`/`-I`
+- [x] #3 Converger `api/pwn.py:compile_source` → `CompilationBridge` + paths via `WorkspaceManager`
+- [x] #4 Token + Origin check sur WebSocket `/ws/{type}/{id}` (ADR-016)
+- [x] #5 CSP stricte `tauri.conf.json` + CORS limité à `localhost:1420` (ADR-015)
+- [x] #6 Tests sécu : `test_pwn_api.py` (32 tests), `test_pwn_models.py` (12 tests), assembler tests
 
 ### Sprint 15 — Performance & Architecture refactor ✅ (28 avril)
 - [x] `React.lazy(PwnMode + ReferenceModal)` dans `App.tsx` — bundle initial 720 → 608 KB (-16%)

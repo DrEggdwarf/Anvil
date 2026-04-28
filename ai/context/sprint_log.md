@@ -17,6 +17,7 @@ Scaffolding du projet : Tauri v2 + React 19 + TypeScript + Vite 7 + système AI 
 - Voir ai/context/decisions.md
 
 ---
+---
 
 ## Sprint 1 — API Engine Core (19 avril 2026) ✅
 **Objectif** : Fondation backend blindée — architecture modulaire, gestion de sessions,
@@ -39,6 +40,7 @@ lifecycle subprocess, WebSocket infra, error handling, tests complets.
 - [x] **97 tests, 95% coverage**
 
 ---
+---
 
 ## Sprint 2 — GDB Bridge (19 avril 2026) ✅
 **Objectif** : Premier bridge concret (GDB/MI via pygdbmi). Implémentation de référence,
@@ -53,6 +55,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 - [x] Mock pygdbmi complet — CI sans GDB installé
 - [x] **171 tests, 97% coverage**
 
+---
 ---
 
 ## Sprint 3 — Compilation Pipeline (19 avril 2026) ✅
@@ -69,6 +72,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 - [x] Security flags map : relro, canary, nx, pie, fortify + négations
 - [x] **243 tests, 97% coverage**
 
+---
 ---
 
 ## Sprint 4 — RE Bridge + Feature Completion (19 avril 2026) ✅
@@ -111,6 +115,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 - [x] **388 tests, 0 failures**
 
 ---
+---
 
 ## Sprint 5 — Bridges Pwn, Firmware, Protocols (19 avril 2026) ✅
 **Objectif** : Compléter l'arsenal de bridges — couverture 100% features des outils wrappés.
@@ -149,6 +154,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 - execute() utilise inspect.isawaitable() pour gérer méthodes sync/async
 - Tous les mocks via sys.modules (pas d'import réel pwntools/binwalk/pymodbus en CI)
 
+---
 ---
 
 ## Sprint 6 — Hardening & Integration (completed) ✅
@@ -204,6 +210,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 > Tout le backend est prêt. Les phases suivantes sont principalement **frontend**.
 
 ---
+---
 
 ## Sprint 7+8 — Mode ASM : Éditeur, Compilation & Debug UI (21 avril 2026) ✅
 
@@ -226,6 +233,7 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 - [x] Rate limit augmenté à 600/min pour dev local
 - [x] Breakpoints visuels (click gutter)
 
+---
 ---
 
 ## Sprint 7+8b — Reference Modal Multi-Mode (22 avril 2026) ✅
@@ -260,189 +268,6 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 | Protocols | Reference Protocoles | Fonctions (20), Registres, Exceptions, Trames, Patterns |
 
 ---
-
-## Sprint 7 — Mode ASM : Éditeur & Compilation UI (backlog)
-**Objectif** : Premier mode fonctionnel — écrire du code ASM, compiler, voir le résultat.
-**Agents** : @frontend → @architect → @testing
-
-### 7.1 — Layout de base
-- [ ] Shell React : sidebar modes (6 icônes) + zone principale + barre d'état
-- [ ] Router interne : switch entre modes (ASM, RE, Pwn, Debug, Firmware, Protocols)
-- [ ] Composant `<Editor>` — CodeMirror 6 avec coloration syntaxique x86 ASM
-- [ ] Split pane vertical : éditeur | output (terminal/console)
-
-### 7.2 — Compilation pipeline UI
-- [ ] Bouton Compile (Ctrl+B) → POST /api/compile/{session_id}/asm
-- [ ] Affichage erreurs nasm inline (markers CodeMirror)
-- [ ] Affichage warnings/errors dans panel output
-- [ ] Toggle libc linking (checkbox)
-- [ ] Panel "Binary Info" : checksec + ELF info après compilation
-
-### 7.3 — Session management UI
-- [ ] Connexion WebSocket au boot
-- [ ] Création session auto (bridge_type=compilation)
-- [ ] Indicateur statut backend (connected/disconnected)
-- [ ] Gestion reconnection WS
-
-### 7.4 — Tests
-- [ ] Tests Vitest composants React
-- [ ] Tests intégration WS mock
-
----
-
-## Sprint 8 — Mode ASM : Debug interactif (GDB)
-**Objectif** : Débuguer le binaire compilé — breakpoints, step, registres, mémoire, stack.
-**Agents** : @frontend → @backend → @testing
-
-### 8.1 — Debug controls
-- [ ] Bouton "Debug" → crée session GDB + load binary
-- [ ] Toolbar debug : Run, Continue, Step Into, Step Over, Step Out, Stop
-- [ ] Raccourcis clavier (F5 Run, F10 Step Over, F11 Step Into, Shift+F11 Step Out)
-- [ ] Sync instruction courante ↔ ligne éditeur (highlight)
-
-### 8.2 — Panels debug
-- [ ] Panel Registres — tableau live (GPR, flags, segments) via WS gdb.registers
-- [ ] Panel Stack — frames + variables locales via WS gdb.stack
-- [ ] Panel Mémoire — hex viewer avec lecture via /api/gdb/{sid}/memory
-- [ ] Panel Disassembly — instructions autour de $pc
-- [ ] Panel Breakpoints — liste, activer/désactiver, conditions
-
-### 8.3 — Breakpoints visuels
-- [ ] Click marge éditeur → set breakpoint (gutter markers)
-- [ ] Sync bidirectionnelle breakpoints éditeur ↔ GDB bridge
-- [ ] Breakpoints conditionnels (input dialog)
-
-### 8.4 — Tests
-- [ ] Tests WS debug flow (mock GDB responses)
-- [ ] Tests composants debug panels
-
----
-
-## Sprint 18 — E2E test infrastructure (28 avril 2026) ✅
-**Objectif** : poser une stack de tests à 5 niveaux (unit → component → backend → smoke → e2e) avec Playwright comme couche e2e principale, plusieurs parcours par module ASM et Pwn, et préparer la structure pour les modes restants.
-**Agents** : @testing → @architect
-
-### Réalisé
-- **Playwright bootstrap** : `playwright.config.ts` avec `webServer` qui spawn uvicorn + Vite et attend `/api/health` + `localhost:1420`. `reuseExistingServer` localement, `CI=1` force un boot propre. Retries 1 local / 2 CI. Trace + screenshot + video on failure.
-- **Fixtures** : `tests/e2e/fixtures/anvil.ts` exporte `AnvilApp` (Page wrapper) + un `test` étendu qui reset les sessions backend entre tests. Tous les sélecteurs centralisés (`runButton`, `stepIntoButton`, `editorTextarea`, `pwnDropZone`, `pwnFilterInput`, `pwnBottomTab(name)`, `pwnToolButton(name)`). Samples inline dans `samples.ts` (NASM hello, GAS hello, broken NASM, divergent step, C BOF).
-- **6 specs ASM** :
-  1. `happy-path` (3 tests) — compile → run → step → registers + stdout
-  2. `compile-error` (3 tests) — erreur structurée + ligne annotée + recovery après fix
-  3. `reverse-step` (2 tests) — Back button + register diff visible entre steps
-  4. `multi-assembler` (4 tests) — NASM default, GAS conditional, FASM offered, status bar
-  5. `breakpoint` (2 tests) — gutter click + persistence sur edit
-  6. `state-panels` (3 tests) — Stack/Memory/Security panels + collapse/expand + terminal clear
-- **5 specs Pwn** :
-  1. `mode-switch` (4 tests) — lazy chunk loads, topbar tools, bottom tabs, isolation ASM
-  2. `cyclic-tool` (2 tests) — pattern generation + cyclic_find offset
-  3. `upload-binary` (3 tests) — checksec badges, symbols list, filter shrink
-  4. `compile-source` (2 tests) — drop .c, auto-compile, SourceViewer vuln highlight
-  5. `security-guard` (3 tests) — LFI 403 PATH_BLOCKED, filename 422, language 400 (via fetch direct)
-- **Smoke script bash** (`tests/e2e/smoke/backend.sh`) : 5 checks live (health 200, token format ADR-016, GET ne leak pas le token, LFI bloquée, WS sans token rejeté). **5/5 verts en local**. Industrialise le smoke manuel du Sprint 14.
-- **CI workflow** : 4 jobs (`lint`, `audit`, `test`, `smoke`, `e2e`). `test` étendu pour aussi lancer vitest. `smoke` boot uvicorn + lance le bash. `e2e` install nasm/gdb/gcc + Playwright browsers + build samples + lance la suite. `continue-on-error: true` sur `e2e` jusqu'à ce que la suite soit stable 2 semaines. Upload du Playwright report en artifact si failure.
-- **Doc** : `tests/e2e/README.md` complet (run, tooling, layout, ajout d'un nouveau mode, discipline anti-flake), scripts npm `e2e`/`e2e:ui`/`e2e:debug`/`smoke`. ADR-019 corrigée dans le CI (`python -m pytest tests/`).
-
-### Couverture
-- **Backend Python** : 699 tests pytest (depuis Sprint 14)
-- **Frontend unit/component** : 27 tests vitest (depuis Sprint 17)
-- **Backend smoke** : 5 checks bash (Sprint 18)
-- **E2E parcours** : 11 specs / ~31 tests (Sprint 18)
-- **Total** : ~762 tests automatisés
-
-### Suite immédiate (Sprint 19)
-- Migration `useAnvilSession` REST → `AnvilWS.request()` — débloquée par la stack e2e (chaque flux step→registers→stack peut être validé en live)
-- Nouveaux specs ASM : `terminal.spec.ts` (clear, output capture), `editor-undo.spec.ts` (Ctrl+Z, snapshots)
-- Frontend RE — démarrage du gros chantier avec specs `tests/e2e/re/*.spec.ts` créés au fur et à mesure
-
----
-
-## Sprint 17 — Frontend tests + WS groundwork + cleanup (28 avril 2026) ✅
-**Objectif** : poser le socle test frontend (vitest + RTL), durcir la CI (audits deps),
-fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth.
-**Agents** : @testing → @frontend → @architect
-
-### Réalisé
-- **A — Stack vitest + RTL + jsdom** : `vitest.config.ts` séparé (Tauri-safe), `src/test/setup.ts` avec jest-dom matchers + cleanup auto. Scripts `npm test`/`test:run`/`test:ui`. **27 tests** au total :
-  - 11 sur `parseGdbResponse` (parsers GDB/MI extraits Sprint 15)
-  - 8 sur `parseGdbMemory` (parseMemoryBlock/Map + parseRegisters extraits Sprint 17-E)
-  - 5 sur `<FilterableList>` (filter, maxDisplay cap, placeholder)
-  - 3 sur `<RegistersPane>` (smoke RTL + jsdom)
-- **B — CI audits (closes Sec A9)** : nouveau job `audit` avec `pip-audit` (env installé via pyproject), `npm audit --audit-level=high`, `cargo-audit` sur `src-tauri/Cargo.lock`. `continue-on-error: true` pour ne pas bloquer un hotfix sur CVE upstream fraîche.
-- **C — `<FilterableList>` extrait** : composant générique typé `<T>`, owns `filter` state, supporte `placeholder`/`maxDisplay`/clipped count. SymbolsList et StringsList migrent en wrappers (~80 L de duplication tuée).
-- **D — `PwnDict<T>` typé + `fetchAndSet` helper** : 6 endpoints pwn rétypés (checksec/symbols/got/plt/sections/functions). `fetchAndSet<R, U>(call, map, setter, errorLabel?)` absorbe l'unwrap `{data:...}`, le mapping et le log d'erreur optionnel. **4 `as any` éliminés** dans `usePwnSession`.
-- **E — `useAnvilSession` allégé** : parsers memory extraits dans `hooks/gdb/parseGdbMemory.ts` (parseMemoryBlock, parseMemoryMap, parseRegisters). `useCallback` posé sur les **23 fonctions retournées** par le hook (compile, buildAndRun, stepInto/Over/Out/Back, continueExec, stop, startAutoStep, stopAutoStep, setBreakpoint, freshSession, ensureSession, refreshRegisters, refreshStack, readMemory, writeMemory, fetchMemoryMap, resolveActiveLine, doStep, destroySessions, log, clearTerminal). Hook racine : 651 → 499 LOC.
-- **F (groundwork) — `AnvilWS` production-ready** : token ADR-016 plumbé dans `connect()` (`?token=...` + `encodeURIComponent`), `request(command, args): Promise<WSMessage>` avec corrélation `request_id`, timeout 30s, rejection propre des pending au `disconnect()`. Type `SessionCreated` exposé côté client. **Migration de useAnvilSession sur WS reportée Sprint 18** (besoin de tests e2e pour valider le flux `step → registers → stack`).
-
-### Reportés Sprint 18
-- Migration `useAnvilSession` du REST GDB vers `AnvilWS.request()` — gain estimé -50ms/step, infra prête, manque le harness e2e
-- Splitter `ReferenceModal.tsx` (877 L) par mode + dynamic `import('../data/reference-X')` par tab — bénéfice marginal après le `React.lazy(ReferenceModal)` du Sprint 15 #1 (la cascade Vite extrait déjà 102 KB en chunk séparé). À faire **si** la latence d'ouverture initiale du modal devient un problème.
-
-### Mesures
-- Tests frontend : **0 → 27** ✅
-- `useAnvilSession.ts` : 651 → **499 LOC** (-23%)
-- `as any` dans `usePwnSession` : 4 → **0**
-- Bundle inchangé (608 KB / 170 KB gzip)
-
----
-
-## Sprint 14 — Hardening sécu post-merge (28 avril 2026) 🔴 IN PROGRESS
-**Objectif** : Corriger les findings critiques identifiés par l'audit multi-agent (Security + Pentester) après le merge `asm-dev → main`. Anticiper le déploiement Docker/web.
-**Agents** : @security → @pentester → @backend → @testing
-**Priorité** : 🔴 CRITIQUE — bloquant avant tout déploiement web/multi-user
-
-### Findings traités
-1. **Pent#1 (Critique, RCE)** — `gdb.execute` raw via WS ne sanitize pas l'input. Fix : `sanitize_gdb_input()` dans `gdb_ws.py:_handle_raw_execute`.
-2. **Pent#2/#3 (Élevé)** — Sanitizer GDB n'inclut pas `"`, allowlist GCC `-W*` autorise `-Wl,-rpath`. Fix : ajouter `"` aux chars bloqués + restreindre `-W*` à une allowlist explicite (`-Wall`, `-Wextra`, `-Werror`, `-W<warning>`).
-3. **Sec A1+A2 / Archi#1 / Pent#4+#6 (Critique)** — `api/pwn.py:compile_source` ré-implémente nasm/gcc/rustc/go en parallèle de `CompilationBridge`. Endpoints `elf/*` acceptent un `path` arbitraire. Fix : rerouter vers `CompilationBridge` + valider tous les paths via `WorkspaceManager.get_file_path(session_id, basename)`.
-4. **Pent#11 / Sec A3 (Élevé)** — WebSocket `/ws/{type}/{id}` accepte sans auth. Fix : générer un `Session.token` (32 hex) au create, exiger `?token=...` côté WS, vérifier `Origin` header.
-5. **Sec A4 / Pent#14 (Moyen → Élevé sous web)** — `csp: null` dans Tauri + CORS `*`. Fix : CSP stricte (default-src 'self', connect-src 127.0.0.1:8000) + CORS limité à `http://localhost:1420` en mode desktop.
-6. **Test régression** — `api/pwn.py` à ~10% couverture, models/pwn.py à ~5%. Fix : créer `test_pwn_api.py` + `test_pwn_models.py` couvrant validators et endpoints sensibles, plus `test_compile_api_assemblers.py` pour GAS/FASM côté route.
-
-### Réalisé
-*(en cours)*
-
----
-
-## Sprint 15 — Performance & Architecture refactor (28 avril 2026) ✅
-**Objectif** : Résorber la régression perf identifiée par l'audit (bundle initial 720 KB, 0 lazy split, hooks non mémoïsés, WS ignoré côté front). Simplifier les fichiers > 500 L.
-**Agents** : @performance → @architect → @frontend
-**Priorité** : 🟠 HAUTE — bloquant cible « step <100ms »
-
-### Réalisé
-- **Perf#1 / Archi#2** ✅ — `App.tsx` : `React.lazy(PwnMode)` + `React.lazy(ReferenceModal)` + `<Suspense>` avec fallback. Mesure bundle : **608 KB / 170 KB gzip** (vs 720 KB avant — -16% initial). PwnMode 47 KB et ReferenceModal 102 KB chargés à la demande.
-- **Perf#2 / Archi (useAnvilSession 651 L)** ✅ partiel — Parsers GDB/MI extraits dans `hooks/gdb/parseGdbResponse.ts` (97 L stateless, testables seuls). Hook racine descend à 560 L. `useCallback` massif sur les fns retournées **reporté au Sprint 17** (couplé au câblage WebSocket pour éviter une double passe risquée sans test e2e).
-- **Archi (ReferenceModal 877 L)** ✅ via cascade — Le `React.lazy(ReferenceModal)` du #1 entraîne le lazy-loading de **tous** ses imports `data/reference-*` via le code-splitting Vite. Gain mesuré : 102 KB sortis du bundle initial. Le découpage par mode (lazy par tab actif) reste possible mais marginal (+~50 KB max) : reporté.
-- **Perf#3 (WS inutilisé)** ⏸ **REPORTÉ Sprint 17** — Refacto majeure (useAnvilSession + api/ws.ts + handlers backend) qui nécessite tests e2e. Sera couplée au split useGdbStepping/useGdbMemory.
-- **Perf#7 (cache FIFO)** ✅ — `pwn_bridge._cache_elf` et `_cache_rop` migrent vers `OrderedDict` avec `move_to_end()` à chaque accès. `_touch_elf(path)` ajouté + utilisé sur 11 sites de lecture de cache.
-
-### Mesures
-- Bundle initial : 720 KB → **608 KB** (-16%)
-- Lazy chunks : PwnMode 47 KB, ReferenceModal 102 KB
-- useAnvilSession : 651 L → **560 L** (-91 L extraits)
-- 88 tests pwn bridge ✅ (LRU compatible API)
-- TypeScript clean, build OK
-
----
-
-## Sprint 16 — Quality cleanup & ADRs (28 avril 2026) ✅
-**Objectif** : Régler la dette quality identifiée et formaliser les décisions structurantes.
-**Agents** : @quality → @architect
-
-### Réalisé
-- **Deps Python unifiées (ADR-019)** ✅ — `requirements.txt` + `requirements-dev.txt` supprimés. README et CLAUDE.md mis à jour. CI nettoyée (le `pip install slowapi` redondant retiré).
-- **Thème Monaco partagé** ✅ — `components/editor/anvilMonacoTheme.ts` (`ANVIL_DARK_THEME`, `defineAnvilDarkTheme()` idempotent). PwnEditor et SourceViewer migrés.
-- **CSS `transition: all`** ✅ — 14 sites remplacés par `transition: background-color X, color X, border-color X, opacity X, transform X, box-shadow X` (élimine layout thrash, conserve les durées d'origine).
-- **Frontend `src/config.ts`** ✅ — Constantes centralisées : `WS_RECONNECT_MS=2000`, `WS_HEARTBEAT_MS=30000`, `EDITOR_UNDO_HISTORY_MAX=80`, `EDITOR_SNAPSHOT_DEBOUNCE_MS=400`, `EDITOR_AUTOCOMPLETE_DEBOUNCE_MS=30`, `EDITOR_AUTOCOMPLETE_BLUR_DELAY_MS=150`, `EDITOR_FIND_FOCUS_DELAY_MS=50`, `EDITOR_DEFAULT_CHAR_WIDTH_PX=7.22`. AsmEditor + api/ws.ts migrent.
-- **ADRs** ✅ — ADR-015 (CSP+CORS), ADR-016 (WS auth token), ADR-017 (Compile pipeline unifié), ADR-018 (Pattern useXxxSession + seuil 400 L), ADR-019 (pyproject.toml source unique) tous écrits dans `decisions.md`.
-
-### Reportés au Sprint 17 (besoin de tests frontend)
-- `<FilterableList>` extrait (Symbols/Strings/ROP listes) — refacto ~80 L sans test = risqué
-- `fetchAndSet` helper dans `usePwnSession` — supprime 4 `as any` mais nécessite typer `PwnDictResponse` côté `api/client.ts` proprement
-- Découpage `useAnvilSession` par domaine + `useCallback` massif — couplé au câblage WS Sprint 17
-
-### Mesures
-- Bundle inchangé (608 KB / 170 KB gzip), build OK, tsc clean, ruff clean, 699 tests passent
-
 ---
 
 ## Sprint 9 — Mode Pwn : UI Complète (23 avril 2026) ✅
@@ -487,150 +312,142 @@ Mode Pwn fonctionnel — charger un binaire/source, analyser, éditer un exploit
 - [x] **658 tests passed** (2 pre-existing failures non liées)
 
 ---
-
-## Sprint 9 — Mode RE : Frontend reverse engineering (backlog)
-**Objectif** : Interface complète d'analyse statique de binaires via le bridge Rizin.
-**Agents** : @frontend → @architect → @testing
-> Backend 100% prêt (Sprint 4 : 50 méthodes, 70 endpoints).
-
-### 9.1 — Layout RE
-- [ ] Layout 3 colonnes : fonctions | vue centrale | sidebar info
-- [ ] File dialog natif (Tauri) ou upload pour charger un binaire
-- [ ] Barre d'analyse : boutons aa / aaa / aaaa + progress
-
-### 9.2 — Vue centrale
-- [ ] Tab Disassembly — instructions colorisées, adresses, opcodes
-- [ ] Tab Décompilation — pseudo-C via r2ghidra (pdg)
-- [ ] Tab Hexdump — hex editor interactif
-- [ ] Tab Strings — tableau filtrable
-- [ ] Navigation adresse ↔ fonction (click = seek)
-
-### 9.3 — Sidebar info
-- [ ] Imports / Exports
-- [ ] Symbols
-- [ ] Sections / Segments
-- [ ] Cross-references (xrefs to/from)
-- [ ] Binary info (arch, format, endian, entry)
-
-### 9.4 — Fonctionnalités avancées
-- [ ] CFG control flow graph (canvas SVG/WebGL)
-- [ ] Call graph
-- [ ] Rename function (inline edit → /api/re/{sid}/rename)
-- [ ] Comments (add/edit/delete)
-- [ ] Flags
-- [ ] Dangerous functions highlight (system, strcpy, gets, etc.)
-
-### 9.5 — Tests
-- [ ] Tests Vitest composants RE
-- [ ] Tests navigation + recherche
-
 ---
 
-## Sprint 10 — Mode Pwn : Exploit development (completed in Sprint 9) ✅
-> Réalisé dans Sprint 9 — Mode Pwn UI Complète (23 avril 2026).
+## Sprint 14 — Hardening sécu post-merge (28 avril 2026) ✅
+**Objectif** : Corriger les findings critiques identifiés par l'audit multi-agent (Security + Pentester) après le merge `asm-dev → main`. Anticiper le déploiement Docker/web.
+**Agents** : @security → @pentester → @backend → @testing
+**Priorité** : 🔴 CRITIQUE — bloquant avant tout déploiement web/multi-user
 
-### 10.1 — Éditeur exploit
-- [ ] CodeMirror 6 avec coloration Python
-- [ ] Templates d'exploits pré-remplis (BOF, fmtstr, ret2libc, ROP chain, heap, SROP)
-- [ ] Exécution script Python (subprocess backend)
-- [ ] Output console (stdout/stderr streaming WS)
-- [ ] Target selector : local binary / remote host:port
+### Réalisé (6/6 fixes)
+1. **Pent#1 (Critique, RCE) ✅** — `sanitize_gdb_input()` ajouté dans `gdb_ws.py:_handle_raw_execute`. Ferme la RCE 1-ligne via WS.
+2. **Pent#2/#3 (Élevé) ✅** — `"` ajouté aux chars bloqués GDB (close-quote injection dans `-interpreter-exec console "..."`). Allowlist GCC restreinte : `-Wl,`/`-Wa,`/`-Wp,`/`-Xlinker`/`-rpath` bloqués ; `-l/abs/path` rejetés ; `-I`/`-L` validés contre `_BLOCKED_PATHS`.
+3. **Sec A1+A2 / Archi#1 / Pent#4+#6 (Critique) ✅** — `WorkspaceManager.resolve_under_workspace()` créé. 9 endpoints `/api/pwn/elf/*` + `rop_create` + `ret2dlresolve` + `corefile_load` + `compile_source` + `upload_binary` routent maintenant via `_resolve_path`. Anti-symlink (`Path.is_symlink()`), anti-path-traversal (`is_relative_to`). Go forcé offline (`GOFLAGS=-mod=vendor`, `GOPROXY=off`). `chmod 0o755` uniquement si magic ELF (`\x7fELF`). ADR-017 rédigé.
+4. **Pent#11 / Sec A3 (Élevé) ✅** — `Session.token = secrets.token_hex(16)` (32 hex chars) généré au create. `SessionCreated` model expose le token UNE fois. `/ws/{type}/{id}?token=...` vérifie via `secrets.compare_digest`, valide `bridge_type == session_type`, check `Origin` contre `cors_origins`. Échec → `close(1008)` avant `accept()`. ADR-016 rédigé.
+5. **Sec A4 / Pent#14 ✅** — CSP stricte dans `tauri.conf.json` (`default-src 'self'`, `connect-src http://127.0.0.1:8000 ws://127.0.0.1:8000`, `script-src 'self' 'wasm-unsafe-eval'`). `cors_origins` par défaut : `[http://localhost:1420, http://127.0.0.1:1420, tauri://localhost, https://tauri.localhost]`. ADR-015 rédigé.
+6. **Test régression ✅** — Créés : `test_pwn_api.py` (32 tests sécurité : path traversal, symlink, ELF magic chmod, env Go offline), `test_pwn_models.py` (12 tests validators), `test_compile_api.py` étendu (GAS/FASM + invalid assembler 422). `test_ws.py` réécrit pour le flux token. `_STATUS_MAP` enrichi (PATH_TRAVERSAL, UNSUPPORTED_LANGUAGE, INVALID_BASE64, etc.).
 
-### 10.2 — Outils intégrés
-- [ ] Panel Checksec — affichage protections binaire cible
-- [ ] Panel ROP — recherche gadgets (via /api/pwn/{sid}/rop/*)
-- [ ] Format string calculator UI
-- [ ] Cyclic pattern generator/finder
-- [ ] Payload hex viewer (pack/unpack preview)
-
-### 10.3 — ELF browser
-- [ ] Chargement ELF → symbols, GOT, PLT, sections
-- [ ] Navigation rapide symbols → adresses
-
-### 10.4 — Tests
-- [ ] Tests composants Pwn
-- [ ] Tests flow template → edit → execute
+### Mesures
+- 699 tests pytest verts (+35 nouveaux), ruff & bandit clean
+- 9 findings fermés (RCE, LFI, WS auth, CSP, CORS, symlink, language, magic ELF, sanitization)
+- Bloquant levé pour déploiement web/multi-user après ce sprint
 
 ---
-
-## Sprint 11 — Mode Debug enhanced + Mode Firmware
-**Objectif** : Heap visualizer, syscall trace, firmware analysis UI.
-**Agents** : @frontend → @pentester → @testing
-
-### 11.1 — Debug enhanced
-- [ ] Heap visualizer — chunks, bins, tcache (graphe interactif)
-- [ ] Syscall trace (via GDB catch syscall → table live)
-- [ ] Memory map visuelle — barres colorées (stack, heap, .text, libs)
-- [ ] Canary + return address tracking
-- [ ] Core dump loader + analysis
-
-### 11.2 — Mode Firmware UI
-- [ ] Upload firmware → scan binwalk
-- [ ] Résultats scan : tableau signatures détectées
-- [ ] Extraction : arbre filesystem navigable
-- [ ] Graphe entropie (chart.js / recharts)
-- [ ] Secret scanning : highlights passwords, clés, tokens
-- [ ] Transition → RE (ouvrir un binaire extrait dans le mode RE)
-
-### 11.3 — Tests
-- [ ] Tests composants heap/memory map
-- [ ] Tests flow firmware scan → extract → browse
-
 ---
 
-## Sprint 12 — Mode Protocols ICS/OT + Tauri packaging
-**Objectif** : Interface Modbus/ICS + packaging desktop natif.
-**Agents** : @frontend → @devops → @rust → @testing
-> Backend 100% prêt (Sprint 5 : 40 méthodes Modbus).
+## Sprint 15 — Performance & Architecture refactor (28 avril 2026) ✅
+**Objectif** : Résorber la régression perf identifiée par l'audit (bundle initial 720 KB, 0 lazy split, hooks non mémoïsés, WS ignoré côté front). Simplifier les fichiers > 500 L.
+**Agents** : @performance → @architect → @frontend
+**Priorité** : 🟠 HAUTE — bloquant cible « step <100ms »
 
-### 12.1 — Mode Protocols UI
-- [ ] Connexion Modbus TCP/RTU : formulaire host/port/unit/baudrate
-- [ ] Register browser : tableau live coils, discrete inputs, holding, input registers
-- [ ] Read/Write operations avec ⚠️ avertissement sécurité
-- [ ] Device info panel (identification)
-- [ ] Scan devices/registers (progress bar)
-- [ ] Diagnostics panel
-- [ ] Data type conversion calculator
+### Réalisé
+- **Perf#1 / Archi#2** ✅ — `App.tsx` : `React.lazy(PwnMode)` + `React.lazy(ReferenceModal)` + `<Suspense>` avec fallback. Mesure bundle : **608 KB / 170 KB gzip** (vs 720 KB avant — -16% initial). PwnMode 47 KB et ReferenceModal 102 KB chargés à la demande.
+- **Perf#2 / Archi (useAnvilSession 651 L)** ✅ partiel — Parsers GDB/MI extraits dans `hooks/gdb/parseGdbResponse.ts` (97 L stateless, testables seuls). Hook racine descend à 560 L. `useCallback` massif sur les fns retournées **reporté au Sprint 17** (couplé au câblage WebSocket pour éviter une double passe risquée sans test e2e).
+- **Archi (ReferenceModal 877 L)** ✅ via cascade — Le `React.lazy(ReferenceModal)` du #1 entraîne le lazy-loading de **tous** ses imports `data/reference-*` via le code-splitting Vite. Gain mesuré : 102 KB sortis du bundle initial. Le découpage par mode (lazy par tab actif) reste possible mais marginal (+~50 KB max) : reporté.
+- **Perf#3 (WS inutilisé)** ⏸ **REPORTÉ Sprint 17** — Refacto majeure (useAnvilSession + api/ws.ts + handlers backend) qui nécessite tests e2e. Sera couplée au split useGdbStepping/useGdbMemory.
+- **Perf#7 (cache FIFO)** ✅ — `pwn_bridge._cache_elf` et `_cache_rop` migrent vers `OrderedDict` avec `move_to_end()` à chaque accès. `_touch_elf(path)` ajouté + utilisé sur 11 sites de lecture de cache.
 
-### 12.2 — Tauri packaging
-- [ ] `src-tauri/src/lib.rs` : spawn FastAPI subprocess + health check loop
-- [ ] File dialogs natifs (ouvrir binaires .elf/.bin/.hex/.c)
-- [ ] Dependency checker au premier lancement (gdb, rizin, gcc, python, nasm)
-- [ ] Build AppImage Linux
-- [ ] Auto-update (tauri-plugin-updater)
-- [ ] Icône + splash screen
-
-### 12.3 — Tests
-- [ ] Tests composants Protocols
-- [ ] Tests Tauri IPC (mocks)
-- [ ] Tests E2E Playwright (smoke)
+### Mesures
+- Bundle initial : 720 KB → **608 KB** (-16%)
+- Lazy chunks : PwnMode 47 KB, ReferenceModal 102 KB
+- useAnvilSession : 651 L → **560 L** (-91 L extraits)
+- 88 tests pwn bridge ✅ (LRU compatible API)
+- TypeScript clean, build OK
 
 ---
+---
 
-## Sprint 13 — Polish, a11y, i18n
-**Objectif** : Qualité finale — accessibilité, internationalisation, tests e2e complets.
-**Agents** : @a11y → @quality → @frontend → @testing
+## Sprint 16 — Quality cleanup & ADRs (28 avril 2026) ✅
+**Objectif** : Régler la dette quality identifiée et formaliser les décisions structurantes.
+**Agents** : @quality → @architect
 
-### 13.1 — Accessibilité
-- [ ] Audit WCAG 2.1 AA
-- [ ] Navigation clavier complète
-- [ ] Screen reader support (aria-labels)
-- [ ] Contrastes couleurs (dark theme)
-- [ ] Focus management
+### Réalisé
+- **Deps Python unifiées (ADR-019)** ✅ — `requirements.txt` + `requirements-dev.txt` supprimés. README et CLAUDE.md mis à jour. CI nettoyée (le `pip install slowapi` redondant retiré).
+- **Thème Monaco partagé** ✅ — `components/editor/anvilMonacoTheme.ts` (`ANVIL_DARK_THEME`, `defineAnvilDarkTheme()` idempotent). PwnEditor et SourceViewer migrés.
+- **CSS `transition: all`** ✅ — 14 sites remplacés par `transition: background-color X, color X, border-color X, opacity X, transform X, box-shadow X` (élimine layout thrash, conserve les durées d'origine).
+- **Frontend `src/config.ts`** ✅ — Constantes centralisées : `WS_RECONNECT_MS=2000`, `WS_HEARTBEAT_MS=30000`, `EDITOR_UNDO_HISTORY_MAX=80`, `EDITOR_SNAPSHOT_DEBOUNCE_MS=400`, `EDITOR_AUTOCOMPLETE_DEBOUNCE_MS=30`, `EDITOR_AUTOCOMPLETE_BLUR_DELAY_MS=150`, `EDITOR_FIND_FOCUS_DELAY_MS=50`, `EDITOR_DEFAULT_CHAR_WIDTH_PX=7.22`. AsmEditor + api/ws.ts migrent.
+- **ADRs** ✅ — ADR-015 (CSP+CORS), ADR-016 (WS auth token), ADR-017 (Compile pipeline unifié), ADR-018 (Pattern useXxxSession + seuil 400 L), ADR-019 (pyproject.toml source unique) tous écrits dans `decisions.md`.
 
-### 13.2 — Internationalisation
-- [ ] i18n framework (react-i18next)
-- [ ] Traductions EN + FR
-- [ ] Détection langue auto
+### Reportés au Sprint 17 (besoin de tests frontend)
+- `<FilterableList>` extrait (Symbols/Strings/ROP listes) — refacto ~80 L sans test = risqué
+- `fetchAndSet` helper dans `usePwnSession` — supprime 4 `as any` mais nécessite typer `PwnDictResponse` côté `api/client.ts` proprement
+- Découpage `useAnvilSession` par domaine + `useCallback` massif — couplé au câblage WS Sprint 17
 
-### 13.3 — Tests E2E
-- [ ] Suite Playwright — smoke tests tous les modes
-- [ ] Flow complet : écrire ASM → compiler → débuguer → step → voir registres
-- [ ] Multi-session concurrentes
-- [ ] Tests responsivité
+### Mesures
+- Bundle inchangé (608 KB / 170 KB gzip), build OK, tsc clean, ruff clean, 699 tests passent
 
-### 13.4 — Extras
-- [ ] Shellcode workshop (mode ASM) — exercices interactifs
-- [ ] Multi-architecture ASM (ARM64, RISC-V via cross-compile)
-- [ ] Plugin system (API extension points)
-- [ ] Documentation utilisateur (guide + tooltips)
+---
+---
+
+## Sprint 17 — Frontend tests + WS groundwork + cleanup (28 avril 2026) ✅
+**Objectif** : poser le socle test frontend (vitest + RTL), durcir la CI (audits deps),
+fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth.
+**Agents** : @testing → @frontend → @architect
+
+### Réalisé
+- **A — Stack vitest + RTL + jsdom** : `vitest.config.ts` séparé (Tauri-safe), `src/test/setup.ts` avec jest-dom matchers + cleanup auto. Scripts `npm test`/`test:run`/`test:ui`. **27 tests** au total :
+  - 11 sur `parseGdbResponse` (parsers GDB/MI extraits Sprint 15)
+  - 8 sur `parseGdbMemory` (parseMemoryBlock/Map + parseRegisters extraits Sprint 17-E)
+  - 5 sur `<FilterableList>` (filter, maxDisplay cap, placeholder)
+  - 3 sur `<RegistersPane>` (smoke RTL + jsdom)
+- **B — CI audits (closes Sec A9)** : nouveau job `audit` avec `pip-audit` (env installé via pyproject), `npm audit --audit-level=high`, `cargo-audit` sur `src-tauri/Cargo.lock`. `continue-on-error: true` pour ne pas bloquer un hotfix sur CVE upstream fraîche.
+- **C — `<FilterableList>` extrait** : composant générique typé `<T>`, owns `filter` state, supporte `placeholder`/`maxDisplay`/clipped count. SymbolsList et StringsList migrent en wrappers (~80 L de duplication tuée).
+- **D — `PwnDict<T>` typé + `fetchAndSet` helper** : 6 endpoints pwn rétypés (checksec/symbols/got/plt/sections/functions). `fetchAndSet<R, U>(call, map, setter, errorLabel?)` absorbe l'unwrap `{data:...}`, le mapping et le log d'erreur optionnel. **4 `as any` éliminés** dans `usePwnSession`.
+- **E — `useAnvilSession` allégé** : parsers memory extraits dans `hooks/gdb/parseGdbMemory.ts` (parseMemoryBlock, parseMemoryMap, parseRegisters). `useCallback` posé sur les **23 fonctions retournées** par le hook (compile, buildAndRun, stepInto/Over/Out/Back, continueExec, stop, startAutoStep, stopAutoStep, setBreakpoint, freshSession, ensureSession, refreshRegisters, refreshStack, readMemory, writeMemory, fetchMemoryMap, resolveActiveLine, doStep, destroySessions, log, clearTerminal). Hook racine : 651 → 499 LOC.
+- **F (groundwork) — `AnvilWS` production-ready** : token ADR-016 plumbé dans `connect()` (`?token=...` + `encodeURIComponent`), `request(command, args): Promise<WSMessage>` avec corrélation `request_id`, timeout 30s, rejection propre des pending au `disconnect()`. Type `SessionCreated` exposé côté client. **Migration de useAnvilSession sur WS reportée Sprint 18** (besoin de tests e2e pour valider le flux `step → registers → stack`).
+
+### Reportés Sprint 18
+- Migration `useAnvilSession` du REST GDB vers `AnvilWS.request()` — gain estimé -50ms/step, infra prête, manque le harness e2e
+- Splitter `ReferenceModal.tsx` (877 L) par mode + dynamic `import('../data/reference-X')` par tab — bénéfice marginal après le `React.lazy(ReferenceModal)` du Sprint 15 #1 (la cascade Vite extrait déjà 102 KB en chunk séparé). À faire **si** la latence d'ouverture initiale du modal devient un problème.
+
+### Mesures
+- Tests frontend : **0 → 27** ✅
+- `useAnvilSession.ts` : 651 → **499 LOC** (-23%)
+- `as any` dans `usePwnSession` : 4 → **0**
+- Bundle inchangé (608 KB / 170 KB gzip)
+
+---
+---
+
+## Sprint 18 — E2E test infrastructure (28 avril 2026) ✅
+**Objectif** : poser une stack de tests à 5 niveaux (unit → component → backend → smoke → e2e) avec Playwright comme couche e2e principale, plusieurs parcours par module ASM et Pwn, et préparer la structure pour les modes restants.
+**Agents** : @testing → @architect
+
+### Réalisé
+- **Playwright bootstrap** : `playwright.config.ts` avec `webServer` qui spawn uvicorn + Vite et attend `/api/health` + `localhost:1420`. `reuseExistingServer` localement, `CI=1` force un boot propre. Retries 1 local / 2 CI. Trace + screenshot + video on failure.
+- **Fixtures** : `tests/e2e/fixtures/anvil.ts` exporte `AnvilApp` (Page wrapper) + un `test` étendu qui reset les sessions backend entre tests. Tous les sélecteurs centralisés (`runButton`, `stepIntoButton`, `editorTextarea`, `pwnDropZone`, `pwnFilterInput`, `pwnBottomTab(name)`, `pwnToolButton(name)`). Samples inline dans `samples.ts` (NASM hello, GAS hello, broken NASM, divergent step, C BOF).
+- **6 specs ASM** :
+  1. `happy-path` (3 tests) — compile → run → step → registers + stdout
+  2. `compile-error` (3 tests) — erreur structurée + ligne annotée + recovery après fix
+  3. `reverse-step` (2 tests) — Back button + register diff visible entre steps
+  4. `multi-assembler` (4 tests) — NASM default, GAS conditional, FASM offered, status bar
+  5. `breakpoint` (2 tests) — gutter click + persistence sur edit
+  6. `state-panels` (3 tests) — Stack/Memory/Security panels + collapse/expand + terminal clear
+- **5 specs Pwn** :
+  1. `mode-switch` (4 tests) — lazy chunk loads, topbar tools, bottom tabs, isolation ASM
+  2. `cyclic-tool` (2 tests) — pattern generation + cyclic_find offset
+  3. `upload-binary` (3 tests) — checksec badges, symbols list, filter shrink
+  4. `compile-source` (2 tests) — drop .c, auto-compile, SourceViewer vuln highlight
+  5. `security-guard` (3 tests) — LFI 403 PATH_BLOCKED, filename 422, language 400 (via fetch direct)
+- **Smoke script bash** (`tests/e2e/smoke/backend.sh`) : 5 checks live (health 200, token format ADR-016, GET ne leak pas le token, LFI bloquée, WS sans token rejeté). **5/5 verts en local**. Industrialise le smoke manuel du Sprint 14.
+- **CI workflow** : 4 jobs (`lint`, `audit`, `test`, `smoke`, `e2e`). `test` étendu pour aussi lancer vitest. `smoke` boot uvicorn + lance le bash. `e2e` install nasm/gdb/gcc + Playwright browsers + build samples + lance la suite. `continue-on-error: true` sur `e2e` jusqu'à ce que la suite soit stable 2 semaines. Upload du Playwright report en artifact si failure.
+- **Doc** : `tests/e2e/README.md` complet (run, tooling, layout, ajout d'un nouveau mode, discipline anti-flake), scripts npm `e2e`/`e2e:ui`/`e2e:debug`/`smoke`. ADR-019 corrigée dans le CI (`python -m pytest tests/`).
+
+### Couverture
+- **Backend Python** : 699 tests pytest (depuis Sprint 14)
+- **Frontend unit/component** : 27 tests vitest (depuis Sprint 17)
+- **Backend smoke** : 5 checks bash (Sprint 18)
+- **E2E parcours** : 11 specs / ~31 tests (Sprint 18)
+- **Total** : ~762 tests automatisés
+
+### Suite immédiate (Sprint 19)
+- Migration `useAnvilSession` REST → `AnvilWS.request()` — débloquée par la stack e2e (chaque flux step→registers→stack peut être validé en live)
+- Nouveaux specs ASM : `terminal.spec.ts` (clear, output capture), `editor-undo.spec.ts` (Ctrl+Z, snapshots)
+- Frontend RE — démarrage du gros chantier avec specs `tests/e2e/re/*.spec.ts` créés au fur et à mesure
+
+---
+---
+
+## Sprint 19+ — Planifiés
+
+Voir [backlog.md](./backlog.md) pour le détail des sprints à venir (WS migration, Mode RE phase 1 et 2, Mode Debug enhanced, Firmware, Protocols, polish/a11y/i18n) et les phases A-H qui en découlent.

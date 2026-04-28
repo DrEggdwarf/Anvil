@@ -226,10 +226,12 @@ React frontend ↔ localhost:8000 (HTTP/WS)
 
 ---
 
-## ADR-012 : Modbus full FC coverage (protocol bridge)
+## ADR-012b : Modbus full FC coverage (protocol bridge)
 
 **Date** : 19 avril 2026
 **Statut** : Accepté
+**Note** : ce numéro a temporairement collidé avec ADR-012 (Docker) écrit plus tard ;
+renommé `012b` pour préserver les références internes existantes sans renuméroter.
 
 **Contexte** : ICS/OT security testing nécessite un accès complet au protocole Modbus, pas seulement read/write basiques.
 
@@ -362,10 +364,29 @@ React frontend ↔ localhost:8000 (HTTP/WS)
 
 ---
 
+## ADR-019 : `pyproject.toml` source unique des deps Python
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 16)
+
+**Contexte** : `backend/requirements.txt` (bundle complet, versions divergentes : pwntools `>=4.0`, binwalk `>=2.3`) coexiste avec `backend/pyproject.toml` (segmenté en optional-deps, versions à jour : pwntools `>=4.12`, binwalk `>=2.4`). Risque de régression lors d'un `pip install -r requirements.txt` qui downgrade les outils.
+
+**Décision** :
+- Supprimer `backend/requirements.txt` et `backend/requirements-dev.txt`.
+- README pointe sur `pip install -e "backend/[dev,re,pwn,firmware,protocols]"` pour install complète.
+- CI inchangée (déjà sur `pip install -e .[dev]`).
+
+**Conséquences** :
+- Une seule source de vérité, plus de drift de versions
+- Le `pip install -r` historique disparaît — léger breaking change pour devs qui suivent l'ancien README
+- Préparation propre pour le Dockerfile (ADR-012) qui consommera `pyproject.toml`
+
+---
+
 ## ADR-020 : Portability discipline — Linux-first, Windows-deferred
 
 **Date** : 28 avril 2026
-**Statut** : Accepté
+**Statut** : Accepté (Sprint 17)
 
 **Contexte** : Anvil cible un déploiement Linux-first avec un éventuel support Windows
 (natif via WSL2 ou via Docker — voir ADR-012 et future ADR sur le runtime detector).
@@ -399,27 +420,8 @@ Aucun de ces points n'est dans la roadmap actuelle (Phases C-G du backlog).
 **Conséquences** :
 - La roadmap Linux-first peut continuer sans bloqueur jusqu'au prochain
   packaging public Windows
-- Quand le runtime Windows sera tranché (probablement Sprint 18+ avec WSL/Docker),
+- Quand le runtime Windows sera tranché (probablement Sprint 21+ avec WSL/Docker),
   zéro régression à corriger dans le code applicatif tant que les 5 règles ont été
   respectées
 - Cette discipline est **vérifiable mécaniquement** : `grep -rn "/proc/\|/sys/\|/dev/\|/usr/bin"`
   dans `backend/app/` et `src/` doit rester vide hors commentaires.
-
----
-
-## ADR-019 : `pyproject.toml` source unique des deps Python
-
-**Date** : 28 avril 2026
-**Statut** : Accepté (Sprint 16)
-
-**Contexte** : `backend/requirements.txt` (bundle complet, versions divergentes : pwntools `>=4.0`, binwalk `>=2.3`) coexiste avec `backend/pyproject.toml` (segmenté en optional-deps, versions à jour : pwntools `>=4.12`, binwalk `>=2.4`). Risque de régression lors d'un `pip install -r requirements.txt` qui downgrade les outils.
-
-**Décision** :
-- Supprimer `backend/requirements.txt` et `backend/requirements-dev.txt`.
-- README pointe sur `pip install -e "backend/[dev,re,pwn,firmware,protocols]"` pour install complète.
-- CI inchangée (déjà sur `pip install -e .[dev]`).
-
-**Conséquences** :
-- Une seule source de vérité, plus de drift de versions
-- Le `pip install -r` historique disparaît — léger breaking change pour devs qui suivent l'ancien README
-- Préparation propre pour le Dockerfile (Sprint 12) qui consommera `pyproject.toml`
