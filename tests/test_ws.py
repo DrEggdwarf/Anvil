@@ -22,7 +22,7 @@ def ws_client():
 
 class TestWSConnection:
     def test_connect_and_disconnect(self, ws_client):
-        with ws_client.websocket_connect("/ws/mock/test-session") as ws:
+        with ws_client.websocket_connect("/ws/mock/test-session"):
             # Connection should succeed
             pass  # disconnect on exit
 

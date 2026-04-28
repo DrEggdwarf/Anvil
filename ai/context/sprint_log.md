@@ -205,7 +205,63 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 
 ---
 
-## Sprint 7 — Mode ASM : Éditeur & Compilation UI
+## Sprint 7+8 — Mode ASM : Éditeur, Compilation & Debug UI (21 avril 2026) ✅
+
+### Réalisé
+- [x] Layout 3 colonnes : éditeur | registres+terminal | panels droite (stack/memory/security)
+- [x] Éditeur ASM custom avec numéros de ligne, highlighting ligne active, support NASM/GAS/FASM
+- [x] Toolbar : Run (F5), Auto-step, Back/Into/Over/Out/Next
+- [x] Session GDB : compile → load → break _start → step interactif
+- [x] Panel Registres — copie fidèle ASMBLE (segments colorés, sub-registres, flags pills, flash, toggle delta/upper/hex)
+- [x] Panel Terminal — xterm.js avec output GDB, collapse/expand
+- [x] Panel Stack — visualisation compacte de la pile :
+  - Rows compactes : offset RSP-relatif + mini-barre bytes + valeur qword
+  - Click-to-expand pour détail byte-par-byte
+  - Zones groupées avec labels : **Locals** / **Stack frame** / **Caller**
+  - Annotations sémantiques : `saved rbp`, `ret addr`
+  - Bordures colorées par zone (teal locals, orange frame)
+  - Toggle hex/dec/bin
+  - Refresh automatique à chaque step
+- [x] Syscall snippets panel (write, exit)
+- [x] Rate limit augmenté à 600/min pour dev local
+- [x] Breakpoints visuels (click gutter)
+
+---
+
+## Sprint 7+8b — Reference Modal Multi-Mode (22 avril 2026) ✅
+
+### Objectif
+Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pwn, Debug, Firmware, Protocols).
+
+### Réalisé
+- [x] CSS bugfix : stack frame diagram et patterns code blocks tronqués (flex-shrink: 0)
+- [x] `src/data/reference-re.ts` — 70 commandes rizin, ELF format/sections, RE patterns
+- [x] `src/data/reference-pwn.ts` — 7 protections+bypass, 6 techniques, format strings, pwntools cheatsheet
+- [x] `src/data/reference-dbg.ts` — 49 commandes GDB, 24 pwndbg, examine formats
+- [x] `src/data/reference-fw.ts` — 27 options binwalk, 23 magic signatures, entropie guide, FW patterns
+- [x] `src/data/reference-hw.ts` — 20 fonctions Modbus, 4 types registres, 9 exceptions, trames TCP/RTU, patterns
+- [x] `src/data/index.ts` — barrel exports pour les 5 nouveaux modules
+- [x] `src/components/ReferenceModal.tsx` — réécriture complète : mode-aware, 6 configurations d'onglets, recherche, filtres catégories
+- [x] `src/App.tsx` — wiring mode prop via MODE_CAT mapping
+- [x] `src/App.css` — styles bypass list (Pwn protections tab)
+- [x] Convention cleanup : inline prop types → named interfaces (FilterBarProps, SearchProps, PatternsViewProps, TabContentProps)
+- [x] Ruff auto-fix : 24 F841 (unused variables) nettoyés dans 5 fichiers test
+- [x] TypeScript clean : 0 erreurs tsc
+- [x] **639 tests passed** (2 pre-existing failures non liées)
+
+### Onglets par mode
+| Mode | Titre | Onglets |
+|------|-------|---------|
+| ASM | Reference x86-64 | Syscalls (174), Instructions, ABI, Directives, Patterns |
+| RE | Reference Reverse Engineering | Commandes (61), ELF, Sections, Patterns |
+| Pwn | Reference Exploitation | Protections, Techniques, Format String, pwntools, Syscalls |
+| Debug | Reference Debug (GDB) | GDB (49), pwndbg (24), x/ Format, ABI |
+| Firmware | Reference Firmware | Binwalk (27), Signatures (23), Entropie, Patterns |
+| Protocols | Reference Protocoles | Fonctions (20), Registres, Exceptions, Trames, Patterns |
+
+---
+
+## Sprint 7 — Mode ASM : Éditeur & Compilation UI (backlog)
 **Objectif** : Premier mode fonctionnel — écrire du code ASM, compiler, voir le résultat.
 **Agents** : @frontend → @architect → @testing
 
@@ -262,7 +318,50 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 
 ---
 
-## Sprint 9 — Mode RE : Frontend reverse engineering
+## Sprint 9 — Mode Pwn : UI Complète (23 avril 2026) ✅
+
+### Objectif
+Mode Pwn fonctionnel — charger un binaire/source, analyser, éditer un exploit Python avec autocomplétion pwntools.
+**Agents** : @frontend → @pentester → @testing
+
+### Réalisé — Frontend Pwn Mode
+- [x] `PwnMode.tsx` — layout complet : topbar (dropzone + checksec badges + tools inline) → split editors → bottom panel tabbé
+- [x] `PwnEditor.tsx` — Monaco Editor pour Python avec thème `anvil-dark`, font Geist Mono, snippets pwntools
+- [x] `SourceViewer.tsx` — Monaco read-only avec détection patterns vulnérables (gets/sprintf/strcpy/printf/system/malloc par langage)
+- [x] `editor/pwnCompletions.ts` — ~150 items autocomplétion (pwntools API complète + Python stdlib + templates exploit)
+- [x] `hooks/usePwnSession.ts` — hook session : load binary, auto-compile si source, fetch checksec/symbols/GOT/PLT
+- [x] `ChecksecBadges` — badges inline colorés (ok=vert, vuln=rouge) pour RELRO/Canary/NX/PIE/Fortify
+- [x] `BottomPanel` — onglets Terminal (xterm.js via AnvilTerminal) | Symbols | GOT | PLT | Strings
+- [x] Resize handles : vertical (col-resize entre Source et exploit.py) + horizontal (row-resize éditeurs ↔ bottom panel)
+- [x] Pipeline : drop source (.c/.cpp/.rs/.go/.asm) → auto-compile backend → load ELF → analyse → affichage
+
+### Réalisé — Backend Pwn Compile
+- [x] `POST /api/pwn/{session_id}/compile` — compile source C/C++/ASM/Rust/Go avec flags vulnérables optionnels
+- [x] `PwnCompileRequest` model Pydantic (path, language, vuln_flags)
+- [x] Support multi-langage : gcc, g++, nasm+ld, rustc, go build
+- [x] Vuln flags par défaut : `-no-pie -fno-stack-protector -z execstack`
+
+### Réalisé — Samples
+- [x] `samples/pwn/` — 7 fichiers exemples : bof_basic.c, fmt_string.c, ret2libc.c, use_after_free.c, bof_cpp.cpp, bof_rust.rs, bof_go.go + Makefile
+
+### Réalisé — Shared
+- [x] `api/client.ts` — ajout `pwnCompile()` dans le client REST typé
+- [x] `useColResize.ts` — support mode 2 colonnes (50/50)
+- [x] `App.tsx` — routing Pwn mode conditionnel avec props dédiés
+- [x] `App.css` — ~500 lignes CSS Pwn mode (layout, badges, tools, editors, bottom panel, resize handles)
+- [x] Resize handles col + row avec indicateur grip et highlight accent au hover
+
+### Dependencies
+- [x] `@monaco-editor/react` ajouté (éditeur Monaco pour Source + Exploit)
+- [x] `@fortawesome/fontawesome-free` ajouté (icônes)
+
+### Tests
+- [x] TypeScript : 0 erreurs (`npx tsc --noEmit`)
+- [x] **658 tests passed** (2 pre-existing failures non liées)
+
+---
+
+## Sprint 9 — Mode RE : Frontend reverse engineering (backlog)
 **Objectif** : Interface complète d'analyse statique de binaires via le bridge Rizin.
 **Agents** : @frontend → @architect → @testing
 > Backend 100% prêt (Sprint 4 : 50 méthodes, 70 endpoints).
@@ -300,10 +399,8 @@ tests exhaustifs avec mocks. Pattern réutilisable pour tous les autres bridges.
 
 ---
 
-## Sprint 10 — Mode Pwn : Exploit development
-**Objectif** : Éditeur Python + templates exploits + outils pwntools intégrés.
-**Agents** : @frontend → @pentester → @testing
-> Backend 100% prêt (Sprint 5 : 40 méthodes, ~40 routes).
+## Sprint 10 — Mode Pwn : Exploit development (completed in Sprint 9) ✅
+> Réalisé dans Sprint 9 — Mode Pwn UI Complète (23 avril 2026).
 
 ### 10.1 — Éditeur exploit
 - [ ] CodeMirror 6 avec coloration Python

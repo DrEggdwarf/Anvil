@@ -19,7 +19,7 @@ src-tauri/ (Rust)  → Shell : IPC, subprocess, file dialogs, serial, packaging
 src/ (React/TS)    → UI : composants, panels, éditeur, 6 modes
 backend/ (Python)  → Logique : FastAPI, 6 bridges, sanitization, rate limiting
 ai/                → Système multi-agent (12 agents, 2 workflows)
-tests/             → Tests Python (pytest, 637 tests)
+tests/             → Tests Python (pytest, ~664 tests sur 24 modules)
 .github/           → CI GitHub Actions (ruff, bandit, pytest)
 ```
 
@@ -53,7 +53,7 @@ npm run tauri dev
 # Backend
 cd backend && uvicorn app.main:app --reload --port 8000
 
-# Tests Python (637 tests)
+# Tests Python (~664 tests)
 python -m pytest tests/ -v --tb=short
 
 # Lint
@@ -83,7 +83,7 @@ bandit -r backend/ -c backend/pyproject.toml
 ## Tests
 
 ```bash
-# Full suite (637 tests)
+# Full suite (~664 tests)
 python -m pytest tests/ -v
 
 # Avec coverage

@@ -151,7 +151,7 @@ class TestPwnContext:
 
     @pytest.mark.asyncio
     async def test_set_context(self, pwn: PwnBridge):
-        result = await pwn.set_context(arch="i386", bits=32)
+        await pwn.set_context(arch="i386", bits=32)
         assert pwn._context.arch == "i386"
         assert pwn._context.bits == 32
 

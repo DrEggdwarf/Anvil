@@ -50,6 +50,14 @@
 - [x] Security tests (30 unit + E2E API injection/traversal tests)
 - [x] 631 tests, 0 failures
 
+### Sprint 7 — ASM Debugger UI ✅
+- [x] Frontend mode ASM fonctionnel (éditeur, registres, stack, terminal)
+- [x] Step into/over/out/back via GDB/MI
+- [x] Reverse debugging (GDB `record` + `reverse-stepi`)
+- [x] GDB/MI output parsing (program stdout extraction, protocol stripping)
+- [x] Triple fallback active line resolution (frame → stack → info line *$pc)
+- [x] 639 tests, 0 failures
+
 ---
 
 ## Phase A — Pwn lite web (mode ASM étendu)
@@ -59,12 +67,15 @@
 - [ ] GDB stepping sur binaire C (adapter entry point)
 - [ ] VMmap, GOT, ROP, cyclic sur binaire C
 
-## Phase B — Tauri packaging
-- [ ] Lancer FastAPI en subprocess Rust (spawn, health check, kill)
+## Phase B — Tauri packaging + Docker cross-platform
+- [ ] Dockerfile backend (Python 3.12 + FastAPI + nasm/ld/gcc/gdb/rizin/pwntools/binwalk/pymodbus)
+- [ ] Tauri : détecter Docker, pull image au premier lancement, `docker run` au start, kill au close
+- [ ] Fallback : subprocess local si Linux natif (pas de Docker requis)
 - [ ] File dialogs natifs (ouvrir .c / .bin / .elf / .hex)
-- [ ] Dependency checker au premier lancement (gdb, rizin, gcc, python)
-- [ ] Build AppImage Linux
+- [ ] Dependency checker au premier lancement (Docker ou outils natifs)
+- [ ] Build AppImage Linux + MSI Windows
 - [ ] Auto-update (tauri-plugin-updater)
+- [ ] Volume mount ~/.anvil/workspaces pour persistance entre sessions Docker
 
 ## Phase C — Mode RE
 > Note : Le bridge backend (`rizin_bridge.py`) est terminé depuis Sprint 4. Cette phase concerne le **frontend** RE.
@@ -125,8 +136,8 @@
 - [ ] Accessibilité (a11y)
 - [ ] Plugin system
 
-## Bugs ASMBLE à porter
-- [ ] B10: CALL step-into cassé (agit comme step-over)
+## Bugs Anvil à corriger
+- [ ] B10: ~~CALL step-into cassé~~ Fixed (reverse-step + record ajoutés)
 - [ ] B11: Tokens QWORD/DWORD/WORD/BYTE/PTR manquants
 - [ ] B12: Auto-close crochet `[` → `[]`
 - [ ] B13: Fidélité valeurs stack vs GDB

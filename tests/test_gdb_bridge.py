@@ -52,7 +52,7 @@ def gdb_console(text: str) -> dict:
 async def gdb_bridge():
     """A GDB bridge with mocked controller (no real GDB)."""
     bridge = GdbBridge()
-    with patch("backend.app.bridges.gdb_bridge.GdbBridge.start") as mock_start:
+    with patch("backend.app.bridges.gdb_bridge.GdbBridge.start"):
         # Manually set up the bridge state as if start() succeeded
         bridge._controller = make_mock_controller()
         bridge.state = BridgeState.READY
@@ -115,7 +115,7 @@ class TestGdbLifecycle:
 class TestGdbExecute:
     @pytest.mark.asyncio
     async def test_execute_calls_write(self, gdb_bridge: GdbBridge):
-        result = await gdb_bridge.execute("-exec-run")
+        await gdb_bridge.execute("-exec-run")
         gdb_bridge._controller.write.assert_called_once_with(
             "-exec-run", timeout_sec=10, raise_error_on_timeout=True,
         )
@@ -343,7 +343,7 @@ class TestGdbStack:
             [gdb_result()],  # stack-select-frame
             [gdb_result({"locals": [{"name": "x", "value": "42"}]})],
         ]
-        result = await gdb_bridge.get_stack_variables(frame=0)
+        await gdb_bridge.get_stack_variables(frame=0)
         # Should have called -stack-select-frame then -stack-list-locals
         calls = gdb_bridge._controller.write.call_args_list
         assert "-stack-select-frame" in calls[0][0][0]

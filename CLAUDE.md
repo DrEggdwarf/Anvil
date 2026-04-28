@@ -57,11 +57,13 @@ Note: pytest asyncio_mode is set to "auto" in pyproject.toml — no need for `@p
 
 ```
 src-tauri/src/     Rust shell: spawns backend as subprocess, 2 IPC commands (check_backend, check_dependencies)
-src/               React UI (skeleton — ~50 LOC, mode switcher only)
-backend/app/       FastAPI: main.py → 8 routers, core/, bridges/, models/, sessions/
-tests/             24 pytest modules, all use MockBridge (no real tools needed in CI)
+src/               React UI — multi-mode: ASM (3-col editor+debug), Pwn (split editors+terminal+tools)
+backend/app/       FastAPI: main.py → 9 routers (health, sessions, gdb, compile, rizin, pwn, firmware, protocol, ws), core/, bridges/, models/, sessions/
+tests/             24 pytest modules, ~664 tests, all use MockBridge (no real tools needed in CI)
 ai/                12 Claude Code agents + 2 workflows (see ai/README.md)
 ```
+
+[AGENTS.md](AGENTS.md) is a condensed companion to this file (commands cheatsheet + key patterns). Keep both in sync when editing.
 
 ### How the layers connect
 
@@ -71,7 +73,7 @@ ai/                12 Claude Code agents + 2 workflows (see ai/README.md)
 
 ### Session-based isolation
 
-Every API interaction goes through sessions. A session owns one bridge instance (GDB, rizin, pwntools, etc.) and one workspace directory (`~/.anvil/workspaces/{session_id}/`). Sessions auto-expire after 1 hour via a background cleanup loop (60s interval). Max 10 concurrent sessions.
+Every API interaction goes through sessions. A session owns one bridge instance (GDB, rizin, pwntools, etc.) and one workspace directory (`~/.anvil/workspaces/{session_id}/`). `session_id` is `uuid.uuid4().hex[:16]` (16 hex chars). Sessions auto-expire after 1 hour via a background cleanup loop (60s interval). Max 10 concurrent sessions.
 
 ```
 POST /api/sessions {bridge_type: "gdb"} → session_id
@@ -107,12 +109,38 @@ AnvilError (code, message, details) → mapped to HTTP status in main.py excepti
 └── SubprocessError → SubprocessTimeout, SubprocessCrash
 ```
 
+## Frontend modes
+
+### Theme & mode accent system
+Root element carries `data-theme="dark|light"` (toggled via `document.documentElement.setAttribute`) and `data-cat="asm|re|pwn|dbg|fw|hw"` (set by current mode). CSS rules key off `data-cat` to swap the `--accent` / `--accent-dim` tokens, which cascades to all mode-aware components.
+
+### ASM mode (default)
+3-column layout: ASM editor | registers+terminal | stack/memory/security panels.
+Custom syntax-highlighted editor with breakpoint gutter, register pane with sub-register breakdown, xterm.js terminal. State managed by `hooks/useAnvilSession.ts` (GDB lifecycle, breakpoints, stepping, register/memory snapshots).
+
+### Pwn mode
+Split layout: topbar (binary loader + checksec badges + tool buttons) → side-by-side editors (Source viewer + exploit.py Monaco) → bottom panel (Terminal/Symbols/GOT/PLT/Strings tabs).
+
+Key components:
+- `PwnMode.tsx` — main layout with resizable panels (col + row resize handles)
+- `PwnEditor.tsx` — Monaco editor for Python with `anvil-dark` theme and pwntools autocompletion
+- `SourceViewer.tsx` — read-only Monaco with vulnerability pattern detection (gets/sprintf/strcpy/system highlighted)
+- `editor/pwnCompletions.ts` — ~150 completion items (pwntools API + Python stdlib + exploit templates)
+- `hooks/usePwnSession.ts` — session hook: load binary (auto-compile if source), fetch checksec/symbols/GOT/PLT
+
+Pipeline: drop source (.c/.cpp/.rs/.go/.asm) → auto-compile via backend → load ELF → analyze → display.
+
+### Shared components
+- `AnvilTerminal.tsx` — xterm.js terminal (used by ASM and Pwn modes)
+- `hooks/useColResize.ts` — column resize hook (2 or 3 column modes)
+- `api/client.ts` — typed REST client wrapping fetch
+
 ## API Routes
 
 | Router | Prefix | Bridge | Key endpoints |
 |--------|--------|--------|---------------|
 | sessions | /api/sessions | all | CRUD sessions |
-| gdb | /api/gdb/{session_id} | pygdbmi | load, run, step, breakpoints, registers, memory, disassembly |
+| gdb | /api/gdb/{session_id} | pygdbmi | load, run, step (into/over/out/back), record, breakpoints, registers, memory, disassembly, current-line |
 | rizin | /api/re/{session_id} | rzpipe | analyze, functions, disasm, strings, imports, xrefs, decompile, emulate |
 | compile | /api/compile/{session_id} | nasm/gcc/ld | write/read source, compile ASM/C, checksec, readelf, objdump |
 | pwn | /api/pwn/{session_id} | pwntools | cyclic, shellcraft, ROP, format string, ELF analysis, encoding |
@@ -122,9 +150,9 @@ AnvilError (code, message, details) → mapped to HTTP status in main.py excepti
 
 ## Conventions
 
-- **CSS**: pure CSS with `anvil-` prefix, design tokens via CSS custom properties
-- **React**: functional components only
-- **Python**: type hints everywhere, Pydantic v2 for all request/response models
+- **CSS**: pure CSS with `anvil-` prefix, design tokens via CSS custom properties (`--space-*` for spacing, `--cat-*` for mode accents, `--font-*` for typography). No CSS-in-JS, no Tailwind.
+- **React**: functional components only, props via `interface XxxProps`. API calls go through `src/api/client.ts` (single typed `request<T>()` wrapper).
+- **Python**: type hints everywhere, Pydantic v2 for all request/response models. `from __future__ import annotations` at the top of every module. Imports ordered stdlib → third-party → local (ruff `I`).
 - **Bridges**: thin wrappers on tools — no extra abstraction
 - **Rust**: shell only — no business logic
 - **Sanitization**: mandatory in all bridges via `core/sanitization.py`
@@ -143,8 +171,13 @@ Core deps are always installed. Optional tool groups in pyproject.toml:
 - `protocols`: pymodbus
 
 ```bash
-pip install -e backend/          # core only
-pip install -e "backend/[dev]"   # + test/lint tools
+pip install -e backend/                    # core only (use this when adding deps to pyproject.toml)
+pip install -e "backend/[dev]"             # + test/lint (pytest, ruff, bandit)
+pip install -e "backend/[dev,re,pwn,firmware,protocols]"  # everything
+
+# Alternative: backend/requirements.txt bundles core + ALL optional tool groups in one file
+# (kept for parity with README install path); pyproject.toml is the source of truth for deps.
+pip install -r backend/requirements.txt
 ```
 
 ## CI

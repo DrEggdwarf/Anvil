@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 
-export function useColResize(initialPcts: [number, number, number]) {
+export function useColResize(initialPcts: number[]) {
   const [cols, setCols] = useState(initialPcts)
   const bodyRef = useRef<HTMLDivElement>(null)
   const dragging = useRef<{ idx: number } | null>(null)
@@ -19,8 +19,13 @@ export function useColResize(initialPcts: [number, number, number]) {
       const x = ((e.clientX - rect.left) / rect.width) * 100
       const { idx } = dragging.current
       setCols(prev => {
-        const next = [...prev] as [number, number, number]
-        if (idx === 0) {
+        const next = [...prev]
+        if (prev.length === 2) {
+          // 2-column mode: simple split
+          const newC0 = Math.max(20, Math.min(x, 80))
+          next[0] = newC0
+          next[1] = 100 - newC0
+        } else if (idx === 0) {
           const newC0 = Math.max(15, Math.min(x, 100 - prev[2] - 15))
           next[0] = newC0
           next[1] = 100 - newC0 - prev[2]

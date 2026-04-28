@@ -2,12 +2,15 @@ import { useState, useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useColResize } from './hooks/useColResize'
 import { useAnvilSession } from './hooks/useAnvilSession'
+import { usePwnSession } from './hooks/usePwnSession'
 import { EditorPanel } from './components/EditorPanel'
 import { RegistersPane } from './components/RegistersPane'
-import { TerminalDrawer } from './components/TerminalDrawer'
+import { AnvilTerminal } from './components/AnvilTerminal'
 import { StackPanel } from './components/panels/StackPanel'
 import { MemoryPanel } from './components/panels/MemoryPanel'
 import { SecurityPanel } from './components/panels/SecurityPanel'
+import { ReferenceModal } from './components/ReferenceModal'
+import { PwnMode } from './components/PwnMode'
 import './App.css'
 
 type Mode = 'ASM' | 'RE' | 'Pwn' | 'Debug' | 'Firmware' | 'Protocols'
@@ -56,12 +59,15 @@ function App() {
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [openPanels, setOpenPanels] = useState({ stack: true, memory: true, security: false })
   const [assembler, setAssembler] = useState<'nasm' | 'gas' | 'fasm'>('nasm')
+  const [refOpen, setRefOpen] = useState(false)
   const [fileName] = useState('source.asm')
   const [code, setCode] = useState(SAMPLE)
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set())
 
   const session = useAnvilSession()
+  const pwnSession = usePwnSession()
   const { cols, bodyRef, onDown } = useColResize([30, 36, 34])
+  const { cols: pwnCols, bodyRef: pwnBodyRef, onDown: pwnOnDown } = useColResize([45, 55])
 
   const toggleBp = useCallback((line: number) => {
     setBreakpoints(prev => {
@@ -74,7 +80,7 @@ function App() {
 
   // Cleanup sessions on unmount
   useEffect(() => {
-    return () => { session.destroySessions() }
+    return () => { session.destroySessions(); pwnSession.destroySession() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -144,6 +150,9 @@ function App() {
 
         <div className="anvil-header-controls">
           <div className="anvil-ctrl-group">
+            <button className="anvil-theme-btn" onClick={() => setRefOpen(true)} title="Reference">
+              <i className="fa-solid fa-book" />
+            </button>
             <button className="anvil-theme-btn" onClick={toggleTheme} title="Toggle theme">
               <i className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'}`} />
             </button>
@@ -158,7 +167,15 @@ function App() {
         </div>
       </header>
 
-      {/* ── Body (3 columns) ──────────────────────────────────── */}
+      {/* ── Body ─────────────────────────────────────────────── */}
+      {mode === 'Pwn' ? (
+        <PwnMode
+          session={pwnSession}
+          cols={pwnCols}
+          bodyRef={pwnBodyRef}
+          onColResize={pwnOnDown}
+        />
+      ) : (
       <div className="anvil-body" ref={bodyRef}>
         {/* Column 1: Editor */}
         <div className="anvil-col anvil-col-editor" style={{ width: cols[0] + '%' }}>
@@ -189,7 +206,7 @@ function App() {
               className="anvil-tb-run"
               title="Compiler et lancer (F5)"
               disabled={session.compiling || session.running}
-              onClick={() => session.buildAndRun(code)}
+              onClick={() => session.buildAndRun(code, assembler)}
             >
               {session.compiling
                 ? <i className="fa-solid fa-spinner fa-spin" />
@@ -265,8 +282,8 @@ function App() {
 
         {/* Column 2: Registers + Terminal */}
         <div className="anvil-col anvil-col-regs" style={{ width: cols[1] + '%' }}>
-          <RegistersPane registers={session.registers} />
-          <TerminalDrawer lines={session.lines} onClear={session.clearTerminal} />
+          <RegistersPane registers={session.registers} prevRegisters={session.prevRegisters} />
+          <AnvilTerminal lines={session.lines} onClear={session.clearTerminal} />
         </div>
 
         {/* Resize handle 2 */}
@@ -294,7 +311,7 @@ function App() {
                   <i className="fa-solid fa-layer-group anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Stack</span>
                 </div>
-                {openPanels.stack && <StackPanel />}
+                {openPanels.stack && <StackPanel stackData={session.stackData} registers={session.registers} />}
               </div>
 
               <div className="anvil-panel-section">
@@ -303,7 +320,14 @@ function App() {
                   <i className="fa-solid fa-memory anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Memory</span>
                 </div>
-                {openPanels.memory && <MemoryPanel />}
+                {openPanels.memory && <MemoryPanel
+                  memoryData={session.memoryData}
+                  memoryRegions={session.memoryRegions}
+                  registers={session.registers}
+                  readMemory={session.readMemory}
+                  writeMemory={session.writeMemory}
+                  fetchMemoryMap={session.fetchMemoryMap}
+                />}
               </div>
 
               <div className="anvil-panel-section">
@@ -312,17 +336,24 @@ function App() {
                   <i className="fa-solid fa-shield-halved anvil-panel-icon" />
                   <span className="anvil-panel-section-title">Security</span>
                 </div>
-                {openPanels.security && <SecurityPanel />}
+                {openPanels.security && <SecurityPanel sessionId={session.sessionId} binaryPath={session.binaryPath} />}
               </div>
             </div>
           </div>
         )}
       </div>
+      )}
+
+      <ReferenceModal open={refOpen} onClose={() => setRefOpen(false)} mode={MODE_CAT[mode] as import('./components/ReferenceModal').AppMode} />
 
       {/* ── Status Bar ────────────────────────────────────────── */}
       <footer className="anvil-statusbar">
         <span className="anvil-statusbar-item clickable">HEX</span>
-        <span className="anvil-statusbar-item">{assembler.toUpperCase()}</span>
+        {mode === 'Pwn' ? (
+          <span className="anvil-statusbar-item">{pwnSession.binaryInfo ? `${pwnSession.binaryInfo.arch} ${pwnSession.binaryInfo.bits}-bit` : 'No binary'}</span>
+        ) : (
+          <span className="anvil-statusbar-item">{assembler.toUpperCase()}</span>
+        )}
         <span className="anvil-statusbar-item"><i className="fa-solid fa-microchip" /> {mode}</span>
         <div className="anvil-statusbar-right">
           <span className="anvil-statusbar-item">Step: {session.stepCount}</span>

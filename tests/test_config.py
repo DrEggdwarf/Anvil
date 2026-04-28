@@ -19,7 +19,7 @@ class TestSettings:
         assert ".asm" in s.allowed_upload_extensions
         assert ".c" in s.allowed_upload_extensions
         assert s.ws_heartbeat_interval_seconds == 30.0
-        assert s.rate_limit_per_minute == 120
+        assert s.rate_limit_per_minute == 600
 
     def test_cors_origins_default(self):
         from backend.app.core.config import Settings

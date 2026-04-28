@@ -254,7 +254,7 @@ class TestFirmwareExtraction:
     async def test_carve_v3(self, fw: FirmwareBridge):
         fw._spm.execute = AsyncMock(return_value=(V3_EXTRACT_RESULT, "", 0))
         with patch("os.makedirs"):
-            result = await fw.carve("/tmp/firmware.bin")
+            await fw.carve("/tmp/firmware.bin")
         call_args = fw._spm.execute.call_args[0][0]
         assert "--carve" in call_args
 

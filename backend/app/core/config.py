@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
 
     # ── Rate limiting ────────────────────────────────────
-    rate_limit_per_minute: int = 120
+    rate_limit_per_minute: int = 600
 
 
 settings = Settings()
