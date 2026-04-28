@@ -1,5 +1,37 @@
 # Backlog — Anvil
 
+## 🔴 Audit post-merge `asm-dev → main` (28 avril 2026) — Sprints 14-16
+
+> Audit multi-agent complet (Security, Pentester, Architect, Performance, Quality, Testing) sur le merge `asm-dev → main`.
+> Verdict global : **fondation saine, dette localisée** — bloquant uniquement pour déploiement web/multi-user.
+> Mode desktop local (Docker localhost final) : acceptable temporairement.
+
+### Sprint 14 — Hardening sécu 🔴 IN PROGRESS
+- [ ] #1 `sanitize_gdb_input` sur `gdb.execute` raw WS (RCE Critique 1 ligne)
+- [ ] #2 `"` aux GDB chars bloqués + restreindre allowlist GCC `-W*`/`-l/path`/`-D`/`-I`
+- [ ] #3 Converger `api/pwn.py:compile_source` → `CompilationBridge` + paths via `WorkspaceManager`
+- [ ] #4 Token + Origin check sur WebSocket `/ws/{type}/{id}`
+- [ ] #5 CSP stricte `tauri.conf.json` + CORS limité à `localhost:1420`
+- [ ] #6 Tests sécu : `test_pwn_api.py`, `test_pwn_models.py`, `test_compile_api_assemblers.py`
+
+### Sprint 15 — Performance & Architecture refactor 🟠 PLANIFIÉ
+- [ ] `React.lazy(PwnMode + ReferenceModal)` dans `App.tsx`
+- [ ] Split `useAnvilSession.ts` (651 L) en `hooks/gdb/{parse,stepping,memory}.ts` + `useCallback`
+- [ ] Splitter `ReferenceModal.tsx` (877 L) par mode + dynamic import `data/reference-*`
+- [ ] Câbler frontend sur `/ws/gdb/{id}` pour stepping (gain -50ms/step)
+- [ ] LRU réel `pwn_bridge._cache_elf` via `OrderedDict.move_to_end`
+
+### Sprint 16 — Quality cleanup & ADRs 🟡 PLANIFIÉ
+- [ ] Supprimer `requirements.txt` divergent (pyproject.toml seule source)
+- [ ] Extraire `<FilterableList>` (Symbols/Strings/ROP)
+- [ ] Helper `fetchAndSet` dans `usePwnSession` (supprime 4 `as any`)
+- [ ] `editor/anvilMonacoTheme.ts` partagé (PwnEditor + SourceViewer)
+- [ ] Constantes nommées dans `AsmEditor` + `src/config.ts` (WS_RECONNECT_MS, HEARTBEAT_MS)
+- [ ] `transition: all` → propriétés ciblées (14 sites `App.css`)
+- [ ] Écrire ADR-015 à ADR-019
+
+---
+
 ## Phase 0 — API Engine (Sprints 1-6) 🔴 CRITIQUE
 > Le moteur d'API est le socle de TOUT. Chaque mode/feature en dépend.
 > Aucune feature UI ne doit démarrer avant que le core API soit testé à 90%+.

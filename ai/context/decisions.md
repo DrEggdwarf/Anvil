@@ -271,3 +271,110 @@ React frontend ↔ localhost:8000 (HTTP/WS)
 - Prevents API abuse and DoS via subprocess flooding
 - Output truncation prevents OOM from large process output
 - Semaphore released in both kill() and execute() cleanup paths
+
+---
+
+## ADR-015 : CSP stricte Tauri + CORS restreint
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 14)
+
+**Contexte** : Audit post-merge a relevé `csp: null` dans `tauri.conf.json` et `cors_origins=["*"]` dans `config.py`. En desktop local mono-user le risque est limité, mais le projet vise Docker localhost et un éventuel mode web. Une XSS dans la WebView (Monaco / xterm / sources C affichés) combinée à un WebSocket sans auth = compromission complète.
+
+**Décision** :
+- CSP stricte dans `tauri.conf.json` :
+  ```
+  default-src 'self';
+  script-src 'self' 'wasm-unsafe-eval';
+  connect-src 'self' http://127.0.0.1:8000 ws://127.0.0.1:8000;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  ```
+- `cors_origins` restreint à `["http://localhost:1420", "tauri://localhost"]` par défaut, override possible via env `ANVIL_CORS_ORIGINS`.
+- `allow_credentials=False` conservé (déjà le cas).
+
+**Conséquences** :
+- XSS via Monaco/xterm bloquée même si une CVE upstream apparaissait
+- DNS rebinding et CSRF cross-site fermés
+- Mode web futur devra explicitement allowlister son origine
+
+---
+
+## ADR-016 : WebSocket auth via session token
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 14)
+
+**Contexte** : `/ws/{session_type}/{session_id}` accepte toute connexion sans vérifier ni l'existence de la session ni le `session_type` correspondant au bridge. Sur un poste local mono-user c'est OK ; mais dès qu'il y a Docker partagé, conteneur multi-user, ou XSS dans la WebView, n'importe qui sur localhost:8000 peut piloter une session GDB.
+
+**Décision** :
+- Au `POST /api/sessions`, générer `session.token = secrets.token_hex(16)` (32 chars).
+- Le token est retourné UNE SEULE FOIS au create.
+- Le WS exige `?token=...` dans l'URL ; le handler vérifie `session.token == query_token` avant `accept()`.
+- Vérification de `Origin` header contre `cors_origins`.
+- Vérification que `session_type` matche le bridge attaché à la session.
+
+**Conséquences** :
+- Compromission cross-process locale fermée
+- Le frontend doit conserver le token côté React state (pas de refresh = re-connect impossible — acceptable, le Tauri shell garde la mémoire)
+- En cas de fuite token = compromission jusqu'à expiration session (1h)
+
+---
+
+## ADR-017 : Pipeline de compilation unifié — `CompilationBridge` source unique
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 14)
+
+**Contexte** : Le merge `asm-dev → main` a introduit `api/pwn.py:compile_source` qui ré-implémente nasm/gcc/g++/rustc/go en parallèle de `bridges/compilation.py`. Conséquences : deux jeux de flags sécurité divergents, deux error parsers, deux mappings extension→langue, deux validations de path. L'audit Security a flagué cela comme cause racine de findings A1, A2 (path arbitraire + Rust/Go avec network).
+
+**Décision** :
+- `CompilationBridge` est l'unique point d'entrée pour toute compilation.
+- `api/pwn.py:compile_source` délègue à `CompilationBridge.compile_<lang>` (ajouter `compile_cpp`, `compile_rust`, `compile_go` au bridge).
+- Tous les paths passent par `WorkspaceManager.get_file_path(session_id, basename)` — plus de `Path` manuel dans `api/pwn.py`.
+- `_LANG_MAP` (extension→langue) déplacé dans le bridge ; le frontend reçoit la langue détectée par l'API.
+- Rust/Go opèrent en mode offline forcé (`CARGO_NET_OFFLINE=1`, `GOFLAGS=-mod=vendor`) tant qu'un sandbox réseau (nsjail/Docker) n'est pas en place.
+
+**Conséquences** :
+- Une seule source de vérité pour les flags sécu (`-fstack-protector-strong`, `-D_FORTIFY_SOURCE=2`, `-pie`, `-Wl,-z,relro,-z,now`)
+- Path traversal/symlink centralisé via `WorkspaceManager`
+- Rust/Go n'ouvrent plus de connexion réseau au build (anti-SSRF)
+- Sprint 14 fix #3 ferme A1, A2, Pent#4, Pent#6
+
+---
+
+## ADR-018 : Pattern `useXxxSession` + seuil dur 400 LOC frontend
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 15)
+
+**Contexte** : `useAnvilSession.ts` (651 L) et `ReferenceModal.tsx` (877 L) violent la règle Quality des 400 L. Mélangent plusieurs responsabilités : parsing GDB/MI + lifecycle + step + memory + compile pour le hook ; 6 vues mode-spécifiques pour le modal.
+
+**Décision** :
+- **Seuil dur** : tout fichier React > 400 L doit être éclaté ; > 500 L est bloquant pour merge.
+- **Pattern hook session** : chaque mode introduit un `useXxxSession` strictement responsable du lifecycle session + appels API. Les sous-domaines (parsing, stepping, memory, compile) vivent dans `hooks/<mode>/<domain>.ts` et sont composés par le hook racine.
+- Contrat minimal d'un `useXxxSession` : `{ sessionId, ensureSession(), destroySession(), log[], clearLog() }`.
+
+**Conséquences** :
+- Hooks plus petits = testables individuellement (vitest)
+- Re-renders limités par découpage des states dans des hooks dédiés
+- ReferenceModal éclaté par mode = lazy-load possible par tab actif
+
+---
+
+## ADR-019 : `pyproject.toml` source unique des deps Python
+
+**Date** : 28 avril 2026
+**Statut** : Accepté (Sprint 16)
+
+**Contexte** : `backend/requirements.txt` (bundle complet, versions divergentes : pwntools `>=4.0`, binwalk `>=2.3`) coexiste avec `backend/pyproject.toml` (segmenté en optional-deps, versions à jour : pwntools `>=4.12`, binwalk `>=2.4`). Risque de régression lors d'un `pip install -r requirements.txt` qui downgrade les outils.
+
+**Décision** :
+- Supprimer `backend/requirements.txt` et `backend/requirements-dev.txt`.
+- README pointe sur `pip install -e "backend/[dev,re,pwn,firmware,protocols]"` pour install complète.
+- CI inchangée (déjà sur `pip install -e .[dev]`).
+
+**Conséquences** :
+- Une seule source de vérité, plus de drift de versions
+- Le `pip install -r` historique disparaît — léger breaking change pour devs qui suivent l'ancien README
+- Préparation propre pour le Dockerfile (Sprint 12) qui consommera `pyproject.toml`

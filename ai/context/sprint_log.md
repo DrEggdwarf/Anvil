@@ -318,6 +318,54 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
+## Sprint 14 — Hardening sécu post-merge (28 avril 2026) 🔴 IN PROGRESS
+**Objectif** : Corriger les findings critiques identifiés par l'audit multi-agent (Security + Pentester) après le merge `asm-dev → main`. Anticiper le déploiement Docker/web.
+**Agents** : @security → @pentester → @backend → @testing
+**Priorité** : 🔴 CRITIQUE — bloquant avant tout déploiement web/multi-user
+
+### Findings traités
+1. **Pent#1 (Critique, RCE)** — `gdb.execute` raw via WS ne sanitize pas l'input. Fix : `sanitize_gdb_input()` dans `gdb_ws.py:_handle_raw_execute`.
+2. **Pent#2/#3 (Élevé)** — Sanitizer GDB n'inclut pas `"`, allowlist GCC `-W*` autorise `-Wl,-rpath`. Fix : ajouter `"` aux chars bloqués + restreindre `-W*` à une allowlist explicite (`-Wall`, `-Wextra`, `-Werror`, `-W<warning>`).
+3. **Sec A1+A2 / Archi#1 / Pent#4+#6 (Critique)** — `api/pwn.py:compile_source` ré-implémente nasm/gcc/rustc/go en parallèle de `CompilationBridge`. Endpoints `elf/*` acceptent un `path` arbitraire. Fix : rerouter vers `CompilationBridge` + valider tous les paths via `WorkspaceManager.get_file_path(session_id, basename)`.
+4. **Pent#11 / Sec A3 (Élevé)** — WebSocket `/ws/{type}/{id}` accepte sans auth. Fix : générer un `Session.token` (32 hex) au create, exiger `?token=...` côté WS, vérifier `Origin` header.
+5. **Sec A4 / Pent#14 (Moyen → Élevé sous web)** — `csp: null` dans Tauri + CORS `*`. Fix : CSP stricte (default-src 'self', connect-src 127.0.0.1:8000) + CORS limité à `http://localhost:1420` en mode desktop.
+6. **Test régression** — `api/pwn.py` à ~10% couverture, models/pwn.py à ~5%. Fix : créer `test_pwn_api.py` + `test_pwn_models.py` couvrant validators et endpoints sensibles, plus `test_compile_api_assemblers.py` pour GAS/FASM côté route.
+
+### Réalisé
+*(en cours)*
+
+---
+
+## Sprint 15 — Performance & Architecture refactor (28 avril 2026) ⏸ PLANIFIÉ
+**Objectif** : Résorber la régression perf identifiée par l'audit (bundle initial 720 KB, 0 lazy split, hooks non mémoïsés, WS ignoré côté front). Simplifier les fichiers > 500 L.
+**Agents** : @performance → @architect → @frontend
+**Priorité** : 🟠 HAUTE — bloquant cible « step <100ms »
+
+### Findings traités
+- **Perf#1 / Archi#2** — `App.tsx` charge tous les modes eager. Fix : `React.lazy(PwnMode)` + `React.lazy(ReferenceModal)` + `<Suspense>`.
+- **Perf#2 / Archi (useAnvilSession 651 L)** — Hook monolithique avec ~25 fns inline. Fix : extraire `hooks/gdb/parseGdbResponse.ts`, `useGdbStepping.ts`, `useGdbMemory.ts` ; ajouter `useCallback`/`useMemo` aux fns retournées.
+- **Archi (ReferenceModal 877 L)** — Plus gros fichier frontend. Fix : éclater en `components/reference/{AsmRef,ReRef,PwnRef,DbgRef,FwRef,HwRef}.tsx` + dynamic `import('../data/reference-pwn')` par tab actif.
+- **Perf#3 (WS inutilisé)** — Stepping en REST round-trip (~80-150ms). Fix : câbler `useAnvilSession` sur `/ws/gdb/{id}` pour stepping/console/registers.
+- **Perf#7 (cache FIFO)** — `pwn_bridge._cache_elf` est FIFO, pas LRU réel. Fix : `OrderedDict.move_to_end(path)` à chaque accès.
+
+---
+
+## Sprint 16 — Quality cleanup & ADRs (28 avril 2026) ⏸ PLANIFIÉ
+**Objectif** : Régler la dette quality identifiée et formaliser les décisions structurantes.
+**Agents** : @quality → @architect
+
+### Findings traités
+- **Archi (deps Python divergentes)** — `requirements.txt` ≠ `pyproject.toml` (pwntools 4.0 vs 4.12). Fix : supprimer `requirements.txt`, ajouter `pyproject.toml` comme source unique.
+- **Quality (duplication PwnMode)** — `SymbolsList` ≈ `StringsList`. Fix : extraire `<FilterableList>`.
+- **Quality (duplication usePwnSession)** — 4 `fetchChecksec/Symbols/Got/Plt` quasi-identiques + 4 `as any`. Fix : helper `fetchAndSet` typé.
+- **Archi (thème Monaco dupliqué)** — PwnEditor + SourceViewer redéfinissent `anvil-dark`. Fix : extraire `editor/anvilMonacoTheme.ts`.
+- **Quality (magic numbers AsmEditor)** — `7.22`, `400`, `80`, `30`, `20` sans nom. Fix : constantes `LINE_HEIGHT_PX`, `SNAPSHOT_DEBOUNCE_MS`, etc.
+- **Quality (frontend sans config)** — WS reconnect/heartbeat hardcodés dans `api/ws.ts`. Fix : `src/config.ts` central.
+- **Perf (CSS transition: all)** — 14 sites dans `App.css`. Fix : propriétés ciblées.
+- **ADRs à écrire** — ADR-015 (CSP+CORS), ADR-016 (WS auth token), ADR-017 (Compile pipeline unifié), ADR-018 (Pattern useXxxSession + seuil 400 L), ADR-019 (pyproject.toml source unique deps Python).
+
+---
+
 ## Sprint 9 — Mode Pwn : UI Complète (23 avril 2026) ✅
 
 ### Objectif
