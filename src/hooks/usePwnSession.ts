@@ -169,42 +169,42 @@ export function usePwnSession() {
     }
   }
 
-  async function fetchChecksec(sid: string, path: string) {
+  // Sprint 17-D: helper that absorbs the {data: ...} unwrap, the mapping, and
+  // the optional error logging so the 4 fetchX functions become one-liners.
+  // `errorLabel` is optional — when omitted, errors are swallowed silently
+  // (used for non-critical sub-fetches like symbols/GOT/PLT).
+  async function fetchAndSet<R, U>(
+    call: () => Promise<api.PwnDict<R>>,
+    map: (raw: R) => U,
+    setter: (value: U) => void,
+    errorLabel?: string,
+  ): Promise<void> {
     try {
-      const resp = await api.pwnChecksec(sid, path)
-      // API wraps in {data: {...}} via PwnDictResponse
-      const data = (resp as any).data ?? resp
-      setChecksecData(data)
+      const resp = await call()
+      setter(map(resp.data))
     } catch (e) {
-      log('error', `Checksec: ${(e as Error).message}`)
+      if (errorLabel) log('error', `${errorLabel}: ${(e as Error).message}`)
     }
   }
 
-  async function fetchSymbols(sid: string, path: string) {
-    try {
-      const resp = await api.pwnSymbols(sid, path)
-      const raw = (resp as any).data ?? resp.symbols ?? {}
-      const entries = Object.entries(raw).map(([name, address]) => ({ name, address: String(address) }))
-      setSymbols(entries)
-    } catch { /* optional */ }
+  // Convert a {name → address} dict into the {name, address} array shape the UI consumes.
+  const toSymbolEntries = (raw: Record<string, string>) =>
+    Object.entries(raw).map(([name, address]) => ({ name, address: String(address) }))
+
+  function fetchChecksec(sid: string, path: string) {
+    return fetchAndSet(() => api.pwnChecksec(sid, path), v => v, setChecksecData, 'Checksec')
   }
 
-  async function fetchGot(sid: string, path: string) {
-    try {
-      const resp = await api.pwnGot(sid, path)
-      const raw = (resp as any).data ?? resp.got ?? {}
-      const entries = Object.entries(raw).map(([name, address]) => ({ name, address: String(address) }))
-      setGotEntries(entries)
-    } catch { /* optional */ }
+  function fetchSymbols(sid: string, path: string) {
+    return fetchAndSet(() => api.pwnSymbols(sid, path), toSymbolEntries, setSymbols)
   }
 
-  async function fetchPlt(sid: string, path: string) {
-    try {
-      const resp = await api.pwnPlt(sid, path)
-      const raw = (resp as any).data ?? resp.plt ?? {}
-      const entries = Object.entries(raw).map(([name, address]) => ({ name, address: String(address) }))
-      setPltEntries(entries)
-    } catch { /* optional */ }
+  function fetchGot(sid: string, path: string) {
+    return fetchAndSet(() => api.pwnGot(sid, path), toSymbolEntries, setGotEntries)
+  }
+
+  function fetchPlt(sid: string, path: string) {
+    return fetchAndSet(() => api.pwnPlt(sid, path), toSymbolEntries, setPltEntries)
   }
 
   // ── Pwn tools ───────────────────────────────────────────

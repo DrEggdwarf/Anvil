@@ -224,6 +224,11 @@ export function dependencies(sessionId: string, filename: string) {
 
 // ── Pwn ──────────────────────────────────────────────────────
 
+/** Backend wraps free-form dict payloads in {data: ...} (PwnDictResponse).
+ *  Sprint 17-D: type it generically so callers can drop `as any` casts. */
+export interface PwnDict<T> { data: T }
+export interface PwnList<T> { items: T[] }
+
 export interface PwnChecksec {
   relro: string
   canary: boolean
@@ -255,27 +260,27 @@ export function pwnLoadElf(sessionId: string, path: string) {
 }
 
 export function pwnChecksec(sessionId: string, path: string) {
-  return request<PwnChecksec>('GET', `/api/pwn/${sessionId}/elf/checksec?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<PwnChecksec>>('GET', `/api/pwn/${sessionId}/elf/checksec?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnSymbols(sessionId: string, path: string) {
-  return request<{ symbols: Record<string, string> }>('GET', `/api/pwn/${sessionId}/elf/symbols?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<Record<string, string>>>('GET', `/api/pwn/${sessionId}/elf/symbols?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnGot(sessionId: string, path: string) {
-  return request<{ got: Record<string, string> }>('GET', `/api/pwn/${sessionId}/elf/got?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<Record<string, string>>>('GET', `/api/pwn/${sessionId}/elf/got?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnPlt(sessionId: string, path: string) {
-  return request<{ plt: Record<string, string> }>('GET', `/api/pwn/${sessionId}/elf/plt?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<Record<string, string>>>('GET', `/api/pwn/${sessionId}/elf/plt?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnSections(sessionId: string, path: string) {
-  return request<{ sections: Record<string, unknown> }>('GET', `/api/pwn/${sessionId}/elf/sections?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<Record<string, unknown>>>('GET', `/api/pwn/${sessionId}/elf/sections?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnFunctions(sessionId: string, path: string) {
-  return request<{ functions: Record<string, string> }>('GET', `/api/pwn/${sessionId}/elf/functions?path=${encodeURIComponent(path)}`)
+  return request<PwnDict<Record<string, string>>>('GET', `/api/pwn/${sessionId}/elf/functions?path=${encodeURIComponent(path)}`)
 }
 
 export function pwnSearchElf(sessionId: string, path: string, needle: string, isHex = false) {

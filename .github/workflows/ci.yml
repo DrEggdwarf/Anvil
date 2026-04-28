@@ -25,6 +25,34 @@ jobs:
       - name: Bandit security scan
         run: bandit -r backend/ -c backend/pyproject.toml
 
+  audit:
+    name: Dependency audits (Sprint 17 — closes Sec A9)
+    runs-on: ubuntu-latest
+    # Audits report for visibility but do not gate the build — a fresh upstream
+    # CVE shouldn't block a hotfix. Promote each step to required when the team
+    # has SLAs for pinning bumps.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: pip-audit (Python deps via pyproject.toml)
+        run: |
+          pip install pip-audit
+          pip install -e "backend/[dev,re,pwn,firmware,protocols]"
+          pip-audit
+      - name: npm audit (high+ only)
+        run: npm audit --audit-level=high
+      - name: cargo-audit (Rust deps for src-tauri)
+        working-directory: src-tauri
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
   test:
     name: Tests
     runs-on: ubuntu-latest

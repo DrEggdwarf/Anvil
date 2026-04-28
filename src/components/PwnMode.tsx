@@ -3,6 +3,7 @@ import type { usePwnSession } from '../hooks/usePwnSession'
 import PwnEditor from './PwnEditor'
 import SourceViewer from './SourceViewer'
 import { AnvilTerminal } from './AnvilTerminal'
+import { FilterableList } from './FilterableList'
 
 /* ═══════════════════════════════════════════════════════════
    Types
@@ -90,28 +91,18 @@ interface SymbolsListProps {
 }
 
 function SymbolsList({ entries, emptyText }: SymbolsListProps) {
-  const [filter, setFilter] = useState('')
-  const filtered = entries.filter(e => !filter || e.name.toLowerCase().includes(filter.toLowerCase()))
-
-  if (entries.length === 0) return <div className="anvil-pwn-empty">{emptyText}</div>
-
   return (
-    <div className="anvil-pwn-symbols">
-      <input
-        className="anvil-pwn-filter"
-        placeholder="Filtrer..."
-        value={filter}
-        onChange={e => setFilter(e.target.value)}
-      />
-      <div className="anvil-pwn-symbol-list">
-        {filtered.map((s, i) => (
-          <div key={i} className="anvil-pwn-symbol-row">
-            <span className="anvil-pwn-sym-addr">{s.address}</span>
-            <span className="anvil-pwn-sym-name">{s.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <FilterableList
+      items={entries}
+      emptyText={emptyText}
+      getFilterText={e => e.name}
+      renderRow={s => (
+        <>
+          <span className="anvil-pwn-sym-addr">{s.address}</span>
+          <span className="anvil-pwn-sym-name">{s.name}</span>
+        </>
+      )}
+    />
   )
 }
 
@@ -120,29 +111,20 @@ interface StringsListProps {
 }
 
 function StringsList({ entries }: StringsListProps) {
-  const [filter, setFilter] = useState('')
-  const filtered = entries.filter(e => !filter || e.string.toLowerCase().includes(filter.toLowerCase()))
-
-  if (entries.length === 0) return <div className="anvil-pwn-empty">No strings found</div>
-
   return (
-    <div className="anvil-pwn-symbols">
-      <input
-        className="anvil-pwn-filter"
-        placeholder="Filtrer strings..."
-        value={filter}
-        onChange={e => setFilter(e.target.value)}
-      />
-      <div className="anvil-pwn-symbol-list">
-        {filtered.slice(0, 200).map((s, i) => (
-          <div key={i} className="anvil-pwn-symbol-row">
-            <span className="anvil-pwn-sym-addr">{s.offset}</span>
-            <span className="anvil-pwn-sym-name anvil-pwn-str-val">{s.string}</span>
-          </div>
-        ))}
-        {filtered.length > 200 && <div className="anvil-pwn-empty">+{filtered.length - 200} more...</div>}
-      </div>
-    </div>
+    <FilterableList
+      items={entries}
+      emptyText="No strings found"
+      placeholder="Filtrer strings..."
+      maxDisplay={200}
+      getFilterText={e => e.string}
+      renderRow={s => (
+        <>
+          <span className="anvil-pwn-sym-addr">{s.offset}</span>
+          <span className="anvil-pwn-sym-name anvil-pwn-str-val">{s.string}</span>
+        </>
+      )}
+    />
   )
 }
 
