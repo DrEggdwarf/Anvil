@@ -3,6 +3,8 @@
  * Handles reconnection, heartbeat, and message routing.
  */
 
+import { WS_HEARTBEAT_MS, WS_RECONNECT_MS } from '../config'
+
 const WS_BASE = window.__TAURI__ ? 'ws://127.0.0.1:8000' : `ws://${location.host}`
 
 export type WSMessageType = 'command' | 'subscribe' | 'unsubscribe' | 'ping' | 'result' | 'event' | 'error' | 'pong'
@@ -64,8 +66,7 @@ export class AnvilWS {
       this._connected = false
       this.stopHeartbeat()
       this.ws = null
-      // Auto-reconnect after 2s
-      this.reconnectTimer = setTimeout(() => this.connect(), 2000)
+      this.reconnectTimer = setTimeout(() => this.connect(), WS_RECONNECT_MS)
     }
 
     this.ws.onerror = () => {
@@ -123,7 +124,7 @@ export class AnvilWS {
           payload: {},
         }))
       }
-    }, 30_000)
+    }, WS_HEARTBEAT_MS)
   }
 
   private stopHeartbeat() {

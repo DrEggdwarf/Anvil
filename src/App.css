@@ -709,7 +709,7 @@ body {
   cursor: pointer;
   font-family: var(--font-code);
   letter-spacing: 0.3px;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
   user-select: none;
 }
 
@@ -1000,7 +1000,7 @@ body {
   border: 1px solid var(--border-base);
   color: var(--text-muted);
   cursor: default;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
   min-width: 28px;
   text-align: center;
 }
@@ -1237,7 +1237,7 @@ body {
   border-radius: 5px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-raised);
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   overflow: hidden;
 }
@@ -1386,7 +1386,7 @@ body {
   color: var(--text-muted);
   background: var(--bg-overlay);
   border: 1px solid var(--border-subtle);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
   cursor: default;
   user-select: none;
 }
@@ -1646,7 +1646,7 @@ body {
   font-size: 11px;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-sec-tab:hover {
@@ -1672,7 +1672,7 @@ body {
   color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-sec-refresh:hover { color: var(--text-primary); background: var(--bg-hover); }
@@ -1893,7 +1893,7 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
   flex-shrink: 0;
 }
 
@@ -1922,7 +1922,7 @@ body {
   font-size: 12px;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-ref-tab:hover { color: var(--text-primary); background: var(--bg-hover); }
@@ -1962,7 +1962,7 @@ body {
   font-size: 11px;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-ref-filter:hover { border-color: var(--border-base); color: var(--text-primary); }
@@ -2308,7 +2308,7 @@ body {
   font-size: 11px;
   font-family: var(--font-code);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-ed-find-btn:hover {
@@ -2410,7 +2410,7 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   border-radius: 2px;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
   flex-shrink: 0;
 }
 
@@ -2913,7 +2913,7 @@ body {
   font-size: 10px;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
   white-space: nowrap;
 }
 
@@ -3000,7 +3000,7 @@ body {
   padding: 3px 10px; border: 0.5px solid var(--border-base);
   border-radius: var(--radius-sm); background: transparent;
   color: var(--text-secondary); font-size: 11px; cursor: pointer;
-  transition: all 0.12s; font-family: var(--font-ui);
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s; font-family: var(--font-ui);
 }
 .anvil-pwn-tab-btn:hover { color: var(--text-primary); }
 .anvil-pwn-tab-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
@@ -3122,7 +3122,7 @@ body {
   font-family: var(--font-ui);
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
 }
 
 .anvil-pwn-bottom-tab:hover {

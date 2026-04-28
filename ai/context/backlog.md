@@ -22,14 +22,24 @@
 - [→ Sprint 17] Câbler frontend sur `/ws/gdb/{id}` pour stepping (gain -50ms/step)
 - [→ Sprint 17] Splitter `ReferenceModal.tsx` par mode + dynamic data par tab
 
-### Sprint 16 — Quality cleanup & ADRs 🟡 PLANIFIÉ
-- [ ] Supprimer `requirements.txt` divergent (pyproject.toml seule source)
-- [ ] Extraire `<FilterableList>` (Symbols/Strings/ROP)
-- [ ] Helper `fetchAndSet` dans `usePwnSession` (supprime 4 `as any`)
-- [ ] `editor/anvilMonacoTheme.ts` partagé (PwnEditor + SourceViewer)
-- [ ] Constantes nommées dans `AsmEditor` + `src/config.ts` (WS_RECONNECT_MS, HEARTBEAT_MS)
-- [ ] `transition: all` → propriétés ciblées (14 sites `App.css`)
-- [ ] Écrire ADR-015 à ADR-019
+### Sprint 16 — Quality cleanup & ADRs ✅ (28 avril)
+- [x] Supprimer `requirements*.txt` divergents (pyproject.toml seule source) + CI nettoyée
+- [x] `editor/anvilMonacoTheme.ts` partagé (PwnEditor + SourceViewer)
+- [x] Constantes nommées dans `AsmEditor` + `src/config.ts`
+- [x] `transition: all` → propriétés ciblées (14 sites `App.css`)
+- [x] ADR-015 à ADR-019 écrits dans `decisions.md`
+- [→ Sprint 17] Extraire `<FilterableList>` (Symbols/Strings/ROP) — besoin de tests frontend
+- [→ Sprint 17] Helper `fetchAndSet` dans `usePwnSession` — typer `PwnDictResponse` proprement
+
+### Sprint 17 — Frontend tests + WS wiring + restant cleanup ⏸ PLANIFIÉ
+- [ ] Bootstrap stack vitest + RTL (`src/__tests__/setup.ts`, smoke test PwnMode + usePwnSession)
+- [ ] Câbler `useAnvilSession` sur `/ws/gdb/{session_id}?token=...` (gain -50ms/step, ferme Perf#3)
+- [ ] Splitter `useAnvilSession.ts` en `useGdbStepping` + `useGdbMemory` + orchestrateur
+- [ ] `useCallback`/`useMemo` massif sur les fns retournées (gain -30-50% renders)
+- [ ] Extraire `<FilterableList>` (gain -80 L de duplication)
+- [ ] Typer `PwnDictResponse` génériquement + `fetchAndSet` helper (supprime 4 `as any`)
+- [ ] Splitter `ReferenceModal.tsx` par mode + dynamic import data par tab
+- [ ] CI : ajouter `pip-audit` + `cargo audit` + `npm audit --audit-level=high` (Sec A9)
 
 ---
 

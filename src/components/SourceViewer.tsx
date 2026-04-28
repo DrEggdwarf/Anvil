@@ -6,6 +6,7 @@
 import { useRef, useCallback, useEffect } from 'react'
 import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
 import type * as Monaco from 'monaco-editor'
+import { ANVIL_DARK_THEME, defineAnvilDarkTheme } from './editor/anvilMonacoTheme'
 
 interface SourceViewerProps {
   code: string
@@ -90,35 +91,6 @@ function monacoLang(lang: string): string {
   }
 }
 
-function defineAnvilThemeIfNeeded(monaco: typeof Monaco) {
-  // Same theme as PwnEditor — may already be defined
-  try {
-    monaco.editor.defineTheme('anvil-dark-source', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'comment', foreground: '6a737d', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'c586c0' },
-        { token: 'string', foreground: 'ce9178' },
-        { token: 'number', foreground: 'b5cea8' },
-        { token: 'type', foreground: '4ec9b0' },
-        { token: 'identifier', foreground: '9cdcfe' },
-        { token: 'function', foreground: 'dcdcaa' },
-        { token: 'delimiter', foreground: 'd4d4d4' },
-      ],
-      colors: {
-        'editor.background': '#0d1117',
-        'editor.foreground': '#e6edf3',
-        'editor.lineHighlightBackground': '#161b22',
-        'editor.selectionBackground': '#264f7844',
-        'editorCursor.foreground': '#e040a0',
-        'editorLineNumber.foreground': '#484f58',
-        'editorLineNumber.activeForeground': '#8b949e',
-        'editorGutter.background': '#0d1117',
-      },
-    })
-  } catch { /* already defined */ }
-}
 
 export default function SourceViewer({ code, language }: SourceViewerProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -126,7 +98,7 @@ export default function SourceViewer({ code, language }: SourceViewerProps) {
   const decorationsRef = useRef<Monaco.editor.IEditorDecorationsCollection | null>(null)
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
-    defineAnvilThemeIfNeeded(monaco)
+    defineAnvilDarkTheme(monaco)
     monacoRef.current = monaco
   }, [])
 
@@ -183,7 +155,7 @@ export default function SourceViewer({ code, language }: SourceViewerProps) {
     <Editor
       height="100%"
       language={monacoLang(language)}
-      theme="anvil-dark-source"
+      theme={ANVIL_DARK_THEME}
       value={code}
       options={{
         readOnly: true,

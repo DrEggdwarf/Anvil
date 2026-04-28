@@ -3,6 +3,14 @@ import { tokenizeLine } from './tokenizer'
 import { lintCode } from './linter'
 import { computeFoldRegions } from './foldRegions'
 import { COMPLETIONS, INSTR_INFO, kindIcon, kindClass, type CompletionItem } from './completions'
+import {
+  EDITOR_AUTOCOMPLETE_BLUR_DELAY_MS,
+  EDITOR_AUTOCOMPLETE_DEBOUNCE_MS,
+  EDITOR_DEFAULT_CHAR_WIDTH_PX,
+  EDITOR_FIND_FOCUS_DELAY_MS,
+  EDITOR_SNAPSHOT_DEBOUNCE_MS,
+  EDITOR_UNDO_HISTORY_MAX,
+} from '../../config'
 
 interface AsmEditorProps {
   code: string
@@ -22,7 +30,7 @@ export default function AsmEditor({ code, onChange, activeLine, errorLine, break
   const tooltipRef = useRef<HTMLDivElement>(null)
   const findInputRef = useRef<HTMLInputElement>(null)
   const highlightLayerRef = useRef<HTMLDivElement>(null)
-  const [charW, setCharW] = useState(7.22)
+  const [charW, setCharW] = useState(EDITOR_DEFAULT_CHAR_WIDTH_PX)
 
   // Undo / Redo
   const undoRef = useRef<string[]>([])
@@ -32,13 +40,13 @@ export default function AsmEditor({ code, onChange, activeLine, errorLine, break
 
   const pushUndo = useCallback((snapshot: string) => {
     if (snapshot === undoRef.current[undoRef.current.length - 1]) return
-    undoRef.current = [...undoRef.current.slice(-79), snapshot]
+    undoRef.current = [...undoRef.current.slice(-(EDITOR_UNDO_HISTORY_MAX - 1)), snapshot]
     redoRef.current = []
   }, [])
 
   const scheduleSnapshot = useCallback((prev: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => { pushUndo(prev); lastSnapshotRef.current = prev }, 400)
+    debounceRef.current = setTimeout(() => { pushUndo(prev); lastSnapshotRef.current = prev }, EDITOR_SNAPSHOT_DEBOUNCE_MS)
   }, [pushUndo])
 
   const handleChange = useCallback((newCode: string) => { scheduleSnapshot(code); onChange(newCode) }, [code, onChange, scheduleSnapshot])
@@ -236,8 +244,8 @@ export default function AsmEditor({ code, onChange, activeLine, errorLine, break
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); return }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo(); return }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setFindOpen(v => !v); setTimeout(() => findInputRef.current?.focus(), 50); return }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'h') { e.preventDefault(); setFindOpen(true); setTimeout(() => findInputRef.current?.focus(), 50); return }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); setFindOpen(v => !v); setTimeout(() => findInputRef.current?.focus(), EDITOR_FIND_FOCUS_DELAY_MS); return }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'h') { e.preventDefault(); setFindOpen(true); setTimeout(() => findInputRef.current?.focus(), EDITOR_FIND_FOCUS_DELAY_MS); return }
     if (acVisible) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAcIndex(i => Math.min(i + 1, acItems.length - 1)); return }
       if (e.key === 'ArrowUp') { e.preventDefault(); setAcIndex(i => Math.max(i - 1, 0)); return }
@@ -318,7 +326,7 @@ export default function AsmEditor({ code, onChange, activeLine, errorLine, break
 
   useEffect(() => {
     const ta = textareaRef.current
-    if (ta && document.activeElement === ta) { const t = setTimeout(() => { updateAutocomplete(); updateCursorWord() }, 30); return () => clearTimeout(t) }
+    if (ta && document.activeElement === ta) { const t = setTimeout(() => { updateAutocomplete(); updateCursorWord() }, EDITOR_AUTOCOMPLETE_DEBOUNCE_MS); return () => clearTimeout(t) }
   }, [code, updateAutocomplete, updateCursorWord])
 
   useEffect(() => {
@@ -472,7 +480,7 @@ export default function AsmEditor({ code, onChange, activeLine, errorLine, break
               <code>{highlightedContent}</code>
             </pre>
           </div>
-          <textarea ref={textareaRef} className="anvil-ed-textarea" value={code} onChange={handleInput} onKeyDown={handleKeyDown} onScroll={syncScroll} onBlur={() => setTimeout(() => setAcVisible(false), 150)} spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off" />
+          <textarea ref={textareaRef} className="anvil-ed-textarea" value={code} onChange={handleInput} onKeyDown={handleKeyDown} onScroll={syncScroll} onBlur={() => setTimeout(() => setAcVisible(false), EDITOR_AUTOCOMPLETE_BLUR_DELAY_MS)} spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off" />
         </div>
       </div>
 

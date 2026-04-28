@@ -357,19 +357,24 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
-## Sprint 16 — Quality cleanup & ADRs (28 avril 2026) ⏸ PLANIFIÉ
+## Sprint 16 — Quality cleanup & ADRs (28 avril 2026) ✅
 **Objectif** : Régler la dette quality identifiée et formaliser les décisions structurantes.
 **Agents** : @quality → @architect
 
-### Findings traités
-- **Archi (deps Python divergentes)** — `requirements.txt` ≠ `pyproject.toml` (pwntools 4.0 vs 4.12). Fix : supprimer `requirements.txt`, ajouter `pyproject.toml` comme source unique.
-- **Quality (duplication PwnMode)** — `SymbolsList` ≈ `StringsList`. Fix : extraire `<FilterableList>`.
-- **Quality (duplication usePwnSession)** — 4 `fetchChecksec/Symbols/Got/Plt` quasi-identiques + 4 `as any`. Fix : helper `fetchAndSet` typé.
-- **Archi (thème Monaco dupliqué)** — PwnEditor + SourceViewer redéfinissent `anvil-dark`. Fix : extraire `editor/anvilMonacoTheme.ts`.
-- **Quality (magic numbers AsmEditor)** — `7.22`, `400`, `80`, `30`, `20` sans nom. Fix : constantes `LINE_HEIGHT_PX`, `SNAPSHOT_DEBOUNCE_MS`, etc.
-- **Quality (frontend sans config)** — WS reconnect/heartbeat hardcodés dans `api/ws.ts`. Fix : `src/config.ts` central.
-- **Perf (CSS transition: all)** — 14 sites dans `App.css`. Fix : propriétés ciblées.
-- **ADRs à écrire** — ADR-015 (CSP+CORS), ADR-016 (WS auth token), ADR-017 (Compile pipeline unifié), ADR-018 (Pattern useXxxSession + seuil 400 L), ADR-019 (pyproject.toml source unique deps Python).
+### Réalisé
+- **Deps Python unifiées (ADR-019)** ✅ — `requirements.txt` + `requirements-dev.txt` supprimés. README et CLAUDE.md mis à jour. CI nettoyée (le `pip install slowapi` redondant retiré).
+- **Thème Monaco partagé** ✅ — `components/editor/anvilMonacoTheme.ts` (`ANVIL_DARK_THEME`, `defineAnvilDarkTheme()` idempotent). PwnEditor et SourceViewer migrés.
+- **CSS `transition: all`** ✅ — 14 sites remplacés par `transition: background-color X, color X, border-color X, opacity X, transform X, box-shadow X` (élimine layout thrash, conserve les durées d'origine).
+- **Frontend `src/config.ts`** ✅ — Constantes centralisées : `WS_RECONNECT_MS=2000`, `WS_HEARTBEAT_MS=30000`, `EDITOR_UNDO_HISTORY_MAX=80`, `EDITOR_SNAPSHOT_DEBOUNCE_MS=400`, `EDITOR_AUTOCOMPLETE_DEBOUNCE_MS=30`, `EDITOR_AUTOCOMPLETE_BLUR_DELAY_MS=150`, `EDITOR_FIND_FOCUS_DELAY_MS=50`, `EDITOR_DEFAULT_CHAR_WIDTH_PX=7.22`. AsmEditor + api/ws.ts migrent.
+- **ADRs** ✅ — ADR-015 (CSP+CORS), ADR-016 (WS auth token), ADR-017 (Compile pipeline unifié), ADR-018 (Pattern useXxxSession + seuil 400 L), ADR-019 (pyproject.toml source unique) tous écrits dans `decisions.md`.
+
+### Reportés au Sprint 17 (besoin de tests frontend)
+- `<FilterableList>` extrait (Symbols/Strings/ROP listes) — refacto ~80 L sans test = risqué
+- `fetchAndSet` helper dans `usePwnSession` — supprime 4 `as any` mais nécessite typer `PwnDictResponse` côté `api/client.ts` proprement
+- Découpage `useAnvilSession` par domaine + `useCallback` massif — couplé au câblage WS Sprint 17
+
+### Mesures
+- Bundle inchangé (608 KB / 170 KB gzip), build OK, tsc clean, ruff clean, 699 tests passent
 
 ---
 

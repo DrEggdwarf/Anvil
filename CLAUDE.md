@@ -174,11 +174,10 @@ Core deps are always installed. Optional tool groups in pyproject.toml:
 pip install -e backend/                    # core only (use this when adding deps to pyproject.toml)
 pip install -e "backend/[dev]"             # + test/lint (pytest, ruff, bandit)
 pip install -e "backend/[dev,re,pwn,firmware,protocols]"  # everything
-
-# Alternative: backend/requirements.txt bundles core + ALL optional tool groups in one file
-# (kept for parity with README install path); pyproject.toml is the source of truth for deps.
-pip install -r backend/requirements.txt
 ```
+
+ADR-019: `pyproject.toml` is the **single** source of truth — `requirements.txt` was removed
+in Sprint 16 to eliminate version drift.
 
 ## CI
 

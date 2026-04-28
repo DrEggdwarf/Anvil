@@ -36,9 +36,9 @@ tests/             → Tests Python (pytest, ~664 tests sur 24 modules)
 # Frontend
 npm install
 
-# Backend
-cd backend && pip install -r requirements.txt
-cd backend && pip install -r requirements-dev.txt  # dev/test deps
+# Backend (pyproject.toml is the single source of truth — ADR-019)
+pip install -e "backend/[dev]"                              # core + dev/test
+pip install -e "backend/[dev,re,pwn,firmware,protocols]"   # full toolchain
 ```
 
 ## Développement
