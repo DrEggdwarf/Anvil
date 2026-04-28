@@ -1,0 +1,379 @@
+/* App shell, header, 3-column body, status bar, right-column collapsed state.
+   Mode-agnostic chrome. */
+/* ── App Shell ───────────────────────────────────────────────────────────── */
+
+.anvil-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.anvil-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--header-h);
+  padding: 0 var(--space-6);
+  background: var(--bg-raised);
+  border-bottom: 0.5px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  z-index: 100;
+  transition: background 0.25s;
+}
+
+.anvil-logo {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.anvil-logo strong {
+  color: var(--green);
+}
+
+.anvil-logo i {
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+/* Mode tabs */
+.anvil-modes {
+  display: flex;
+  gap: 2px;
+  margin-left: var(--space-2);
+}
+
+.anvil-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-family: var(--font-ui);
+}
+
+.anvil-mode-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.anvil-mode-btn--active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* Header controls (right side) */
+.anvil-header-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anvil-ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-right: 0.5px solid var(--border-subtle);
+}
+
+.anvil-ctrl-group:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+/* Buttons (shared) */
+.anvil-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s, transform 0.1s;
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+}
+
+.anvil-btn:active { transform: scale(0.96); }
+
+.anvil-btn:hover {
+  background: var(--bg-hover);
+}
+
+.anvil-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Status dot */
+.anvil-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.anvil-status-dot--ok { background: var(--green); }
+.anvil-status-dot--err { background: var(--red); }
+
+/* Theme toggle */
+.anvil-theme-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+
+.anvil-theme-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Body (3-column layout) ──────────────────────────────────────────────── */
+
+.anvil-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Columns */
+.anvil-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.anvil-col-editor {
+  border-right: 0.5px solid var(--border-subtle);
+}
+
+.anvil-col-regs {
+  border-right: 0.5px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.anvil-file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s, color 0.12s;
+}
+
+.anvil-file-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* Resize handle between columns */
+.anvil-resize-col {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  z-index: 10;
+  position: relative;
+}
+
+.anvil-resize-col::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 24px;
+  border-radius: 1px;
+  background: var(--border-base);
+  transition: background 0.15s, height 0.15s;
+}
+
+.anvil-resize-col:hover,
+.anvil-resize-col.active {
+  background: var(--accent);
+}
+
+.anvil-resize-col:hover::after,
+.anvil-resize-col.active::after {
+  background: transparent;
+}
+
+/* Resize handle between rows */
+.anvil-resize-row {
+  height: 5px;
+  cursor: row-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  z-index: 10;
+  position: relative;
+}
+
+.anvil-resize-row::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-base);
+  transition: background 0.15s, width 0.15s;
+}
+
+.anvil-resize-row:hover {
+  background: var(--accent);
+}
+
+.anvil-resize-row:hover::after {
+  background: transparent;
+}
+
+/* ── Section titles ──────────────────────────────────────────────────────── */
+
+.anvil-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── Right column collapsed state ────────────────────────────────────────── */
+
+.anvil-col-right-collapsed {
+  width: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  background: var(--bg-raised);
+  border-left: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+  transition: background 0.25s;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+
+.anvil-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--statusbar-h);
+  padding: 0 var(--space-4);
+  background: var(--bg-raised);
+  border-top: 0.5px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  z-index: 100;
+  transition: background 0.25s;
+}
+
+.anvil-statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.anvil-statusbar-item.clickable {
+  cursor: pointer;
+}
+
+.anvil-statusbar-item.clickable:hover {
+  color: var(--text-primary);
+}
+
+.anvil-statusbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Placeholder / empty states ──────────────────────────────────────────── */
+
+.anvil-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--space-5);
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: center;
+  user-select: none;
+}
+
+.anvil-empty-icon {
+  font-size: 24px;
+  opacity: 0.3;
+}
+
+.anvil-empty-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ASM Editor (pro)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.anvil-editor-pro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  background: var(--bg-base);
+  font-family: var(--font-code);
+  font-size: 13px;
+  line-height: 20px;
+  overflow: hidden;
+}
+

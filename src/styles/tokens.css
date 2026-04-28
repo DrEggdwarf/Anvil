@@ -1,0 +1,155 @@
+/* Design tokens, dark/light themes, base reset.
+   Imported first so overrides in component CSS work. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Anvil — Design System & Layout
+   Based on anvil-ds.html design tokens
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@300;400;500&display=swap');
+
+/* ── Design Tokens ───────────────────────────────────────────────────────── */
+
+:root {
+  /* Fonts */
+  --font-ui:   'Geist', system-ui, sans-serif;
+  --font-code: 'Geist Mono', 'Fira Code', monospace;
+
+  /* Radius */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-pill: 999px;
+
+  /* Spacing */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+  /* Accents */
+  --green:      #22c37a;
+  --green-dark: #18a866;
+  --green-dim:  rgba(34,195,122,0.12);
+  --red:        #f04747;
+  --red-dim:    rgba(240,71,71,0.12);
+  --amber:      #f0a020;
+  --amber-dim:  rgba(240,160,32,0.12);
+  --blue:       #4a9eff;
+  --blue-dim:   rgba(74,158,255,0.12);
+
+  /* Category accents */
+  --cat-asm: #4a9eff; --cat-asm-dim: rgba(74,158,255,0.12);
+  --cat-pwn: #e040a0; --cat-pwn-dim: rgba(224,64,160,0.12);
+  --cat-hw:  #f0820a; --cat-hw-dim:  rgba(240,130,10,0.12);
+  --cat-fw:  #f0c020; --cat-fw-dim:  rgba(240,192,32,0.12);
+  --cat-re:  #9b6dff; --cat-re-dim:  rgba(155,109,255,0.12);
+  --cat-dbg: #22c3c3; --cat-dbg-dim: rgba(34,195,195,0.12);
+
+  --accent:     var(--cat-asm);
+  --accent-dim: var(--cat-asm-dim);
+
+  /* Sizes */
+  --header-h: 52px;
+  --statusbar-h: 28px;
+}
+
+/* ── Category accent overrides ───────────────────────────────────────────── */
+
+[data-cat="asm"] { --accent: var(--cat-asm); --accent-dim: var(--cat-asm-dim); }
+[data-cat="re"]  { --accent: var(--cat-re);  --accent-dim: var(--cat-re-dim); }
+[data-cat="pwn"] { --accent: var(--cat-pwn); --accent-dim: var(--cat-pwn-dim); }
+[data-cat="dbg"] { --accent: var(--cat-dbg); --accent-dim: var(--cat-dbg-dim); }
+[data-cat="fw"]  { --accent: var(--cat-fw);  --accent-dim: var(--cat-fw-dim); }
+[data-cat="hw"]  { --accent: var(--cat-hw);  --accent-dim: var(--cat-hw-dim); }
+
+/* ── Dark Theme ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+  --bg-base:      #111111;
+  --bg-raised:    #1a1a1a;
+  --bg-overlay:   #222222;
+  --bg-subtle:    #2a2a2a;
+  --bg-hover:     #2e2e2e;
+
+  --text-primary:   #f0f0f0;
+  --text-secondary: #888888;
+  --text-muted:     #606060;
+
+  --border-faint:  rgba(255,255,255,0.05);
+  --border-subtle: rgba(255,255,255,0.08);
+  --border-base:   rgba(255,255,255,0.12);
+  --border-strong: rgba(255,255,255,0.2);
+
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.05);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+
+  --syntax-keyword:  #c792ea;
+  --syntax-string:   #c3e88d;
+  --syntax-number:   #f78c6c;
+  --syntax-comment:  #546e7a;
+  --syntax-fn:       #82aaff;
+  --syntax-type:     #ffcb6b;
+  --syntax-operator: #89ddff;
+
+  --terminal-bg:    #0d0d0d;
+  --terminal-green: #4ec9b0;
+  --terminal-red:   #f48771;
+  --terminal-dim:   #555;
+}
+
+/* ── Light Theme ────────────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  --bg-base:      #f0eeea;
+  --bg-raised:    #ffffff;
+  --bg-overlay:   #f7f6f4;
+  --bg-subtle:    #eeece8;
+  --bg-hover:     #e8e6e2;
+
+  --text-primary:   #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted:     #aaaaaa;
+
+  --border-faint:  rgba(0,0,0,0.04);
+  --border-subtle: rgba(0,0,0,0.07);
+  --border-base:   rgba(0,0,0,0.1);
+  --border-strong: rgba(0,0,0,0.18);
+
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.06);
+
+  --syntax-keyword:  #7c3aed;
+  --syntax-string:   #16a34a;
+  --syntax-number:   #ea580c;
+  --syntax-comment:  #94a3b8;
+  --syntax-fn:       #1d4ed8;
+  --syntax-type:     #b45309;
+  --syntax-operator: #0891b2;
+
+  --terminal-bg:    #1a1a1a;
+  --terminal-green: #4ec9b0;
+  --terminal-red:   #f48771;
+  --terminal-dim:   #555;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  transition: background 0.25s, color 0.25s;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+

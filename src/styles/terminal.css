@@ -1,0 +1,73 @@
+/* AnvilTerminal (xterm.js) drawer + overrides. */
+/* ── Terminal drawer ─────────────────────────────────────────────────────── */
+
+.anvil-terminal-drawer {
+  display: flex;
+  flex-direction: column;
+  border-top: 0.5px solid var(--border-subtle);
+  background: var(--terminal-bg);
+  flex: 1;
+  min-height: 34px;
+  overflow: hidden;
+}
+
+.anvil-xterm-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.anvil-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--space-4);
+  height: 34px;
+  background: var(--bg-overlay);
+  border-bottom: 0.5px solid var(--border-faint);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.25s;
+}
+
+.anvil-terminal-bar-title {
+  font-size: 11px;
+  font-family: var(--font-code);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.anvil-terminal-line-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+}
+
+.anvil-terminal-bar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.anvil-terminal-prompt {
+  color: var(--terminal-green);
+  margin-right: 4px;
+}
+
+.anvil-terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+
+.anvil-terminal-line { white-space: pre-wrap; word-break: break-all; }
+.anvil-terminal-line.error { color: var(--terminal-red); }
+.anvil-terminal-line.step { color: var(--text-secondary); }
+.anvil-terminal-line.output { color: var(--terminal-green); }
+.anvil-terminal-line.info { color: var(--accent); }
+

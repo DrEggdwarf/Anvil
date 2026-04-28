@@ -1,0 +1,439 @@
+/* Pwn mode — topbar (binary loader, checksec badges), tool panel,
+   side-by-side editors, bottom panel (Terminal/Symbols/GOT/PLT/Strings). */
+/* ── Top bar: binary + checksec badges + tools ───────────────────────────── */
+
+.anvil-pwn-topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-3);
+  background: var(--bg-overlay);
+  border-bottom: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+/* Drop zone compact (inline in topbar) */
+.anvil-pwn-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px dashed var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.anvil-pwn-dropzone:hover,
+.anvil-pwn-dropzone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.anvil-pwn-drop-icon { font-size: 13px; color: var(--accent); }
+.anvil-pwn-drop-text { font-size: 11px; font-weight: 500; color: var(--text-primary); }
+.anvil-pwn-drop-hint { font-size: 10px; color: var(--text-muted); margin-left: 4px; }
+
+.anvil-pwn-binary-loaded {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  background: var(--accent-dim);
+  border: 0.5px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.anvil-pwn-binary-name {
+  font-family: var(--font-code);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.anvil-pwn-reload-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 2px; border-radius: var(--radius-sm); transition: color 0.12s;
+}
+.anvil-pwn-reload-btn:hover { color: var(--text-primary); }
+
+/* Checksec inline badges */
+.anvil-pwn-checksec-badges {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.anvil-pwn-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font-code);
+  white-space: nowrap;
+  border: 0.5px solid;
+}
+
+.anvil-pwn-badge.ok {
+  color: var(--green);
+  border-color: rgba(34, 195, 122, 0.3);
+  background: rgba(34, 195, 122, 0.08);
+}
+
+.anvil-pwn-badge.vuln {
+  color: var(--red);
+  border-color: rgba(240, 71, 71, 0.3);
+  background: rgba(240, 71, 71, 0.08);
+}
+
+.anvil-pwn-badge i { font-size: 9px; }
+
+.anvil-pwn-topbar-sep {
+  width: 0.5px;
+  height: 18px;
+  background: var(--border-base);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* Tools inline in topbar */
+.anvil-pwn-tools-inline {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.anvil-pwn-tool-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 0.5px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+  white-space: nowrap;
+}
+
+.anvil-pwn-tool-inline:hover { border-color: var(--border-base); color: var(--text-secondary); }
+.anvil-pwn-tool-inline.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.anvil-pwn-tool-inline i { font-size: 9px; }
+
+/* ── Tool panel (slides below topbar) ────────────────────────────────────── */
+
+.anvil-pwn-tool-panel {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 0.5px solid var(--border-subtle);
+  background: var(--bg-raised);
+  flex-shrink: 0;
+  max-height: 180px;
+}
+
+.anvil-pwn-tool-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px var(--space-3);
+  background: var(--bg-overlay); border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.anvil-pwn-tool-title { font-size: 11px; font-weight: 500; color: var(--accent); }
+
+.anvil-pwn-tool-close {
+  margin-left: auto; background: none; border: none;
+  color: var(--text-muted); cursor: pointer; padding: 2px 6px;
+  border-radius: var(--radius-sm); transition: color 0.12s;
+}
+.anvil-pwn-tool-close:hover { color: var(--text-primary); }
+
+.anvil-pwn-tool-body {
+  flex: 1; overflow-y: auto; padding: var(--space-2) var(--space-3);
+}
+
+.anvil-pwn-tool-form { display: flex; flex-direction: column; gap: 6px; }
+
+.anvil-pwn-tool-row {
+  display: flex; align-items: center; gap: 6px;
+}
+
+.anvil-pwn-tool-row label {
+  font-size: 11px; color: var(--text-secondary); min-width: 75px; flex-shrink: 0;
+}
+
+.anvil-pwn-tool-row input,
+.anvil-pwn-tool-row select {
+  flex: 1; height: 26px; padding: 0 8px;
+  border: 0.5px solid var(--border-base); border-radius: var(--radius-sm);
+  background: var(--bg-base); color: var(--text-primary);
+  font-family: var(--font-code); font-size: 11px; outline: none;
+}
+
+.anvil-pwn-tool-row input:focus,
+.anvil-pwn-tool-row select:focus { border-color: var(--accent); }
+
+.anvil-pwn-tool-btn {
+  height: 26px; padding: 0 12px; border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: #0a0a0a; font-family: var(--font-ui);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: opacity 0.12s; flex-shrink: 0;
+}
+.anvil-pwn-tool-btn:hover { opacity: 0.85; }
+
+.anvil-pwn-tool-textarea {
+  width: 100%; padding: 8px;
+  border: 0.5px solid var(--border-base); border-radius: var(--radius-sm);
+  background: var(--bg-base); color: var(--text-primary);
+  font-family: var(--font-code); font-size: 11px; outline: none;
+  resize: vertical; line-height: 1.5;
+}
+.anvil-pwn-tool-textarea:focus { border-color: var(--accent); }
+
+.anvil-pwn-tool-result {
+  padding: 6px 8px; border-radius: var(--radius-sm);
+  background: var(--bg-base); border: 0.5px solid var(--border-faint);
+  font-family: var(--font-code); font-size: 10px; color: var(--text-primary);
+  white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto;
+}
+
+.anvil-pwn-tab-btn {
+  padding: 3px 10px; border: 0.5px solid var(--border-base);
+  border-radius: var(--radius-sm); background: transparent;
+  color: var(--text-secondary); font-size: 11px; cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s; font-family: var(--font-ui);
+}
+.anvil-pwn-tab-btn:hover { color: var(--text-primary); }
+.anvil-pwn-tab-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+/* ── Editors split area ──────────────────────────────────────────────────── */
+
+.anvil-pwn-editors {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.anvil-pwn-editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.anvil-pwn-pane-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-3);
+  height: 28px;
+  background: var(--bg-overlay);
+  border-bottom: 0.5px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.anvil-pwn-pane-bar i { font-size: 10px; color: var(--accent); }
+
+.anvil-pwn-source-lang {
+  margin-left: auto;
+  font-family: var(--font-code);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.anvil-pwn-pane-tag {
+  margin-left: auto;
+  font-family: var(--font-code);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.anvil-pwn-pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.anvil-pwn-pane-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.anvil-pwn-pane-empty i {
+  font-size: 28px;
+  opacity: 0.3;
+}
+
+/* Monaco vulnerability decorations */
+.anvil-vuln-highlight {
+  background: rgba(224, 64, 160, 0.18) !important;
+  border-bottom: 1.5px wavy #e040a0;
+}
+
+.anvil-vuln-line {
+  background: rgba(224, 64, 160, 0.06) !important;
+}
+
+.anvil-vuln-glyph {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext x='2' y='13' font-size='12'%3E⚠%3C/text%3E%3C/svg%3E") center center / 14px no-repeat;
+}
+
+/* ── Bottom panel: tabs + content ────────────────────────────────────────── */
+
+.anvil-pwn-bottom {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 220px;
+  border-top: 0.5px solid var(--border-subtle);
+  background: var(--bg-base);
+}
+
+.anvil-pwn-bottom-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-overlay);
+  border-bottom: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+}
+
+.anvil-pwn-bottom-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.anvil-pwn-bottom-tab:hover {
+  color: var(--text-secondary);
+}
+
+.anvil-pwn-bottom-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.anvil-pwn-bottom-tab i { font-size: 10px; }
+
+.anvil-pwn-tab-count {
+  font-family: var(--font-code);
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  min-width: 16px;
+  text-align: center;
+}
+
+.anvil-pwn-bottom-tab.active .anvil-pwn-tab-count {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.anvil-pwn-bottom-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.anvil-pwn-bottom-content .anvil-pwn-symbols {
+  height: 100%;
+}
+
+.anvil-pwn-bottom-content .anvil-pwn-empty {
+  height: 100%;
+}
+
+/* Symbols / list shared (used in bottom panel) */
+
+.anvil-pwn-symbols {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.anvil-pwn-filter {
+  margin: var(--space-2) var(--space-3);
+  padding: 4px 8px;
+  border: 0.5px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  font-size: 11px;
+  outline: none;
+}
+
+.anvil-pwn-filter:focus { border-color: var(--accent); }
+
+.anvil-pwn-symbol-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.anvil-pwn-symbol-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-code);
+  font-size: 10px;
+  transition: background 0.1s;
+}
+
+.anvil-pwn-symbol-row:hover { background: var(--bg-hover); }
+
+.anvil-pwn-sym-addr { color: var(--text-secondary); min-width: 80px; }
+.anvil-pwn-sym-name { color: var(--accent); }
+.anvil-pwn-str-val { color: var(--syntax-string); }
+
+.anvil-pwn-empty {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-5); color: var(--text-muted); font-size: 12px;
+}
+
+.anvil-lazy-fallback {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--space-2);
+  width: 100%; height: 100%;
+  padding: var(--space-6);
+  color: var(--text-muted); font-size: 13px;
+}

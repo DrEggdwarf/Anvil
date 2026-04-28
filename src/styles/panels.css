@@ -1,0 +1,1161 @@
+/* RegistersPane + right-column stacked panels (Stack, Memory, Security),
+   checksec view, table views (sections, strings). */
+/* ── Registers pane (adapted from ASMBLE) ────────────────────────────────── */
+
+.anvil-regs-pane {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.anvil-regs-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.anvil-regs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.anvil-regs-filters {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.anvil-regs-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: var(--font-code);
+  letter-spacing: 0.3px;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.anvil-regs-toggle:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.anvil-regs-toggle.on {
+  background: rgba(74, 158, 255, 0.15);
+  border-color: rgba(74, 158, 255, 0.4);
+  color: var(--blue);
+}
+
+/* RIP indicator bar */
+.anvil-rip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(74, 158, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
+  font-family: var(--font-code);
+  font-size: 12px;
+  min-width: 0;
+  transition: background 0.2s ease;
+}
+
+.anvil-rip-bar.changed {
+  background: rgba(34, 195, 122, 0.1);
+}
+
+.anvil-rip-label {
+  font-weight: 700;
+  color: var(--blue);
+  font-size: 11px;
+}
+
+.anvil-rip-val {
+  color: #89b4fa;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Main register cards — vertical list */
+.anvil-regcards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+}
+
+.anvil-regcard {
+  background: var(--bg-raised);
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-subtle);
+  overflow: hidden;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.anvil-regcard.changed {
+  background: rgba(34, 195, 122, 0.08);
+  border-color: rgba(158, 206, 106, 0.3);
+  border-left-color: #9ece6a;
+  animation: anvil-reg-flash 0.4s ease-out;
+}
+
+@keyframes anvil-reg-flash {
+  0%   { background: rgba(34, 195, 122, 0.25); }
+  100% { background: rgba(34, 195, 122, 0.08); }
+}
+
+/* Card header: pill name + value + delta */
+.anvil-regcard-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  min-width: 0;
+}
+
+.anvil-regcard-pill {
+  font-family: var(--font-code);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  padding: 2px 8px;
+  border-radius: 9px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.anvil-regcard.changed .anvil-regcard-pill {
+  background: rgba(158, 206, 106, 0.25);
+  color: #9ece6a;
+}
+
+.anvil-regcard-val {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anvil-regcard.changed .anvil-regcard-val { color: #9ece6a; }
+
+/* Delta: old → new */
+.anvil-regcard-delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-left: auto;
+  font-family: var(--font-code);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.anvil-delta-old { color: #f7768e; font-size: 10px; }
+.anvil-delta-arrow { color: var(--text-muted); font-size: 10px; }
+.anvil-delta-new { color: #9ece6a; font-weight: 600; font-size: 10px; animation: anvil-value-flash 0.5s ease-out; }
+.anvil-regcard-delta .anvil-delta-diff { color: #7dcfff; font-size: 10px; margin-left: 2px; }
+.anvil-regext-delta { color: #7dcfff; font-size: 10px; margin-left: auto; font-family: var(--font-code); }
+
+@keyframes anvil-value-flash {
+  0%   { color: #ffffff; }
+  100% { color: #9ece6a; }
+}
+
+/* Sub-register bar — single row, proportional widths */
+.anvil-regcard-bar {
+  display: flex;
+  height: 26px;
+  margin: 0 3px 3px;
+  border-radius: 3px;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.anvil-regbar-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  transition: background-color 0.25s;
+  position: relative;
+  font-family: var(--font-code);
+}
+
+/* Upper 32 bits (unnamed) — hatched pattern */
+.anvil-regbar-seg.upper {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.06) 3px,
+      rgba(255, 255, 255, 0.06) 5px
+    );
+}
+
+.anvil-regbar-seg.upper.active {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.12) 3px,
+      rgba(255, 255, 255, 0.12) 5px
+    );
+}
+
+.anvil-regbar-seg.upper .anvil-seg-pill {
+  color: rgba(255, 255, 255, 0.25);
+  background: none;
+  font-size: 8px;
+}
+
+.anvil-regbar-seg.upper .anvil-seg-val {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 8px;
+}
+
+.anvil-regbar-seg.upper.active .anvil-seg-pill {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.anvil-regbar-seg.upper.active .anvil-seg-val {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.anvil-seg-pill {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.anvil-seg-val {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active segment (non-zero): dark text on bright color bg */
+.anvil-regbar-seg.active .anvil-seg-pill {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.anvil-regbar-seg.active .anvil-seg-val {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 700;
+}
+
+/* Extension registers — 2 column grid */
+.anvil-regext-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 0;
+  padding: 2px 6px 4px;
+}
+
+.anvil-regext {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  transition: background 0.25s ease;
+}
+
+.anvil-regext.changed {
+  background: rgba(34, 195, 122, 0.08);
+}
+
+.anvil-regext-name {
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 24px;
+  flex-shrink: 0;
+}
+
+.anvil-regext.changed .anvil-regext-name { color: #9ece6a; }
+
+.anvil-regext-val {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.anvil-regext.changed .anvil-regext-val { color: #9ece6a; }
+
+/* Flags — inline pills */
+.anvil-flags-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.anvil-flag-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-base);
+  color: var(--text-muted);
+  cursor: default;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  min-width: 28px;
+  text-align: center;
+}
+
+.anvil-flag-pill.active {
+  background: rgba(248, 81, 73, 0.15);
+  border-color: rgba(248, 81, 73, 0.4);
+  color: #f85149;
+  font-weight: 700;
+}
+
+.anvil-flag-pill.pulse {
+  animation: anvil-flag-pulse 0.4s ease-out;
+}
+
+@keyframes anvil-flag-pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.25); box-shadow: 0 0 8px rgba(248, 81, 73, 0.4); }
+  100% { transform: scale(1); }
+}
+
+/* ── Right column — stacked panels ───────────────────────────────────────── */
+
+.anvil-right-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-overlay);
+  border-bottom: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+  transition: background 0.25s;
+}
+
+.anvil-tab-collapse {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+
+.anvil-tab-collapse:hover {
+  color: var(--text-primary);
+}
+
+.anvil-stacked-panels {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Collapsible panel section */
+.anvil-panel-section {
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.anvil-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.anvil-panel-section-header:hover {
+  background: var(--bg-hover);
+}
+
+.anvil-panel-section-arrow {
+  color: var(--text-muted);
+  font-size: 10px;
+  transition: transform 0.15s;
+  width: 12px;
+  text-align: center;
+}
+
+.anvil-panel-section-arrow.open {
+  transform: rotate(90deg);
+}
+
+.anvil-panel-icon {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.anvil-panel-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Stack panel — compact rows with expandable byte detail */
+.anvil-stack {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.anvil-stack-label-high {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.anvil-stack-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+
+/* Rows */
+.anvil-stack-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Zone grouping */
+.anvil-stack-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 6px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.anvil-stack-zone--frame {
+  background: rgba(115, 218, 202, 0.04);
+  border-color: rgba(115, 218, 202, 0.2);
+}
+
+.anvil-stack-zone--caller {
+  background: transparent;
+  border-color: var(--border-subtle);
+}
+
+.anvil-stack-zone-label {
+  font-family: var(--font-code);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  color: var(--text-muted);
+}
+
+.anvil-stack-zone--frame .anvil-stack-zone-label {
+  color: #73daca;
+}
+
+.anvil-stack-row {
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.anvil-stack-row:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.anvil-stack-row.rsp-row {
+  background: rgba(115, 218, 202, 0.06);
+  border-color: rgba(115, 218, 202, 0.25);
+  border-left: 3px solid #73daca;
+}
+
+.anvil-stack-row.rbp-row {
+  border-color: rgba(255, 158, 100, 0.25);
+  border-left: 3px solid #ff9e64;
+}
+
+.anvil-stack-row.expanded {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Compact row: offset | bar | qword | tags — single line */
+.anvil-stack-row-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  min-height: 28px;
+}
+
+.anvil-stack-offset {
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 30px;
+  flex-shrink: 0;
+}
+
+.anvil-stack-offset.rsp {
+  color: #73daca;
+  font-weight: 700;
+}
+
+/* Mini bar: 8 tiny segments showing which bytes are active */
+.anvil-stack-bar {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.anvil-stack-bar-seg {
+  width: 4px;
+  height: 12px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background-color 0.2s;
+}
+
+.anvil-stack-bar-seg.on {
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.anvil-stack-qval {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.35;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anvil-stack-qval.has-val {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Tags (RSP / RBP) */
+.anvil-stack-tag {
+  font-family: var(--font-code);
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.anvil-stack-tag.rsp-tag {
+  background: rgba(115, 218, 202, 0.2);
+  color: #73daca;
+}
+
+.anvil-stack-tag.rbp-tag {
+  background: rgba(255, 158, 100, 0.2);
+  color: #ff9e64;
+}
+
+/* Semantic annotations (saved rbp, ret addr, local) */
+.anvil-stack-anno {
+  font-family: var(--font-code);
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+.anvil-stack-anno.ret {
+  background: rgba(187, 154, 247, 0.2);
+  color: #bb9af7;
+}
+
+.anvil-stack-anno.frame {
+  background: rgba(255, 158, 100, 0.15);
+  color: #ff9e64;
+}
+
+/* Expanded detail: byte grid */
+.anvil-stack-detail {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 0 8px 6px;
+}
+
+.anvil-stack-byte {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+  user-select: none;
+}
+
+.anvil-stack-byte.null {
+  background: transparent;
+  border-color: transparent;
+}
+
+.anvil-stack-byte:not(.active):not(.null) {
+  color: rgba(255, 255, 255, 0.12);
+  font-weight: 400;
+}
+
+.anvil-stack-byte.active {
+  font-weight: 700;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.anvil-stack-footer {
+  text-align: center;
+  padding-top: 6px;
+}
+
+.anvil-stack-grow {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Memory panel */
+.anvil-mem {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.anvil-mem-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.anvil-mem-addr {
+  flex: 1;
+  font-family: var(--font-code);
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.anvil-mem-addr:focus {
+  border-color: var(--cat-dbg);
+}
+
+.anvil-mem-size {
+  font-family: var(--font-code);
+  font-size: 10px;
+  padding: 4px 6px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.anvil-mem-go {
+  padding: 4px 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.anvil-mem-go:hover { color: var(--cat-dbg); border-color: var(--cat-dbg); }
+
+.anvil-mem-shortcuts {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.anvil-mem-shortcut {
+  font-family: var(--font-code);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.anvil-mem-shortcut:hover { color: var(--cat-dbg); border-color: var(--cat-dbg); }
+.anvil-mem-shortcut.active { color: var(--cat-dbg); border-color: var(--cat-dbg); background: rgba(125, 207, 255, 0.08); }
+
+/* Hex dump */
+.anvil-mem-dump {
+  font-family: var(--font-code);
+  font-size: 10px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.anvil-mem-header {
+  display: flex;
+  gap: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+  user-select: none;
+}
+
+.anvil-mem-haddr { width: 72px; text-align: right; padding-right: 8px; }
+.anvil-mem-hhex { display: flex; gap: 0; flex: 1; }
+.anvil-mem-hcol { width: 22px; text-align: center; }
+.anvil-mem-hascii { width: 132px; padding-left: 8px; }
+
+.anvil-mem-row {
+  display: flex;
+  align-items: center;
+  padding: 1px 0;
+  border-radius: var(--radius-sm);
+}
+
+.anvil-mem-row:hover { background: var(--bg-raised); }
+.anvil-mem-row.rip-row { background: rgba(187, 154, 247, 0.08); }
+.anvil-mem-row.rsp-row { background: rgba(115, 218, 202, 0.08); }
+
+.anvil-mem-addr-col {
+  width: 72px;
+  text-align: right;
+  padding-right: 8px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.anvil-mem-hex {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+.anvil-mem-byte {
+  width: 22px;
+  text-align: center;
+  color: var(--text-secondary);
+  cursor: default;
+  border-radius: 2px;
+}
+
+.anvil-mem-byte.nz { color: var(--text-primary); }
+.anvil-mem-byte:hover { background: var(--bg-overlay); }
+
+.anvil-mem-edit {
+  width: 22px;
+  text-align: center;
+  font-family: var(--font-code);
+  font-size: 10px;
+  background: var(--cat-dbg);
+  color: #000;
+  border: none;
+  border-radius: 2px;
+  outline: none;
+  padding: 0;
+}
+
+.anvil-mem-ascii {
+  width: 132px;
+  padding-left: 8px;
+  color: var(--text-muted);
+  letter-spacing: 1.2px;
+  white-space: pre;
+  user-select: none;
+}
+
+.anvil-mem-ascii .printable { color: var(--text-secondary); }
+
+/* Memory map */
+.anvil-mem-map {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+
+.anvil-mem-map-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.anvil-mem-map-empty {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.anvil-mem-map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.anvil-mem-map-row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 4px;
+  font-family: var(--font-code);
+  font-size: 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.anvil-mem-map-row:hover { background: var(--bg-raised); }
+
+.anvil-mem-map-addr { color: var(--text-muted); min-width: 90px; }
+.anvil-mem-map-perms { color: var(--cat-pwn); min-width: 40px; }
+.anvil-mem-map-name { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Security panel */
+.anvil-sec-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.anvil-sec-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.anvil-sec-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.anvil-sec-tab.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.anvil-sec-refresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.anvil-sec-refresh:hover { color: var(--text-primary); background: var(--bg-hover); }
+.anvil-sec-refresh:disabled { opacity: 0.4; cursor: default; }
+
+.anvil-sec-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--red);
+  background: var(--red-dim);
+  border-radius: var(--radius-sm);
+  margin: 6px;
+}
+
+/* ── Checksec view ──────────────────────────── */
+
+.anvil-sec-checksec {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0;
+}
+
+.anvil-sec-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  transition: background 0.1s;
+}
+
+.anvil-sec-check-row:hover { background: var(--bg-hover); }
+
+.anvil-sec-check-icon {
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+}
+
+.anvil-sec-check-icon.ok { color: var(--green); }
+.anvil-sec-check-icon.bad { color: var(--red); }
+
+.anvil-sec-check-label {
+  font-size: 11px;
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  min-width: 100px;
+}
+
+.anvil-sec-check-value {
+  font-size: 11px;
+  font-family: var(--font-code);
+  margin-left: auto;
+}
+
+.anvil-sec-check-value.ok { color: var(--green); }
+.anvil-sec-check-value.bad { color: var(--red); opacity: 0.8; }
+
+/* ── Table views (sections, strings) ────────── */
+
+.anvil-sec-table-wrap {
+  overflow: auto;
+  max-height: 300px;
+}
+
+.anvil-sec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+
+.anvil-sec-table thead th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-raised);
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.anvil-sec-table tbody tr {
+  transition: background 0.08s;
+}
+
+.anvil-sec-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.anvil-sec-table td {
+  padding: 3px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.anvil-sec-cell-name { color: var(--accent); }
+.anvil-sec-cell-type { color: var(--text-secondary); }
+.anvil-sec-cell-addr { color: var(--text-muted); }
+.anvil-sec-cell-size { color: var(--text-secondary); }
+.anvil-sec-cell-flags { color: var(--cat-pwn); }
+.anvil-sec-cell-str { color: var(--text-primary); max-width: 200px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reference Modal
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.anvil-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: anvil-fadein 0.15s ease;
+}
+
+@keyframes anvil-fadein { from { opacity: 0; } to { opacity: 1; } }
+
+.anvil-modal {
+  background: var(--bg-base);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: anvil-slideup 0.2s ease;
+}
+
+@keyframes anvil-slideup { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.anvil-ref-modal {
+  width: min(92vw, 1100px);
+  height: min(88vh, 780px);
+}
+
+.anvil-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-raised);
+  border-bottom: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.anvil-modal-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.anvil-ref-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  margin: 0 12px;
+  padding: 4px 10px;
+  background: var(--bg-overlay);
+  border: 0.5px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: border-color 0.12s;
+}
+
+.anvil-ref-search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.anvil-ref-search {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.anvil-ref-search-clear {
+  display: flex;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  font-size: 11px;
+}
+
+.anvil-ref-search-clear:hover { color: var(--text-primary); }
+
+.anvil-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+
+.anvil-modal-close:hover { color: var(--text-primary); background: var(--bg-hover); }

@@ -1,0 +1,266 @@
+/* ReferenceModal — tabs, body, table view, ABI section, patterns. */
+/* ── Ref tabs ────────────────────────────────── */
+
+.anvil-ref-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 12px;
+  background: var(--bg-raised);
+  border-bottom: 0.5px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.anvil-ref-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.anvil-ref-tab:hover { color: var(--text-primary); background: var(--bg-hover); }
+.anvil-ref-tab.active { color: var(--accent); background: var(--accent-dim); }
+
+/* ── Ref body ────────────────────────────────── */
+
+.anvil-ref-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.anvil-ref-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.anvil-ref-filters {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.anvil-ref-filter {
+  padding: 3px 10px;
+  background: var(--bg-raised);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.anvil-ref-filter:hover { border-color: var(--border-base); color: var(--text-primary); }
+.anvil-ref-filter.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+
+.anvil-ref-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+}
+
+/* ── Ref table ───────────────────────────────── */
+
+.anvil-ref-table-wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.anvil-ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.anvil-ref-table thead th {
+  position: sticky;
+  top: 0;
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-raised);
+  border-bottom: 0.5px solid var(--border-subtle);
+  z-index: 1;
+}
+
+.anvil-ref-table tbody tr {
+  transition: background 0.06s;
+  border-bottom: 0.5px solid var(--border-faint);
+}
+
+.anvil-ref-table tbody tr:hover { background: var(--bg-hover); }
+
+.anvil-ref-table td {
+  padding: 5px 10px;
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.anvil-ref-num { color: var(--text-muted); font-family: var(--font-code); min-width: 36px; }
+.anvil-ref-name { color: var(--accent); font-family: var(--font-code); font-weight: 500; white-space: nowrap; }
+.anvil-ref-args { color: var(--text-secondary); font-family: var(--font-code); font-size: 11px; }
+.anvil-ref-syntax { color: var(--cat-re); font-family: var(--font-code); white-space: nowrap; }
+.anvil-ref-desc { color: var(--text-primary); max-width: 400px; }
+.anvil-ref-cat-badge { color: var(--text-muted); font-size: 10px; text-transform: uppercase; white-space: nowrap; }
+
+.anvil-ref-caller { color: var(--red); font-size: 11px; opacity: 0.9; }
+.anvil-ref-callee { color: var(--green); font-size: 11px; }
+
+/* ── ABI section ─────────────────────────────── */
+
+.anvil-ref-abi {
+  padding: 12px 16px;
+  gap: 16px;
+}
+
+.anvil-ref-abi > * { flex-shrink: 0; }
+
+.anvil-ref-h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  margin: 0;
+  padding-top: 8px;
+}
+
+.anvil-ref-box {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px 12px;
+  padding: 10px;
+  background: var(--bg-raised);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.anvil-ref-box-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 2px;
+}
+
+.anvil-ref-box-val {
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.anvil-ref-code {
+  font-family: var(--font-code);
+  color: var(--accent);
+}
+
+.anvil-ref-diagram {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 0;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.anvil-ref-pre {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-overlay);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 4px 0;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.anvil-ref-code-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Patterns section ────────────────────────── */
+
+.anvil-ref-patterns {
+  padding: 10px 14px;
+  gap: 8px;
+}
+
+.anvil-ref-patterns > * { flex-shrink: 0; }
+
+.anvil-ref-pattern {
+  background: var(--bg-raised);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.anvil-ref-pattern-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--border-faint);
+}
+
+.anvil-ref-pattern-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.anvil-ref-pattern-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.anvil-ref-pattern .anvil-ref-pre {
+  margin: 0;
+  border-radius: 0;
+  background: var(--bg-base);
+}
+
+.anvil-ref-bypass-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.anvil-ref-bypass-item {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  padding-left: 4px;
+}
+
