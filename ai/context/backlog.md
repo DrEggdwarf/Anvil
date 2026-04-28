@@ -191,3 +191,15 @@
 - [ ] B11: Tokens QWORD/DWORD/WORD/BYTE/PTR manquants
 - [ ] B12: Auto-close crochet `[` → `[]`
 - [ ] B13: Fidélité valeurs stack vs GDB
+
+## Idées à évaluer (pas planifiées, gardées pour réflexion)
+
+- [ ] **Migration AsmEditor → Monaco** — l'éditeur custom (525 L) est un héritage ASMBLE.
+  Avantages migration : multi-cursor, find&replace plus puissant, grammaires multi-arch
+  (ARM/RISC-V) gratuites, bundle Monaco déjà chargé pour le mode Pwn.
+  Coût : ~2-3 jours, ~600 LOC à porter (breakpoint gutter via `glyphMarginWidget`,
+  active line via `deltaDecorations`, jump arrows via `addContentWidget`).
+  À évaluer **quand** : ajout multi-architecture ASM (Phase H), ou intro de features
+  type LSP (rename label, find references), ou ciblage mode web.
+  À NE PAS faire tant que ces déclencheurs ne sont pas là — risque de perte de
+  contrôle CSS fin et complication de la synchro GDB pour zéro feature visible.
