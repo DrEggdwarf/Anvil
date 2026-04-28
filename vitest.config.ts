@@ -12,5 +12,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Sprint 18: keep Playwright's tests/e2e/ out of vitest — they need a live
+    // backend + browser, run via `npm run e2e` instead.
+    exclude: ['node_modules', 'tests/e2e/**', 'dist/**'],
   },
 })

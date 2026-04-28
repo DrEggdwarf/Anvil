@@ -318,6 +318,44 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
+## Sprint 18 — E2E test infrastructure (28 avril 2026) ✅
+**Objectif** : poser une stack de tests à 5 niveaux (unit → component → backend → smoke → e2e) avec Playwright comme couche e2e principale, plusieurs parcours par module ASM et Pwn, et préparer la structure pour les modes restants.
+**Agents** : @testing → @architect
+
+### Réalisé
+- **Playwright bootstrap** : `playwright.config.ts` avec `webServer` qui spawn uvicorn + Vite et attend `/api/health` + `localhost:1420`. `reuseExistingServer` localement, `CI=1` force un boot propre. Retries 1 local / 2 CI. Trace + screenshot + video on failure.
+- **Fixtures** : `tests/e2e/fixtures/anvil.ts` exporte `AnvilApp` (Page wrapper) + un `test` étendu qui reset les sessions backend entre tests. Tous les sélecteurs centralisés (`runButton`, `stepIntoButton`, `editorTextarea`, `pwnDropZone`, `pwnFilterInput`, `pwnBottomTab(name)`, `pwnToolButton(name)`). Samples inline dans `samples.ts` (NASM hello, GAS hello, broken NASM, divergent step, C BOF).
+- **6 specs ASM** :
+  1. `happy-path` (3 tests) — compile → run → step → registers + stdout
+  2. `compile-error` (3 tests) — erreur structurée + ligne annotée + recovery après fix
+  3. `reverse-step` (2 tests) — Back button + register diff visible entre steps
+  4. `multi-assembler` (4 tests) — NASM default, GAS conditional, FASM offered, status bar
+  5. `breakpoint` (2 tests) — gutter click + persistence sur edit
+  6. `state-panels` (3 tests) — Stack/Memory/Security panels + collapse/expand + terminal clear
+- **5 specs Pwn** :
+  1. `mode-switch` (4 tests) — lazy chunk loads, topbar tools, bottom tabs, isolation ASM
+  2. `cyclic-tool` (2 tests) — pattern generation + cyclic_find offset
+  3. `upload-binary` (3 tests) — checksec badges, symbols list, filter shrink
+  4. `compile-source` (2 tests) — drop .c, auto-compile, SourceViewer vuln highlight
+  5. `security-guard` (3 tests) — LFI 403 PATH_BLOCKED, filename 422, language 400 (via fetch direct)
+- **Smoke script bash** (`tests/e2e/smoke/backend.sh`) : 5 checks live (health 200, token format ADR-016, GET ne leak pas le token, LFI bloquée, WS sans token rejeté). **5/5 verts en local**. Industrialise le smoke manuel du Sprint 14.
+- **CI workflow** : 4 jobs (`lint`, `audit`, `test`, `smoke`, `e2e`). `test` étendu pour aussi lancer vitest. `smoke` boot uvicorn + lance le bash. `e2e` install nasm/gdb/gcc + Playwright browsers + build samples + lance la suite. `continue-on-error: true` sur `e2e` jusqu'à ce que la suite soit stable 2 semaines. Upload du Playwright report en artifact si failure.
+- **Doc** : `tests/e2e/README.md` complet (run, tooling, layout, ajout d'un nouveau mode, discipline anti-flake), scripts npm `e2e`/`e2e:ui`/`e2e:debug`/`smoke`. ADR-019 corrigée dans le CI (`python -m pytest tests/`).
+
+### Couverture
+- **Backend Python** : 699 tests pytest (depuis Sprint 14)
+- **Frontend unit/component** : 27 tests vitest (depuis Sprint 17)
+- **Backend smoke** : 5 checks bash (Sprint 18)
+- **E2E parcours** : 11 specs / ~31 tests (Sprint 18)
+- **Total** : ~762 tests automatisés
+
+### Suite immédiate (Sprint 19)
+- Migration `useAnvilSession` REST → `AnvilWS.request()` — débloquée par la stack e2e (chaque flux step→registers→stack peut être validé en live)
+- Nouveaux specs ASM : `terminal.spec.ts` (clear, output capture), `editor-undo.spec.ts` (Ctrl+Z, snapshots)
+- Frontend RE — démarrage du gros chantier avec specs `tests/e2e/re/*.spec.ts` créés au fur et à mesure
+
+---
+
 ## Sprint 17 — Frontend tests + WS groundwork + cleanup (28 avril 2026) ✅
 **Objectif** : poser le socle test frontend (vitest + RTL), durcir la CI (audits deps),
 fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth.

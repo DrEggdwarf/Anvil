@@ -54,16 +54,88 @@ jobs:
           cargo audit
 
   test:
-    name: Tests
+    name: Tests (Python + Vitest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install Python deps
         # ADR-019: pyproject.toml is the single source of truth.
-        # `slowapi` is already pinned via the core deps in [project.dependencies].
         run: pip install -e "backend/[dev]"
-      - name: Run tests
-        run: cd backend && pytest ../tests/ -v --tb=short
+      - name: Install Node deps
+        run: npm ci
+      - name: Run Python tests
+        # `python -m` puts the repo root on sys.path so `from backend.app...` resolves.
+        run: python -m pytest tests/ -v --tb=short
+      - name: Run vitest unit/component tests
+        run: npm run test:run
+
+  smoke:
+    name: Smoke (live backend)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        run: pip install -e "backend/[dev,pwn]"
+      - name: Boot backend
+        run: |
+          uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level error &
+          for i in {1..30}; do
+            curl -fs http://127.0.0.1:8000/api/health && break
+            sleep 1
+          done
+      - name: Run smoke checks
+        run: bash tests/e2e/smoke/backend.sh
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: test
+    # Playwright pulls ~150 MB of browsers; allow the job to fail without
+    # gating the whole CI until tests are stable. Promote to required when
+    # the suite has been green for 2 weeks.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install backend (with pwn for Pwn specs)
+        run: pip install -e "backend/[dev,pwn]"
+      - name: Install runtime tools (nasm, gdb, gcc)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm gdb gcc
+      - name: Install Node deps
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Build sample binaries
+        run: make -C samples/pwn || true
+      - name: Run Playwright tests
+        env:
+          CI: "1"
+          E2E_HAS_GAS: "1"
+          E2E_HAS_GCC: "1"
+        run: npx playwright test
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

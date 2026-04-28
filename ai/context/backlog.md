@@ -46,10 +46,25 @@
 - [x] E — `useAnvilSession` 651 → 499 L + parsers memory extraits + useCallback ×23
 - [x] F (groundwork) — `AnvilWS` production-ready (token ADR-016 + `request()` Promise)
 
-### Sprint 18 — WS migration + ReferenceModal split + Mode RE frontend ⏸ PLANIFIÉ
-- [ ] **F.2** Migrer `useAnvilSession` vers `AnvilWS.request()` pour stepping (-50ms/step) — needs e2e harness first
-- [ ] **G** Splitter `ReferenceModal.tsx` par mode (Asm/Re/Pwn/Dbg/Fw/Hw) si latence d'ouverture devient bloquante
-- [ ] **Mode RE frontend** (gros chantier 8-10 jours) : layout 3 cols (fonctions | décompilé | info), CFG canvas, strings/imports/exports/xrefs (backend déjà prêt depuis Sprint 4, ~70 endpoints rzpipe)
+### Sprint 18 — E2E test infrastructure ✅ (28 avril)
+- [x] Playwright bootstrap + config + fixtures + samples
+- [x] 6 specs ASM (happy/error/reverse/assembler/breakpoint/panels — ~17 tests)
+- [x] 5 specs Pwn (mode-switch/cyclic/upload/compile-source/security — ~14 tests)
+- [x] Smoke script bash (5 checks live, all green)
+- [x] CI workflow : 5 jobs (lint, audit, test, smoke, e2e)
+- [x] Doc complète (`tests/e2e/README.md`)
+
+### Sprint 19 — WS migration + Mode RE phase 1 ⏸ PLANIFIÉ
+- [ ] **F.2** Migrer `useAnvilSession` REST → `AnvilWS.request()` (-50ms/step) — débloqué par la stack e2e
+- [ ] **Mode RE phase 1** : layout 3 cols (fonctions | disasm | info), liste fonctions filtrable, viewer disasm, panels strings/imports/exports
+- [ ] Specs e2e RE : `mode-switch`, `analyze`, `function-list`, `disasm-view`
+- [ ] **G** ReferenceModal split par mode (si triggers atteints — backlog Sprint 17)
+
+### Sprint 20 — Mode RE phase 2 ⏸ PLANIFIÉ
+- [ ] Décompilation pseudo-C via `r2ghidra pdg`
+- [ ] CFG canvas (call graph, function graph)
+- [ ] Xrefs panel
+- [ ] Specs e2e RE phase 2 : `decompile`, `cfg-canvas`, `xrefs`
 
 ---
 

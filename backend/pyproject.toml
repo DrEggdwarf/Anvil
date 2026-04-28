@@ -37,6 +37,8 @@ protocols = [
 [tool.pytest.ini_options]
 testpaths = ["../tests"]
 asyncio_mode = "auto"
+# Sprint 18: Playwright owns tests/e2e/. Don't let pytest crawl those .spec.ts/.ts files.
+norecursedirs = ["e2e"]
 
 [tool.ruff]
 target-version = "py312"

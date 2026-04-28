@@ -47,3 +47,5 @@ samples/pwn/bof_cpp
 samples/pwn/bof_go
 samples/pwn/bof_rust
 samples/pwn/*.o
+playwright-report/
+test-results/
