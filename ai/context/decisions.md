@@ -362,6 +362,51 @@ React frontend ↔ localhost:8000 (HTTP/WS)
 
 ---
 
+## ADR-020 : Portability discipline — Linux-first, Windows-deferred
+
+**Date** : 28 avril 2026
+**Statut** : Accepté
+
+**Contexte** : Anvil cible un déploiement Linux-first avec un éventuel support Windows
+(natif via WSL2 ou via Docker — voir ADR-012 et future ADR sur le runtime detector).
+Le choix du runtime Windows n'a **pas besoin d'être tranché maintenant** car il s'agit
+d'une décision tactique (~150 LOC Rust + 1 Dockerfile) sans impact structurant sur
+l'archi 3-couches existante.
+
+**Décision** : Continuer Linux-first sans bloquer la roadmap, mais s'imposer 5 règles
+de portabilité pour ne pas se peindre dans un coin :
+
+1. **Pas de path Linux hardcodé dans le code applicatif.** Pas de `/proc/...`,
+   `/sys/...`, `/dev/...` en dur. Toujours passer par les outils (gdb, rizin)
+   qui font eux-mêmes l'abstraction.
+2. **`SubprocessManager` est l'unique chemin pour spawn un process.** Jamais
+   `os.system`, `subprocess.run` direct, ni shell scripts inline.
+3. **`src-tauri/src/lib.rs` reste minimal** (~70 LOC actuellement). Pas de plugin
+   Rust natif qui ferait des syscalls Linux directs (ptrace, `/proc` parsing).
+4. **Outils accessibles via PATH.** Jamais hardcoder `/usr/bin/gdb` ni
+   `/usr/local/bin/...` — juste `gdb`, `nasm`, `gcc`, etc.
+5. **Capabilities Tauri minimales** (`core:default` + `opener:default` aujourd'hui).
+   Pas de `tauri-plugin-shell` ni autre plugin OS-specific.
+
+**Features qui forceraient à trancher le runtime** :
+- Plugin Tauri natif Rust avec syscalls Linux → bloquerait Windows pur
+- Hardware temps réel (USB-RS485, USB-JTAG, SDR) en feature standard → demande
+  passthrough Docker `--device` ou drivers Windows natifs
+- Heavyweight binary integré (Ghidra/IDA) → souvent licensing Linux-only
+
+Aucun de ces points n'est dans la roadmap actuelle (Phases C-G du backlog).
+
+**Conséquences** :
+- La roadmap Linux-first peut continuer sans bloqueur jusqu'au prochain
+  packaging public Windows
+- Quand le runtime Windows sera tranché (probablement Sprint 18+ avec WSL/Docker),
+  zéro régression à corriger dans le code applicatif tant que les 5 règles ont été
+  respectées
+- Cette discipline est **vérifiable mécaniquement** : `grep -rn "/proc/\|/sys/\|/dev/\|/usr/bin"`
+  dans `backend/app/` et `src/` doit rester vide hors commentaires.
+
+---
+
 ## ADR-019 : `pyproject.toml` source unique des deps Python
 
 **Date** : 28 avril 2026

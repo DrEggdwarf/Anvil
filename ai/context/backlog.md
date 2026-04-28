@@ -31,6 +31,13 @@
 - [→ Sprint 17] Extraire `<FilterableList>` (Symbols/Strings/ROP) — besoin de tests frontend
 - [→ Sprint 17] Helper `fetchAndSet` dans `usePwnSession` — typer `PwnDictResponse` proprement
 
+### Portability checklist (ADR-020) — vérifier à chaque PR
+- [ ] Aucun path Linux hardcodé (`grep -rn '/proc/\|/sys/\|/dev/\|/usr/bin' backend/app/ src/`)
+- [ ] Tous les subprocess via `SubprocessManager` (pas de `os.system`, `subprocess.run` direct)
+- [ ] `src-tauri/src/lib.rs` reste sous 100 LOC, pas de plugin natif OS-specific
+- [ ] Outils invoqués par nom (PATH), pas par chemin absolu
+- [ ] Capabilities Tauri restent minimales
+
 ### Sprint 17 — Frontend tests + WS wiring + restant cleanup ⏸ PLANIFIÉ
 - [ ] Bootstrap stack vitest + RTL (`src/__tests__/setup.ts`, smoke test PwnMode + usePwnSession)
 - [ ] Câbler `useAnvilSession` sur `/ws/gdb/{session_id}?token=...` (gain -50ms/step, ferme Perf#3)
