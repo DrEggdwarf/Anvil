@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -33,6 +34,9 @@ class Session:
     id: str
     bridge_type: str
     bridge: BaseBridge
+    # ADR-016: per-session secret required to open the WebSocket. Constant-time
+    # compared against ?token=... in /ws/{type}/{id}. Returned ONCE at create.
+    token: str = field(default_factory=lambda: secrets.token_hex(16))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_activity: datetime = field(default_factory=lambda: datetime.now(UTC))
 

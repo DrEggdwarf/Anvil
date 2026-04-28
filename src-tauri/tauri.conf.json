@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' http://127.0.0.1:8000 ws://127.0.0.1:8000 ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; worker-src 'self' blob:"
     }
   },
   "bundle": {

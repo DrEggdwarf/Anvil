@@ -15,8 +15,14 @@ from backend.app.core.exceptions import InvalidFile
 
 logger = logging.getLogger(__name__)
 
-# Allowed source extensions for writing
-_SOURCE_EXTENSIONS = frozenset({".asm", ".s", ".c", ".h", ".py", ".ld"})
+# Allowed source extensions for writing.
+# Aligned with pwn._LANG_MAP so /api/compile/files and /api/pwn/upload share
+# the same allowlist (Sprint 14 fix #3).
+_SOURCE_EXTENSIONS = frozenset({
+    ".asm", ".s", ".c", ".h", ".py", ".ld",
+    ".cpp", ".cc", ".cxx", ".hpp", ".hxx",
+    ".rs", ".go",
+})
 
 
 class WorkspaceManager:
@@ -116,6 +122,33 @@ class WorkspaceManager:
         if not filepath.resolve().is_relative_to(workspace.resolve()):
             raise InvalidFile("Path traversal detected")
         return str(filepath)
+
+    def resolve_under_workspace(self, session_id: str, raw_path: str) -> str:
+        """Resolve any path (basename or absolute) to an absolute path under the workspace.
+
+        Used by API endpoints that accept a user-supplied path
+        (e.g. /api/pwn/elf/checksec?path=...). Rejects paths outside the workspace,
+        symlinks pointing outside, and null bytes.
+
+        Sprint 14 fix #3 (Security A1, Pentester #5/#6): closes LFI via pwntools.ELF()
+        and symlink escape via write_source over a pre-existing symlink.
+        """
+        if not raw_path or "\x00" in raw_path:
+            raise InvalidFile("Empty or null-byte path")
+
+        workspace = Path(self.get_workspace(session_id)).resolve()
+        candidate = Path(raw_path)
+        if not candidate.is_absolute():
+            candidate = workspace / candidate
+
+        # Reject symlinks (refuse to follow even pre-existing ones).
+        if candidate.is_symlink():
+            raise InvalidFile("Symlinks are not allowed in workspace paths")
+
+        resolved = candidate.resolve()
+        if not resolved.is_relative_to(workspace):
+            raise InvalidFile("Path traversal detected")
+        return str(resolved)
 
     def cleanup_all(self) -> int:
         """Remove all workspaces. Returns count of removed."""

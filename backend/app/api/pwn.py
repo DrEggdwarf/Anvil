@@ -7,7 +7,7 @@ from pathlib import Path
 
 from backend.app.api.deps import get_session_manager
 from backend.app.bridges.pwn_bridge import PwnBridge
-from backend.app.core.exceptions import ValidationError
+from backend.app.core.exceptions import InvalidFile, ValidationError
 from backend.app.core.subprocess_manager import SubprocessManager
 from backend.app.core.workspace import WorkspaceManager
 from backend.app.models.pwn import (
@@ -69,6 +69,18 @@ def _get_pwn_bridge(session_id: str, sm: SessionManager) -> PwnBridge:
     return session.bridge
 
 
+def _resolve_path(session_id: str, raw_path: str, field_name: str = "path") -> str:
+    """Force any user-supplied path under the session workspace.
+
+    Sprint 14 fix #3 (Security A1, Pentester #5/#6): every endpoint that previously
+    accepted a free-form `path` now goes through this guard to close LFI/symlink escapes.
+    """
+    try:
+        return _workspace.resolve_under_workspace(session_id, raw_path)
+    except InvalidFile as exc:
+        raise ValidationError(f"Invalid {field_name}: {exc}", code="PATH_BLOCKED") from exc
+
+
 # ── File upload ──────────────────────────────────────────
 
 @router.post("/{session_id}/upload")
@@ -79,17 +91,22 @@ async def upload_binary(
 ) -> dict:
     """Upload a binary file (base64-encoded) to the session workspace."""
     _get_pwn_bridge(session_id, sm)  # validate session type
-    workspace = _workspace.get_workspace(session_id)
-    filepath = Path(workspace) / body.filename
-    if not filepath.resolve().is_relative_to(Path(workspace).resolve()):
-        raise ValidationError("Path traversal detected", code="PATH_TRAVERSAL")
+    # Reject path separators in filename (model already forbids them, double-check).
+    if "/" in body.filename or "\\" in body.filename:
+        raise ValidationError("Filename must not contain path separators", code="PATH_TRAVERSAL")
+    target = Path(_resolve_path(session_id, body.filename, "filename"))
     try:
         data = base64.b64decode(body.data_b64)
     except Exception as exc:
         raise ValidationError(f"Invalid base64 data: {exc}", code="INVALID_BASE64") from exc
-    filepath.write_bytes(data)
-    filepath.chmod(0o755)
-    return {"path": str(filepath), "size": len(data)}
+    # Refuse to overwrite an existing symlink (resolve_under_workspace also checks this).
+    if target.is_symlink():
+        raise ValidationError("Symlinks are not allowed", code="PATH_TRAVERSAL")
+    target.write_bytes(data)
+    # Only mark as executable if the payload looks like an ELF binary.
+    if data.startswith(b"\x7fELF"):
+        target.chmod(0o755)
+    return {"path": str(target), "size": len(data)}
 
 
 # ── Compile source → binary ──────────────────────────────
@@ -125,14 +142,16 @@ async def compile_source(
             code="UNSUPPORTED_LANGUAGE",
         )
 
-    src = Path(body.path)
-    if not src.resolve().is_relative_to(Path(workspace).resolve()):
-        raise ValidationError("Path traversal detected", code="PATH_TRAVERSAL")
+    src_path = _resolve_path(session_id, body.path, "path")
+    src = Path(src_path)
     if not src.exists():
         raise ValidationError(f"Source file not found: {body.path}", code="FILE_NOT_FOUND")
 
     output = src.with_suffix("")  # strip extension → binary name
     compiler = _LANG_MAP[lang]
+    # Force network-offline mode for managed-build languages until a sandbox is wired.
+    # ADR-017: Rust/Go must not pull deps at build time (anti-SSRF, anti-RCE via build.rs / go.mod).
+    extra_env: dict[str, str] = {}
 
     if compiler == "gcc":
         cmd = ["gcc"]
@@ -148,7 +167,7 @@ async def compile_source(
         obj = src.with_suffix(".o")
         # Two-step: assemble then link
         asm_cmd = ["nasm", "-f", "elf64", "-g", "-F", "dwarf", str(src), "-o", str(obj)]
-        stdout, stderr, rc = await _subprocess.execute(asm_cmd, timeout=30.0, cwd=workspace)
+        _stdout, stderr, rc = await _subprocess.execute(asm_cmd, timeout=30.0, cwd=workspace)
         if rc != 0:
             raise ValidationError(f"NASM error:\n{stderr.strip()}", code="COMPILE_ERROR")
         cmd = ["ld", "-m", "elf_x86_64", str(obj), "-o", str(output)]
@@ -156,10 +175,13 @@ async def compile_source(
         cmd = ["rustc", "-g", "-o", str(output), str(src)]
     elif compiler == "go":
         cmd = ["go", "build", "-o", str(output), str(src)]
+        extra_env = {"GOFLAGS": "-mod=vendor", "GOPROXY": "off"}
     else:
         raise ValidationError(f"Compiler not configured: {compiler}", code="COMPILE_ERROR")
 
-    stdout, stderr, rc = await _subprocess.execute(cmd, timeout=60.0, cwd=workspace)
+    _stdout, stderr, rc = await _subprocess.execute(
+        cmd, timeout=60.0, cwd=workspace, env=extra_env or None
+    )
     if rc != 0:
         raise ValidationError(f"Compilation error:\n{stderr.strip()}", code="COMPILE_ERROR")
 
@@ -274,47 +296,56 @@ async def shellcraft_list(session_id: str, sm: SessionManager = Depends(get_sess
 @router.post("/{session_id}/elf/load", response_model=PwnElfResponse)
 async def elf_load(session_id: str, body: PwnElfLoadRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return await bridge.elf_load(body.path)
+    safe_path = _resolve_path(session_id, body.path)
+    return await bridge.elf_load(safe_path)
 
 @router.get("/{session_id}/elf/checksec", response_model=PwnDictResponse)
 async def elf_checksec(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.elf_checksec(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnDictResponse(data=await bridge.elf_checksec(safe_path))
 
 @router.get("/{session_id}/elf/symbols", response_model=PwnDictResponse)
 async def elf_symbols(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.elf_symbols(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnDictResponse(data=await bridge.elf_symbols(safe_path))
 
 @router.get("/{session_id}/elf/got", response_model=PwnDictResponse)
 async def elf_got(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.elf_got(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnDictResponse(data=await bridge.elf_got(safe_path))
 
 @router.get("/{session_id}/elf/plt", response_model=PwnDictResponse)
 async def elf_plt(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.elf_plt(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnDictResponse(data=await bridge.elf_plt(safe_path))
 
 @router.get("/{session_id}/elf/functions", response_model=PwnListResponse)
 async def elf_functions(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnListResponse(items=await bridge.elf_functions(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnListResponse(items=await bridge.elf_functions(safe_path))
 
 @router.get("/{session_id}/elf/sections", response_model=PwnListResponse)
 async def elf_sections(session_id: str, path: str, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnListResponse(items=await bridge.elf_sections(path))
+    safe_path = _resolve_path(session_id, path)
+    return PwnListResponse(items=await bridge.elf_sections(safe_path))
 
 @router.post("/{session_id}/elf/search", response_model=PwnListResponse)
 async def elf_search(session_id: str, body: PwnElfSearchRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnListResponse(items=await bridge.elf_search(body.path, body.needle, body.is_hex))
+    safe_path = _resolve_path(session_id, body.path)
+    return PwnListResponse(items=await bridge.elf_search(safe_path, body.needle, body.is_hex))
 
 @router.post("/{session_id}/elf/bss", response_model=PwnHexResponse)
 async def elf_bss(session_id: str, body: PwnElfBssRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnHexResponse(hex=await bridge.elf_bss(body.path, body.offset))
+    safe_path = _resolve_path(session_id, body.path)
+    return PwnHexResponse(hex=await bridge.elf_bss(safe_path, body.offset))
 
 
 # ── ROP ──────────────────────────────────────────────────
@@ -322,7 +353,8 @@ async def elf_bss(session_id: str, body: PwnElfBssRequest, sm: SessionManager = 
 @router.post("/{session_id}/rop/create", response_model=PwnStringResponse)
 async def rop_create(session_id: str, body: PwnRopCreateRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    rop_id = await bridge.rop_create(body.elf_path)
+    safe_path = _resolve_path(session_id, body.elf_path, "elf_path")
+    rop_id = await bridge.rop_create(safe_path)
     return PwnStringResponse(output=rop_id)
 
 @router.post("/{session_id}/rop/gadget", response_model=PwnStringResponse)
@@ -390,7 +422,8 @@ async def srop_frame(session_id: str, body: PwnSropRequest, sm: SessionManager =
 @router.post("/{session_id}/ret2dlresolve", response_model=PwnDictResponse)
 async def ret2dlresolve(session_id: str, body: PwnRet2dlRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.ret2dlresolve(body.elf_path, body.symbol, body.args))
+    safe_path = _resolve_path(session_id, body.elf_path, "elf_path")
+    return PwnDictResponse(data=await bridge.ret2dlresolve(safe_path, body.symbol, body.args))
 
 
 # ── Encoding / crypto ───────────────────────────────────
@@ -442,7 +475,8 @@ async def list_constants(session_id: str, body: PwnListConstantsRequest,
 @router.post("/{session_id}/corefile", response_model=PwnDictResponse)
 async def corefile_load(session_id: str, body: PwnCorefileRequest, sm: SessionManager = Depends(get_session_manager)):
     bridge = _get_pwn_bridge(session_id, sm)
-    return PwnDictResponse(data=await bridge.corefile_load(body.path))
+    safe_path = _resolve_path(session_id, body.path)
+    return PwnDictResponse(data=await bridge.corefile_load(safe_path))
 
 
 # ── Misc ─────────────────────────────────────────────────

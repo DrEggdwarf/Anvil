@@ -8,10 +8,17 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 from collections.abc import Awaitable, Callable
 
+from backend.app.core.config import settings
+from backend.app.core.exceptions import SessionExpired, SessionNotFound, ValidationError
 from backend.app.models.ws import WSMessage, WSMessageType
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+# WS close codes (RFC 6455)
+_WS_POLICY_VIOLATION = 1008
+_WS_UNSUPPORTED_DATA = 1003
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +50,55 @@ class WSDispatcher:
 ws_dispatcher = WSDispatcher()
 
 
+def _origin_allowed(origin: str | None) -> bool:
+    """ADR-015 / ADR-016: refuse connections from unlisted origins."""
+    if not origin:
+        # Native WS clients (Tauri WebView, Python tests) often omit Origin — allow.
+        return True
+    allowed = settings.cors_origins
+    return "*" in allowed or origin in allowed
+
+
 @router.websocket("/ws/{session_type}/{session_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
     session_type: str,
     session_id: str,
 ) -> None:
-    """Generic WebSocket endpoint — dispatches messages to registered handlers."""
+    """Generic WebSocket endpoint — dispatches messages to registered handlers.
+
+    ADR-016: requires `?token=...` query string matching the session's token.
+    Validates session exists, type matches, and Origin is allowed before accept().
+    """
+    # 1. Origin gate (defense in depth on top of CORS middleware).
+    if not _origin_allowed(websocket.headers.get("origin")):
+        await websocket.close(code=_WS_POLICY_VIOLATION, reason="Origin not allowed")
+        return
+
+    # 2. Token gate — must precede accept() to avoid leaking handshake to unauth clients.
+    sm = getattr(websocket.app.state, "session_manager", None)
+    if sm is None:
+        await websocket.close(code=_WS_POLICY_VIOLATION, reason="Server not ready")
+        return
+
+    token = websocket.query_params.get("token", "")
+    try:
+        session = sm.get(session_id)
+    except (SessionNotFound, SessionExpired, ValidationError):
+        await websocket.close(code=_WS_POLICY_VIOLATION, reason="Session invalid")
+        return
+
+    if not token or not secrets.compare_digest(token, session.token):
+        await websocket.close(code=_WS_POLICY_VIOLATION, reason="Invalid token")
+        return
+
+    if session.bridge_type != session_type:
+        await websocket.close(
+            code=_WS_UNSUPPORTED_DATA,
+            reason=f"Session type mismatch (expected {session.bridge_type})",
+        )
+        return
+
     await websocket.accept()
     logger.info("WS connected: %s/%s", session_type, session_id)
 

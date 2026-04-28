@@ -22,11 +22,13 @@ class TestSettings:
         assert s.rate_limit_per_minute == 600
 
     def test_cors_origins_default(self):
+        """ADR-015: defaults are tight (Tauri/Vite local only), never `*`."""
         from backend.app.core.config import Settings
 
         s = Settings()
         assert "http://localhost:1420" in s.cors_origins
-        assert "http://localhost:5173" in s.cors_origins
+        assert "tauri://localhost" in s.cors_origins
+        assert "*" not in s.cors_origins
 
     def test_env_override(self, monkeypatch):
         monkeypatch.setenv("ANVIL_MAX_SESSIONS", "42")

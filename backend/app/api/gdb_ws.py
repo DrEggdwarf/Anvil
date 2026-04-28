@@ -11,6 +11,7 @@ import logging
 from backend.app.api.ws import ws_dispatcher
 from backend.app.bridges.gdb_bridge import GdbBridge
 from backend.app.core.exceptions import ValidationError
+from backend.app.core.sanitization import sanitize_gdb_input
 from backend.app.models.ws import WSMessage
 from backend.app.sessions.manager import SessionManager
 from fastapi import WebSocket
@@ -161,5 +162,6 @@ async def _handle_raw_execute(ws: WebSocket, msg: WSMessage, session_id: str) ->
     command = msg.payload.get("command_str", "")
     if not command:
         raise ValidationError("command_str is required")
+    command = sanitize_gdb_input(command, "command_str")
     responses = await bridge.execute(command)
     return {"action": "execute", "command": command, "gdb_responses": responses}

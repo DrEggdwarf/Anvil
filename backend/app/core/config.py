@@ -47,9 +47,17 @@ class Settings(BaseSettings):
     ws_message_max_size_bytes: int = 1 * 1024 * 1024  # 1 MB
 
     # ── CORS ─────────────────────────────────────────────
-    cors_origins: list[str] = ["*"]
+    # ADR-015: locked down to Tauri/Vite local origins by default. Override with
+    # ANVIL_CORS_ORIGINS='http://example.com,http://other.com' for web deployment.
+    cors_origins: list[str] = [
+        "http://localhost:1420",
+        "http://127.0.0.1:1420",
+        "tauri://localhost",
+        "https://tauri.localhost",
+    ]
 
     # ── Rate limiting ────────────────────────────────────
+    # 600/min global cap; effective per-route limits live in slowapi decorators.
     rate_limit_per_minute: int = 600
 
 

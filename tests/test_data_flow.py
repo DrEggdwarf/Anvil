@@ -25,6 +25,15 @@ def ws_client():
     return TestClient(app)
 
 
+@pytest.fixture
+def authed_ws(ws_client):
+    """Sprint 14 fix #4: WS endpoint requires a real session + token; create one."""
+    resp = ws_client.post("/api/sessions", json={"bridge_type": "mock"})
+    assert resp.status_code == 201
+    body = resp.json()
+    return ws_client, body["id"], body["token"]
+
+
 class TestErrorMiddlewareDataFlow:
     """Verify that AnvilError exceptions become structured JSON responses."""
 
@@ -59,9 +68,10 @@ class TestErrorMiddlewareDataFlow:
 class TestWSDataFlow:
     """Verify data flows correctly through the WebSocket pipeline."""
 
-    def test_ws_ping_pong_data_integrity(self, ws_client):
+    def test_ws_ping_pong_data_integrity(self, authed_ws):
         """Ping → Pong: verify request_id is preserved."""
-        with ws_client.websocket_connect("/ws/test/session1") as ws:
+        client, sid, token = authed_ws
+        with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "ping",
                 "request_id": "my-unique-id-123",
@@ -70,8 +80,9 @@ class TestWSDataFlow:
             assert resp["type"] == "pong"
             assert resp["request_id"] == "my-unique-id-123"
 
-    def test_ws_command_result_data_flow(self, ws_client):
+    def test_ws_command_result_data_flow(self, authed_ws):
         """Command → Handler → Result: verify payload flows through."""
+        client, sid, token = authed_ws
 
         async def echo_handler(ws, msg, session_id):
             return {
@@ -79,27 +90,28 @@ class TestWSDataFlow:
                 "echoed_data": msg.payload.get("data"),
             }
 
-        ws_dispatcher.register("test.echo", echo_handler)
+        ws_dispatcher.register("mock.echo", echo_handler)
         try:
-            with ws_client.websocket_connect("/ws/test/my-session") as ws:
+            with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
                 ws.send_json({
                     "type": "command",
                     "request_id": "req-42",
-                    "session_id": "my-session",
+                    "session_id": sid,
                     "payload": {"command": "echo", "data": {"key": "value"}},
                 })
                 resp = ws.receive_json()
                 assert resp["type"] == "result"
-                assert resp["session_id"] == "my-session"
+                assert resp["session_id"] == sid
                 assert resp["request_id"] == "req-42"
-                assert resp["payload"]["echoed_session"] == "my-session"
+                assert resp["payload"]["echoed_session"] == sid
                 assert resp["payload"]["echoed_data"] == {"key": "value"}
         finally:
-            ws_dispatcher._handlers.pop("test.echo", None)
+            ws_dispatcher._handlers.pop("mock.echo", None)
 
-    def test_ws_error_data_flow(self, ws_client):
+    def test_ws_error_data_flow(self, authed_ws):
         """Unknown command → Error: verify error structure."""
-        with ws_client.websocket_connect("/ws/test/session1") as ws:
+        client, sid, token = authed_ws
+        with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "req-err",

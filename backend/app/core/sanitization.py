@@ -29,8 +29,10 @@ _GDB_DANGEROUS_PATTERNS = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
-# Characters that could enable command chaining in GDB
-_GDB_INJECTION_CHARS = re.compile(r"[;`\n\r]")
+# Characters that could enable command chaining or quote-escape in GDB
+# `"` is blocked because GDB f-strings wrap user input in `-interpreter-exec console "{cmd}"`,
+# and an injected `"` would close the quote and allow appending arbitrary commands.
+_GDB_INJECTION_CHARS = re.compile(r'[;`\n\r"]')
 
 
 def sanitize_gdb_input(value: str, field_name: str = "input") -> str:
@@ -178,12 +180,40 @@ _ALLOWED_GCC_FLAG_PREFIXES = frozenset({
     "-pthread", "-rdynamic",
 })
 
+# Explicitly dangerous flags that bypass the allowlist via known-safe prefixes.
+# `-Wl,`/`-Wa,`/`-Wp,` slip past `-W` (warnings) and pass arbitrary args to linker/assembler/preprocessor.
+# `-l/path` and `-L/path` can pull libraries from anywhere on disk.
 _BLOCKED_GCC_FLAGS = frozenset({
     "-wrapper", "-fplugin", "-fplugin-arg",
     "-fprofile-generate", "-fprofile-use",
-    "--sysroot", "-isysroot",
+    "--sysroot", "-isysroot", "-isystem",
     "-specs", "-dumpspecs",
+    "-Wl,", "-Wa,", "-Wp,",
+    "-Xlinker", "-Xassembler", "-Xpreprocessor",
+    "-rpath",
 })
+
+def _validate_gcc_path_flag(flag: str, prefix: str) -> None:
+    """Reject path-bearing flags (`-I/etc`, `-L/proc`, `-l/abs/path`) that escape the workspace."""
+    payload = flag[len(prefix):]
+    if not payload:
+        return
+    # Reject library specs containing path separators (`-l/abs/path` or `-l../foo`).
+    if prefix == "-l" and ("/" in payload or "\\" in payload):
+        raise ValidationError(
+            f"Library path traversal blocked in flag: {flag}",
+            code="INJECTION_BLOCKED",
+            details={"flag": flag},
+        )
+    # Reject -I/-L pointing at sensitive system dirs.
+    if prefix in ("-I", "-L") and (payload.startswith("/") or ".." in payload):
+        for blocked in _BLOCKED_PATHS:
+            if payload.startswith(blocked):
+                raise ValidationError(
+                    f"Sensitive path blocked in flag: {flag}",
+                    code="PATH_BLOCKED",
+                    details={"flag": flag, "path": payload},
+                )
 
 
 def validate_gcc_flags(flags: list[str]) -> list[str]:
@@ -191,13 +221,17 @@ def validate_gcc_flags(flags: list[str]) -> list[str]:
     validated = []
     for flag in flags:
         flag_lower = flag.lower()
-        # Block explicitly dangerous flags
-        if any(flag_lower.startswith(b) for b in _BLOCKED_GCC_FLAGS):
+        # Block explicitly dangerous flags (case-insensitive prefix match)
+        if any(flag_lower.startswith(b.lower()) for b in _BLOCKED_GCC_FLAGS):
             raise ValidationError(
                 f"Blocked GCC flag: {flag}",
                 code="INJECTION_BLOCKED",
                 details={"flag": flag},
             )
+        # Path-bearing flags get extra validation (no `/etc`, no `../`, no `-l/abs/path`)
+        for path_prefix in ("-I", "-L", "-l"):
+            if flag.startswith(path_prefix) and len(flag) > len(path_prefix):
+                _validate_gcc_path_flag(flag, path_prefix)
         # Allow known-safe prefixes
         if any(flag.startswith(p) for p in _ALLOWED_GCC_FLAG_PREFIXES):
             validated.append(flag)

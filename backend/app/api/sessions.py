@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from backend.app.api.deps import get_session_manager
-from backend.app.models.sessions import SessionCreate, SessionInfo, SessionListResponse
+from backend.app.models.sessions import (
+    SessionCreate,
+    SessionCreated,
+    SessionInfo,
+    SessionListResponse,
+)
 from backend.app.sessions.manager import Session, SessionManager
 from fastapi import APIRouter, Depends
 
@@ -20,14 +25,24 @@ def _session_to_info(s: Session) -> SessionInfo:
     )
 
 
-@router.post("", response_model=SessionInfo, status_code=201)
+@router.post("", response_model=SessionCreated, status_code=201)
 async def create_session(
     body: SessionCreate,
     sm: SessionManager = Depends(get_session_manager),
 ):
-    """Create a new session for a given bridge type."""
+    """Create a new session for a given bridge type.
+
+    ADR-016: returns the WebSocket auth `token` ONCE; client must store it to open `/ws/...`.
+    """
     session = await sm.create(body.bridge_type, body.config)
-    return _session_to_info(session)
+    return SessionCreated(
+        id=session.id,
+        bridge_type=session.bridge_type,
+        state=session.bridge.state.value,
+        created_at=session.created_at.isoformat(),
+        last_activity=session.last_activity.isoformat(),
+        token=session.token,
+    )
 
 
 @router.get("", response_model=SessionListResponse)

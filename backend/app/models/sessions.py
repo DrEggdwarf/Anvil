@@ -27,6 +27,16 @@ class SessionInfo(BaseModel):
     last_activity: str
 
 
+class SessionCreated(SessionInfo):
+    """Same as SessionInfo plus the WS auth token — returned ONCE at creation only.
+
+    ADR-016: the token is required to open `/ws/{session_type}/{session_id}` and
+    must be kept by the client (not re-fetchable via GET /api/sessions/{id}).
+    """
+
+    token: str
+
+
 class SessionListResponse(BaseModel):
     sessions: list[SessionInfo]
     count: int

@@ -43,17 +43,19 @@ def gdb_ws_env():
     bridge._controller.write.return_value = [_gdb_result()]
     bridge.state = BridgeState.READY
 
-    session = Session(id="aabbccdd11223344", bridge_type="gdb", bridge=bridge)
+    # Sprint 14 fix #4 (ADR-016): Session generates a token automatically;
+    # tests must include it as `?token=...` when opening the WS.
+    session = Session(id="aabbccdd11223344", bridge_type="gdb", bridge=bridge, token="deadbeefcafe1234")
     sm._sessions["aabbccdd11223344"] = session
 
     client = TestClient(app)
-    return client, "aabbccdd11223344", bridge
+    return client, "aabbccdd11223344", bridge, session.token
 
 
 class TestGdbWSStepCommands:
     def test_step_into(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r1",
@@ -65,8 +67,8 @@ class TestGdbWSStepCommands:
             assert "gdb_responses" in resp["payload"]
 
     def test_step_over(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r2",
@@ -76,8 +78,8 @@ class TestGdbWSStepCommands:
             assert resp["payload"]["action"] == "step_over"
 
     def test_step_out(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r3",
@@ -89,8 +91,8 @@ class TestGdbWSStepCommands:
 
 class TestGdbWSExecControl:
     def test_continue(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r4",
@@ -100,8 +102,8 @@ class TestGdbWSExecControl:
             assert resp["payload"]["action"] == "continue"
 
     def test_run(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r5",
@@ -113,8 +115,8 @@ class TestGdbWSExecControl:
 
 class TestGdbWSLoad:
     def test_load_binary(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r6",
@@ -125,8 +127,8 @@ class TestGdbWSLoad:
             assert resp["payload"]["binary_path"] == "/tmp/test_bin"
 
     def test_load_binary_missing_path(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "r7",
@@ -138,8 +140,8 @@ class TestGdbWSLoad:
 
 class TestGdbWSBreakpoints:
     def test_set_breakpoint(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "bp1",
@@ -149,8 +151,8 @@ class TestGdbWSBreakpoints:
             assert resp["payload"]["location"] == "main"
 
     def test_remove_breakpoint(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "bp2",
@@ -162,7 +164,7 @@ class TestGdbWSBreakpoints:
 
 class TestGdbWSInspection:
     def test_registers(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
+        client, sid, bridge, token = gdb_ws_env
         bridge._controller.write.side_effect = [
             [{"type": "result", "message": "done",
               "payload": {"register-names": ["rax", "rbx"]}}],
@@ -172,7 +174,7 @@ class TestGdbWSInspection:
                   {"number": "1", "value": "0xff"},
               ]}}],
         ]
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "reg1",
@@ -186,8 +188,8 @@ class TestGdbWSInspection:
             assert regs[0]["value"] == "0x42"
 
     def test_stack(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "stk1",
@@ -197,8 +199,8 @@ class TestGdbWSInspection:
             assert resp["payload"]["action"] == "stack"
 
     def test_memory(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "mem1",
@@ -209,8 +211,8 @@ class TestGdbWSInspection:
             assert resp["payload"]["size"] == 64
 
     def test_memory_missing_address(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "mem2",
@@ -222,8 +224,8 @@ class TestGdbWSInspection:
 
 class TestGdbWSDisassemble:
     def test_disassemble(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "dis1",
@@ -235,8 +237,8 @@ class TestGdbWSDisassemble:
 
 class TestGdbWSEvaluate:
     def test_evaluate(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "eval1",
@@ -246,8 +248,8 @@ class TestGdbWSEvaluate:
             assert resp["payload"]["expression"] == "$rax"
 
     def test_evaluate_missing_expression(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "eval2",
@@ -259,8 +261,8 @@ class TestGdbWSEvaluate:
 
 class TestGdbWSRawExecute:
     def test_raw_execute(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "raw1",
@@ -270,8 +272,8 @@ class TestGdbWSRawExecute:
             assert resp["payload"]["command"] == "-exec-run"
 
     def test_raw_execute_missing_cmd(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             ws.send_json({
                 "type": "command",
                 "request_id": "raw2",
@@ -285,8 +287,8 @@ class TestGdbWSDataFlow:
     """Full data flow test: load → breakpoint → run → step → registers via WS."""
 
     def test_full_debug_flow_ws(self, gdb_ws_env):
-        client, sid, bridge = gdb_ws_env
-        with client.websocket_connect(f"/ws/gdb/{sid}") as ws:
+        client, sid, bridge, token = gdb_ws_env
+        with client.websocket_connect(f"/ws/gdb/{sid}?token={token}") as ws:
             # Load
             ws.send_json({
                 "type": "command", "request_id": "f1",

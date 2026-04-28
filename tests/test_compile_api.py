@@ -155,6 +155,37 @@ class TestAsmCompileRoute:
             assert data["success"] is False
             assert len(data["errors"]) == 1
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("assembler", ["gas", "fasm"])
+    async def test_compile_asm_alternate_assemblers(self, client, assembler):
+        """Sprint 14 fix #6: ensure GAS/FASM are wired through the route, not just the bridge."""
+        sid = await _create_session(client)
+        with patch(
+            "backend.app.bridges.compilation.CompilationBridge.compile_asm",
+            new_callable=AsyncMock,
+            return_value={
+                "success": True, "stage": "link", "binary_path": "/tmp/p",
+                "object_path": "/tmp/p.o", "errors": [], "stdout": "",
+                "stderr": "", "returncode": 0,
+            },
+        ) as mock_compile:
+            resp = await client.post(
+                f"/api/compile/{sid}/asm",
+                json={"source_code": "nop", "assembler": assembler},
+            )
+            assert resp.status_code == 200
+            assert mock_compile.await_args.kwargs.get("assembler") == assembler
+
+    @pytest.mark.asyncio
+    async def test_compile_asm_invalid_assembler_rejected(self, client):
+        """Pydantic regex `^(nasm|gas|fasm)$` must reject unknown assemblers at the route boundary."""
+        sid = await _create_session(client)
+        resp = await client.post(
+            f"/api/compile/{sid}/asm",
+            json={"source_code": "nop", "assembler": "; rm -rf /"},
+        )
+        assert resp.status_code == 422
+
 
 # ── C compilation routes ─────────────────────────────────
 
