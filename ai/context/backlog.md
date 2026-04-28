@@ -66,6 +66,53 @@
 - [ ] Xrefs panel
 - [ ] Specs e2e RE phase 2 : `decompile`, `cfg-canvas`, `xrefs`
 
+### Sprint 21 — GitHub & release engineering ⏸ PLANIFIÉ (~9h, 3 phases)
+
+> Anvil n'a quasiment aucun outillage GitHub standard. Ce sprint comble l'écart
+> avant tout déploiement public ou première release. À découper si nécessaire.
+
+**Décisions à prendre avant de démarrer** :
+- License : `MIT` / `Apache-2.0` / `GPLv3` / autre — **bloquant Phase A**, sans license
+  personne ne peut légalement utiliser Anvil
+- Email contact sécurité pour `SECURITY.md` (mailto: ou @PGP key)
+
+#### Phase A — Indispensable (~2h, bloquant déploiement public)
+- [ ] `LICENSE` à la racine
+- [ ] `SECURITY.md` — politique de divulgation responsable, scope desktop/web,
+      délai de réponse, contact (mail + PGP optionnel)
+- [ ] `CONTRIBUTING.md` — pointer vers `CLAUDE.md` + workflow git + format de commit
+      + lancement de la stack tests + comment ajouter un mode
+- [ ] `.github/dependabot.yml` — auto-PR hebdo pour pip, npm, cargo, github-actions
+      (groupage par écosystème, ignorer les majeures pour ne pas bruiter)
+
+#### Phase B — Robustesse CI (~3h)
+- [ ] `.github/ISSUE_TEMPLATE/bug.yml` — formulaire (mode, version, repro, logs)
+- [ ] `.github/ISSUE_TEMPLATE/feature.yml` — formulaire (mode cible, use case, scope)
+- [ ] `.github/ISSUE_TEMPLATE/security.yml` — redirige vers `SECURITY.md` (jamais d'issue publique)
+- [ ] `.github/pull_request_template.md` — checklist (tests ajoutés, ADR, screenshot UI, breaking change)
+- [ ] `CODEOWNERS` — auto-assign reviewers par chemin (`/src/` → frontend, `/backend/` → backend, `/.github/` → infra)
+- [ ] Coverage reporting : `pytest --cov` → upload artifact + badge README
+- [ ] `.pre-commit-config.yaml` — ruff format + ruff check + tsc --noEmit + prettier en local
+- [ ] CI gating : promouvoir `e2e` + `audit` en `required` après 2 semaines verts ;
+      ajouter job `build` (`npm run build` + `cargo check src-tauri`)
+- [ ] Documenter les **branch protection rules** recommandées dans `CONTRIBUTING.md`
+      (require PR review, require status checks, no direct push to main)
+
+#### Phase C — Release engineering (~4h, à faire avant 1ère release publique)
+- [ ] `CHANGELOG.md` automatisé via `git-cliff` ou `release-please`
+- [ ] `.github/workflows/release.yml` — sur tag `v*` :
+  - [ ] Build Tauri Linux (AppImage + .deb)
+  - [ ] Build Tauri Windows (MSI) — conditionnel si Sprint runtime detector clos
+  - [ ] Build + push Docker image sur `ghcr.io/dreggdwarf/anvil-backend:vX.Y.Z`
+  - [ ] Crée GitHub Release avec assets + changelog auto
+- [ ] Badges README : CI status, coverage %, license, latest release, Docker pulls
+- [ ] (optionnel) Stale bot — auto-close issues inactives 60+ jours
+
+#### Reportés / hors scope
+- Bug bounty / disclosure program payant — trop tôt
+- PR auto-labeling par chemin — gadget, peu de valeur sur repo solo
+- Branch protection rules — config UI GitHub, pas dans le repo (juste documenté)
+
 ---
 
 ## Phase 0 — API Engine (Sprints 1-6) 🔴 CRITIQUE
