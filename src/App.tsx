@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useColResize } from './hooks/useColResize'
 import { useAnvilSession } from './hooks/useAnvilSession'
@@ -9,9 +9,23 @@ import { AnvilTerminal } from './components/AnvilTerminal'
 import { StackPanel } from './components/panels/StackPanel'
 import { MemoryPanel } from './components/panels/MemoryPanel'
 import { SecurityPanel } from './components/panels/SecurityPanel'
-import { ReferenceModal } from './components/ReferenceModal'
-import { PwnMode } from './components/PwnMode'
 import './App.css'
+
+// Sprint 15 fix #1: heavy modes are code-split out of the initial bundle.
+// PwnMode pulls Monaco + xterm + the pwn completion table; ReferenceModal pulls
+// the 6 reference datasets (~150 KB). Loading them lazily cuts initial JS by ~30-40%.
+const PwnMode = lazy(() => import('./components/PwnMode').then(m => ({ default: m.PwnMode })))
+const ReferenceModal = lazy(() =>
+  import('./components/ReferenceModal').then(m => ({ default: m.ReferenceModal }))
+)
+
+function LazyFallback({ label }: { label: string }) {
+  return (
+    <div className="anvil-lazy-fallback">
+      <i className="fa-solid fa-spinner fa-spin" /> Loading {label}…
+    </div>
+  )
+}
 
 type Mode = 'ASM' | 'RE' | 'Pwn' | 'Debug' | 'Firmware' | 'Protocols'
 
@@ -169,12 +183,14 @@ function App() {
 
       {/* ── Body ─────────────────────────────────────────────── */}
       {mode === 'Pwn' ? (
-        <PwnMode
-          session={pwnSession}
-          cols={pwnCols}
-          bodyRef={pwnBodyRef}
-          onColResize={pwnOnDown}
-        />
+        <Suspense fallback={<LazyFallback label="Pwn mode" />}>
+          <PwnMode
+            session={pwnSession}
+            cols={pwnCols}
+            bodyRef={pwnBodyRef}
+            onColResize={pwnOnDown}
+          />
+        </Suspense>
       ) : (
       <div className="anvil-body" ref={bodyRef}>
         {/* Column 1: Editor */}
@@ -344,7 +360,15 @@ function App() {
       </div>
       )}
 
-      <ReferenceModal open={refOpen} onClose={() => setRefOpen(false)} mode={MODE_CAT[mode] as import('./components/ReferenceModal').AppMode} />
+      {refOpen && (
+        <Suspense fallback={<LazyFallback label="Reference" />}>
+          <ReferenceModal
+            open={refOpen}
+            onClose={() => setRefOpen(false)}
+            mode={MODE_CAT[mode] as import('./components/ReferenceModal').AppMode}
+          />
+        </Suspense>
+      )}
 
       {/* ── Status Bar ────────────────────────────────────────── */}
       <footer className="anvil-statusbar">

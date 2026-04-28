@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from collections import OrderedDict
 from typing import Any
 
 from backend.app.bridges.base import BaseBridge, BridgeState
@@ -41,26 +42,36 @@ class PwnBridge(BaseBridge):
         super().__init__()
         self._pwn: Any = None       # pwnlib module reference
         self._context: Any = None    # pwnlib.context.context
-        self._elf_cache: dict[str, Any] = {}  # path → ELF object
-        self._rop_cache: dict[str, Any] = {}  # id → ROP object
+        # Sprint 15 fix #5: real LRU eviction via OrderedDict.move_to_end on every access.
+        # Previously evicted the oldest *inserted* entry (FIFO), which could drop a hot ELF.
+        self._elf_cache: OrderedDict[str, Any] = OrderedDict()
+        self._rop_cache: OrderedDict[str, Any] = OrderedDict()
 
-    def _evict_cache(self, cache: dict, key: str) -> None:
-        """Add key; if cache exceeds limit, evict the oldest entry."""
+    def _evict_cache(self, cache: OrderedDict, key: str) -> None:
+        """Add key; if cache exceeds limit, evict the least-recently-used entry."""
         if key not in cache and len(cache) >= self._MAX_CACHE_SIZE:
-            oldest = next(iter(cache))
-            removed = cache.pop(oldest)
+            _, removed = cache.popitem(last=False)  # LRU = first item
             with contextlib.suppress(Exception):
                 removed.close()
 
     def _cache_elf(self, path: str, elf: Any) -> None:
-        """Store ELF in cache with eviction."""
+        """Store ELF in cache with LRU eviction."""
         self._evict_cache(self._elf_cache, path)
         self._elf_cache[path] = elf
+        self._elf_cache.move_to_end(path)
 
     def _cache_rop(self, rop_id: str, rop: Any) -> None:
-        """Store ROP in cache with eviction."""
+        """Store ROP in cache with LRU eviction."""
         self._evict_cache(self._rop_cache, rop_id)
         self._rop_cache[rop_id] = rop
+        self._rop_cache.move_to_end(rop_id)
+
+    def _touch_elf(self, path: str) -> Any | None:
+        """Mark cached ELF as most-recently-used and return it (None if absent)."""
+        elf = self._elf_cache.get(path)
+        if elf is not None:
+            self._elf_cache.move_to_end(path)
+        return elf
 
     async def start(self) -> None:
         """Import pwntools and configure context."""
@@ -303,7 +314,7 @@ class PwnBridge(BaseBridge):
     async def elf_checksec(self, path: str) -> dict:
         """Run checksec on ELF."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return {
@@ -321,7 +332,7 @@ class PwnBridge(BaseBridge):
     async def elf_symbols(self, path: str) -> dict[str, str]:
         """Get all symbols {name: hex_addr}."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return {name: hex(addr) for name, addr in elf.symbols.items()}
@@ -329,7 +340,7 @@ class PwnBridge(BaseBridge):
     async def elf_got(self, path: str) -> dict[str, str]:
         """Get GOT entries {name: hex_addr}."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return {name: hex(addr) for name, addr in elf.got.items()}
@@ -337,7 +348,7 @@ class PwnBridge(BaseBridge):
     async def elf_plt(self, path: str) -> dict[str, str]:
         """Get PLT entries {name: hex_addr}."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return {name: hex(addr) for name, addr in elf.plt.items()}
@@ -345,7 +356,7 @@ class PwnBridge(BaseBridge):
     async def elf_functions(self, path: str) -> list[dict]:
         """List functions with address + size."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return [
@@ -356,7 +367,7 @@ class PwnBridge(BaseBridge):
     async def elf_sections(self, path: str) -> list[dict]:
         """List sections with address, size, flags."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         result = []
@@ -374,7 +385,7 @@ class PwnBridge(BaseBridge):
     async def elf_search(self, path: str, needle: str, is_hex: bool = False) -> list[str]:
         """Search for bytes in ELF. Returns list of hex addresses."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         data = bytes.fromhex(needle) if is_hex else needle.encode()
@@ -383,7 +394,7 @@ class PwnBridge(BaseBridge):
     async def elf_bss(self, path: str, offset: int = 0) -> str:
         """Get BSS section address + optional offset."""
         self._require_ready()
-        elf = self._elf_cache.get(path) or self._pwn.ELF(path, checksec=False)
+        elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
         return hex(elf.bss(offset))
@@ -393,7 +404,7 @@ class PwnBridge(BaseBridge):
     async def rop_create(self, elf_path: str) -> str:
         """Create ROP chain builder from ELF. Returns rop_id."""
         self._require_ready()
-        elf = self._elf_cache.get(elf_path) or self._pwn.ELF(elf_path, checksec=False)
+        elf = self._touch_elf(elf_path) or self._pwn.ELF(elf_path, checksec=False)
         if elf_path not in self._elf_cache:
             self._cache_elf(elf_path, elf)
         rop = self._pwn.ROP(elf)
@@ -500,7 +511,7 @@ class PwnBridge(BaseBridge):
     async def ret2dlresolve(self, elf_path: str, symbol: str, args: list | None = None) -> dict:
         """Build ret2dlresolve payload. Returns {payload_hex, reloc_index}."""
         self._require_ready()
-        elf = self._elf_cache.get(elf_path) or self._pwn.ELF(elf_path, checksec=False)
+        elf = self._touch_elf(elf_path) or self._pwn.ELF(elf_path, checksec=False)
         if elf_path not in self._elf_cache:
             self._cache_elf(elf_path, elf)
         dlresolve = self._pwn.Ret2dlresolvePayload(elf, symbol, args or [])

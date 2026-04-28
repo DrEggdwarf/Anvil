@@ -14,12 +14,13 @@
 - [ ] #5 CSP stricte `tauri.conf.json` + CORS limité à `localhost:1420`
 - [ ] #6 Tests sécu : `test_pwn_api.py`, `test_pwn_models.py`, `test_compile_api_assemblers.py`
 
-### Sprint 15 — Performance & Architecture refactor 🟠 PLANIFIÉ
-- [ ] `React.lazy(PwnMode + ReferenceModal)` dans `App.tsx`
-- [ ] Split `useAnvilSession.ts` (651 L) en `hooks/gdb/{parse,stepping,memory}.ts` + `useCallback`
-- [ ] Splitter `ReferenceModal.tsx` (877 L) par mode + dynamic import `data/reference-*`
-- [ ] Câbler frontend sur `/ws/gdb/{id}` pour stepping (gain -50ms/step)
-- [ ] LRU réel `pwn_bridge._cache_elf` via `OrderedDict.move_to_end`
+### Sprint 15 — Performance & Architecture refactor ✅ (28 avril)
+- [x] `React.lazy(PwnMode + ReferenceModal)` dans `App.tsx` — bundle initial 720 → 608 KB (-16%)
+- [x] Parsers GDB extraits dans `hooks/gdb/parseGdbResponse.ts` (-91 L sur useAnvilSession)
+- [x] LRU réel `pwn_bridge._cache_elf`/`_cache_rop` via `OrderedDict.move_to_end`
+- [→ Sprint 17] `useCallback`/`useMemo` massif sur useAnvilSession (couplé refacto WS)
+- [→ Sprint 17] Câbler frontend sur `/ws/gdb/{id}` pour stepping (gain -50ms/step)
+- [→ Sprint 17] Splitter `ReferenceModal.tsx` par mode + dynamic data par tab
 
 ### Sprint 16 — Quality cleanup & ADRs 🟡 PLANIFIÉ
 - [ ] Supprimer `requirements.txt` divergent (pyproject.toml seule source)

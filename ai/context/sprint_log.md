@@ -336,17 +336,24 @@ Modal de référence contextuelle — contenu adapté au mode actif (ASM, RE, Pw
 
 ---
 
-## Sprint 15 — Performance & Architecture refactor (28 avril 2026) ⏸ PLANIFIÉ
+## Sprint 15 — Performance & Architecture refactor (28 avril 2026) ✅
 **Objectif** : Résorber la régression perf identifiée par l'audit (bundle initial 720 KB, 0 lazy split, hooks non mémoïsés, WS ignoré côté front). Simplifier les fichiers > 500 L.
 **Agents** : @performance → @architect → @frontend
 **Priorité** : 🟠 HAUTE — bloquant cible « step <100ms »
 
-### Findings traités
-- **Perf#1 / Archi#2** — `App.tsx` charge tous les modes eager. Fix : `React.lazy(PwnMode)` + `React.lazy(ReferenceModal)` + `<Suspense>`.
-- **Perf#2 / Archi (useAnvilSession 651 L)** — Hook monolithique avec ~25 fns inline. Fix : extraire `hooks/gdb/parseGdbResponse.ts`, `useGdbStepping.ts`, `useGdbMemory.ts` ; ajouter `useCallback`/`useMemo` aux fns retournées.
-- **Archi (ReferenceModal 877 L)** — Plus gros fichier frontend. Fix : éclater en `components/reference/{AsmRef,ReRef,PwnRef,DbgRef,FwRef,HwRef}.tsx` + dynamic `import('../data/reference-pwn')` par tab actif.
-- **Perf#3 (WS inutilisé)** — Stepping en REST round-trip (~80-150ms). Fix : câbler `useAnvilSession` sur `/ws/gdb/{id}` pour stepping/console/registers.
-- **Perf#7 (cache FIFO)** — `pwn_bridge._cache_elf` est FIFO, pas LRU réel. Fix : `OrderedDict.move_to_end(path)` à chaque accès.
+### Réalisé
+- **Perf#1 / Archi#2** ✅ — `App.tsx` : `React.lazy(PwnMode)` + `React.lazy(ReferenceModal)` + `<Suspense>` avec fallback. Mesure bundle : **608 KB / 170 KB gzip** (vs 720 KB avant — -16% initial). PwnMode 47 KB et ReferenceModal 102 KB chargés à la demande.
+- **Perf#2 / Archi (useAnvilSession 651 L)** ✅ partiel — Parsers GDB/MI extraits dans `hooks/gdb/parseGdbResponse.ts` (97 L stateless, testables seuls). Hook racine descend à 560 L. `useCallback` massif sur les fns retournées **reporté au Sprint 17** (couplé au câblage WebSocket pour éviter une double passe risquée sans test e2e).
+- **Archi (ReferenceModal 877 L)** ✅ via cascade — Le `React.lazy(ReferenceModal)` du #1 entraîne le lazy-loading de **tous** ses imports `data/reference-*` via le code-splitting Vite. Gain mesuré : 102 KB sortis du bundle initial. Le découpage par mode (lazy par tab actif) reste possible mais marginal (+~50 KB max) : reporté.
+- **Perf#3 (WS inutilisé)** ⏸ **REPORTÉ Sprint 17** — Refacto majeure (useAnvilSession + api/ws.ts + handlers backend) qui nécessite tests e2e. Sera couplée au split useGdbStepping/useGdbMemory.
+- **Perf#7 (cache FIFO)** ✅ — `pwn_bridge._cache_elf` et `_cache_rop` migrent vers `OrderedDict` avec `move_to_end()` à chaque accès. `_touch_elf(path)` ajouté + utilisé sur 11 sites de lecture de cache.
+
+### Mesures
+- Bundle initial : 720 KB → **608 KB** (-16%)
+- Lazy chunks : PwnMode 47 KB, ReferenceModal 102 KB
+- useAnvilSession : 651 L → **560 L** (-91 L extraits)
+- 88 tests pwn bridge ✅ (LRU compatible API)
+- TypeScript clean, build OK
 
 ---
 
