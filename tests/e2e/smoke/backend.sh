@@ -27,7 +27,8 @@ else
 fi
 
 # 2. Session create returns a 32-hex token (Sprint 14 ADR-016)
-sess=$(curl -s -X POST "$BACKEND/api/sessions" -H 'Content-Type: application/json' -d '{"bridge_type":"gdb"}')
+# Use pwn bridge — always available via pip install -e "backend/[dev,pwn]"
+sess=$(curl -s -X POST "$BACKEND/api/sessions" -H 'Content-Type: application/json' -d '{"bridge_type":"pwn"}')
 sid=$(echo "$sess" | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))")
 token=$(echo "$sess" | python3 -c "import sys, json; print(json.load(sys.stdin).get('token', ''))")
 if [[ -n "$sid" && "$token" =~ ^[a-f0-9]{32}$ ]]; then
@@ -59,7 +60,7 @@ status=$(python3 - "$sid" <<'PY' 2>/dev/null || echo "exception"
 import asyncio, sys, websockets
 async def go(sid):
     try:
-        async with websockets.connect(f"ws://127.0.0.1:8000/ws/gdb/{sid}", open_timeout=2):
+        async with websockets.connect(f"ws://127.0.0.1:8000/ws/pwn/{sid}", open_timeout=2):
             print("200")
     except websockets.InvalidStatus as e:
         print(e.response.status_code)

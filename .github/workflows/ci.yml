@@ -42,10 +42,12 @@ jobs:
           node-version: "20"
       - name: pip-audit (Python deps via pyproject.toml)
         run: |
+          pip install --upgrade pip
           pip install pip-audit
           pip install -e "backend/[dev,re,pwn,protocols]"
-          pip-audit
-          # Note: firmware group excluded — binwalk has no PyPI release for Python 3.12+
+          pip-audit --ignore-package pip
+          # firmware excluded: binwalk has no PyPI release for Python 3.12+
+          # pip ignored: runner-managed, not our dependency
       - name: npm audit (high+ only)
         run: npm audit --audit-level=high
       - name: cargo-audit (Rust deps for src-tauri)

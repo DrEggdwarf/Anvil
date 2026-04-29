@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Runs the same gates as CI before every push.
+# Install with: make install-hooks
+
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+echo "▶ pre-push: running CI checks..."
+
+make check
+
+echo "✓ all checks passed"
