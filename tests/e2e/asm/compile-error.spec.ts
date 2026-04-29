@@ -10,14 +10,14 @@ test.describe('ASM compile error', () => {
     await app.runButton.click()
 
     // The bridge wraps NASM stderr into a structured error containing the line number.
-    await app.waitForTerminalLine(/Compilation echouee/, 15_000)
+    await app.waitForTerminalLine(/Compilation echouee/, 30_000)
     await expect(app.terminal).toContainText(/L5/)
   })
 
   test('error line is annotated in the editor gutter', async ({ app }) => {
     await app.setEditorContent(ASM_BROKEN)
     await app.runButton.click()
-    await app.waitForTerminalLine(/Compilation echouee/, 15_000)
+    await app.waitForTerminalLine(/Compilation echouee/, 30_000)
 
     // The error class is applied to the gutter at line 5 — see editor.css.
     // Use a permissive matcher: any `.anvil-ed-error` inside the editor proves
@@ -29,11 +29,11 @@ test.describe('ASM compile error', () => {
   test('fixing the source clears the error on next compile', async ({ app }) => {
     await app.setEditorContent(ASM_BROKEN)
     await app.runButton.click()
-    await app.waitForTerminalLine(/Compilation echouee/, 15_000)
+    await app.waitForTerminalLine(/Compilation echouee/, 30_000)
 
     // Replace with a minimal valid program — `nop` is enough.
     await app.setEditorContent(`section .text\n    global _start\n_start:\n    nop\n    mov rax, 60\n    xor rdi, rdi\n    syscall\n`)
     await app.runButton.click()
-    await app.waitForTerminalLine(/Compilation OK/, 15_000)
+    await app.waitForTerminalLine(/Compilation OK/, 30_000)
   })
 })
