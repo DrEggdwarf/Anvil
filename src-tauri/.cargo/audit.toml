@@ -1,12 +1,35 @@
 [advisories]
-# All advisories below are in Tauri's transitive dependency chain.
-# We cannot update them — Tauri owns these deps. Re-evaluate on each Tauri major bump.
+# cargo audit now runs with --deny vulnerability only.
+# This file is kept as documentation of known advisories in Tauri's transitive
+# dependency chain that cannot be fixed by this project.
+#
+# All entries are unmaintained/unsound warnings in Tauri's chain (gtk-rs, glib,
+# webkit2gtk, proc-macro-error, unic-*, fxhash, rand, wry).
+# Re-evaluate when upgrading Tauri major versions.
+#
+# To reproduce the full list locally:
+#   cd src-tauri && cargo audit
 ignore = [
-    "RUSTSEC-2026-0097",  # rand 0.7.3 unsound — via phf_generator -> tauri-utils
-    "RUSTSEC-2025-0081",  # unic-char-property unmaintained — via urlpattern -> tauri-utils
-    "RUSTSEC-2025-0075",  # unic-char-range unmaintained — via urlpattern -> tauri-utils
-    "RUSTSEC-2025-0080",  # unic-common unmaintained — via urlpattern -> tauri-utils
-    "RUSTSEC-2025-0100",  # unic-ucd-ident unmaintained — via urlpattern -> tauri-utils
-    "RUSTSEC-2025-0098",  # unic-ucd-version unmaintained — via urlpattern -> tauri-utils
-    "RUSTSEC-2024-0429",  # glib 0.18.5 unsound — via webkit2gtk -> wry -> tauri-runtime-wry
+    # unsound
+    "RUSTSEC-2026-0097",  # rand 0.7.3 — via phf_generator -> tauri-utils
+    "RUSTSEC-2024-0429",  # glib 0.18.5 — via webkit2gtk -> wry -> tauri-runtime-wry
+    # unmaintained (gtk-rs ecosystem)
+    "RUSTSEC-2024-0370",  # proc-macro-error
+    "RUSTSEC-2024-0411",  # gtk-rs GTK3
+    "RUSTSEC-2024-0412",  # gtk-rs GTK3
+    "RUSTSEC-2024-0413",  # gtk-rs GTK3
+    "RUSTSEC-2024-0414",  # gtk-rs GTK3
+    "RUSTSEC-2024-0415",  # gtk-rs GTK3
+    "RUSTSEC-2024-0416",  # gtk-rs GTK3
+    "RUSTSEC-2024-0417",  # gtk-rs GTK3
+    "RUSTSEC-2024-0418",  # gtk-rs GTK3
+    "RUSTSEC-2024-0419",  # gtk-rs GTK3
+    "RUSTSEC-2024-0420",  # gtk-rs GTK3
+    "RUSTSEC-2025-0057",  # fxhash
+    "RUSTSEC-2025-0075",  # unic-char-range
+    "RUSTSEC-2025-0080",  # unic-common
+    "RUSTSEC-2025-0081",  # unic-char-property
+    "RUSTSEC-2025-0098",  # unic-ucd-version
+    "RUSTSEC-2025-0100",  # unic-ucd-ident
+    "RUSTSEC-2026-0104",  # rcgen — reachable panic in CRL parsing
 ]

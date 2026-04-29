@@ -20,10 +20,10 @@ lint:
 test:
 	$(PYTEST) tests/ --tb=short -q
 
-## audit-cargo: cargo audit (requires: cargo install cargo-audit --locked)
+## audit-cargo: cargo audit (ignores listed via src-tauri/.cargo/audit.toml)
 audit-cargo:
 	@if command -v cargo-audit >/dev/null 2>&1; then \
-		cargo audit --manifest-path src-tauri/Cargo.toml; \
+		cd src-tauri && cargo audit; \
 	else \
 		echo "⚠ cargo-audit not installed — skipping (run: cargo install cargo-audit --locked)"; \
 	fi

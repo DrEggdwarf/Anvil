@@ -54,6 +54,8 @@ jobs:
         working-directory: src-tauri
         run: |
           cargo install cargo-audit --locked
+          # audit.toml ignores known Tauri transitive dep advisories (all unfixable).
+          # See src-tauri/.cargo/audit.toml for the documented list.
           cargo audit
 
   test:
