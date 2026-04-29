@@ -40,7 +40,9 @@ def make_mock_client():
     # Read operations
     client.read_coils.return_value = make_mock_response(bits=[True, False, True])
     client.read_discrete_inputs.return_value = make_mock_response(bits=[False, True])
-    client.read_holding_registers.return_value = make_mock_response(registers=[100, 200, 300])
+    client.read_holding_registers.return_value = make_mock_response(
+        registers=[100, 200, 300]
+    )
     client.read_input_registers.return_value = make_mock_response(registers=[400, 500])
     client.read_exception_status.return_value = make_mock_response(status=0xFF)
     client.read_fifo_queue.return_value = make_mock_response(registers=[10, 20])
@@ -66,14 +68,20 @@ def make_mock_client():
     client.diag_clear_counters.return_value = make_mock_response()
     client.diag_read_bus_message_count.return_value = make_mock_response(message=42)
     client.diag_read_bus_comm_error_count.return_value = make_mock_response(message=0)
-    client.diag_read_bus_exception_error_count.return_value = make_mock_response(message=1)
+    client.diag_read_bus_exception_error_count.return_value = make_mock_response(
+        message=1
+    )
     client.diag_read_device_message_count.return_value = make_mock_response(message=100)
-    client.diag_read_device_no_response_count.return_value = make_mock_response(message=0)
+    client.diag_read_device_no_response_count.return_value = make_mock_response(
+        message=0
+    )
     client.diag_read_device_nak_count.return_value = make_mock_response(message=0)
     client.diag_read_device_busy_count.return_value = make_mock_response(message=0)
     client.diag_read_bus_char_overrun_count.return_value = make_mock_response(message=0)
     # Event counter/log
-    client.diag_get_comm_event_counter.return_value = make_mock_response(status=0, count=10)
+    client.diag_get_comm_event_counter.return_value = make_mock_response(
+        status=0, count=10
+    )
     client.diag_get_comm_event_log.return_value = make_mock_response(
         status=0, event_count=5, message_count=10, events=[]
     )
@@ -166,11 +174,14 @@ class TestProtocolConnection:
         mock_pymodbus_client.ModbusTcpClient.return_value = mock_client
         mock_pymodbus_framer = MagicMock()
         mock_pymodbus_framer.FramerType.SOCKET = "socket"
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.client": mock_pymodbus_client,
-            "pymodbus.framer": mock_pymodbus_framer,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.client": mock_pymodbus_client,
+                "pymodbus.framer": mock_pymodbus_framer,
+            },
+        ):
             result = await proto.connect(transport="tcp", host="192.168.1.1", port=502)
         assert result["connected"] is True
         assert result["transport"] == "tcp"
@@ -179,11 +190,14 @@ class TestProtocolConnection:
     async def test_connect_unknown_transport(self, proto: ProtocolBridge):
         mock_pymodbus_client = MagicMock()
         mock_pymodbus_framer = MagicMock()
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.client": mock_pymodbus_client,
-            "pymodbus.framer": mock_pymodbus_framer,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.client": mock_pymodbus_client,
+                "pymodbus.framer": mock_pymodbus_framer,
+            },
+        ):
             with pytest.raises(ValueError, match="Unknown transport"):
                 await proto.connect(transport="bluetooth")
 
@@ -285,8 +299,10 @@ class TestProtocolWrite:
     @pytest.mark.asyncio
     async def test_readwrite_registers(self, connected_proto: ProtocolBridge):
         result = await connected_proto.readwrite_registers(
-            read_address=0, read_count=1,
-            write_address=10, write_values=[42],
+            read_address=0,
+            read_count=1,
+            write_address=10,
+            write_values=[42],
         )
         assert result["error"] is False
         assert result["values"] == [42]
@@ -308,10 +324,13 @@ class TestProtocolDeviceInfo:
         mock_constants.DeviceInformation.REGULAR = 2
         mock_constants.DeviceInformation.EXTENDED = 3
         mock_constants.DeviceInformation.SPECIFIC = 4
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.constants": mock_constants,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.constants": mock_constants,
+            },
+        ):
             result = await connected_proto.read_device_info(read_code=1)
         assert result["error"] is False
         assert "information" in result
@@ -433,11 +452,14 @@ class TestProtocolConversion:
         mock_constants.DATATYPE.FLOAT32 = mock_dtype
         mock_client_mod = MagicMock()
         mock_client_mod.ModbusClientMixin = mock_mixin
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.client": mock_client_mod,
-            "pymodbus.constants": mock_constants,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.client": mock_client_mod,
+                "pymodbus.constants": mock_constants,
+            },
+        ):
             result = await proto.convert_from_registers([0x4048, 0xF5C3], "FLOAT32")
         assert result == 3.14
 
@@ -450,11 +472,14 @@ class TestProtocolConversion:
         mock_constants.DATATYPE.FLOAT32 = mock_dtype
         mock_client_mod = MagicMock()
         mock_client_mod.ModbusClientMixin = mock_mixin
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.client": mock_client_mod,
-            "pymodbus.constants": mock_constants,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.client": mock_client_mod,
+                "pymodbus.constants": mock_constants,
+            },
+        ):
             result = await proto.convert_to_registers(3.14, "FLOAT32")
         assert result == [0x4048, 0xF5C3]
 
@@ -465,11 +490,14 @@ class TestProtocolConversion:
         mock_constants.DATATYPE = MagicMock(spec=[])
         mock_client_mod = MagicMock()
         mock_client_mod.ModbusClientMixin = mock_mixin
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.client": mock_client_mod,
-            "pymodbus.constants": mock_constants,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.client": mock_client_mod,
+                "pymodbus.constants": mock_constants,
+            },
+        ):
             with pytest.raises(ValueError, match="Unknown data type"):
                 await proto.convert_from_registers([0], "NONEXISTENT")
 
@@ -492,7 +520,9 @@ class TestProtocolScan:
 
     @pytest.mark.asyncio
     async def test_scan_devices_exception(self, connected_proto: ProtocolBridge):
-        connected_proto._client.read_holding_registers.side_effect = Exception("timeout")
+        connected_proto._client.read_holding_registers.side_effect = Exception(
+            "timeout"
+        )
         results = await connected_proto.scan_devices(start_id=1, end_id=3)
         assert results == []
 
@@ -500,7 +530,9 @@ class TestProtocolScan:
     async def test_scan_registers_holding(self, connected_proto: ProtocolBridge):
         mock_resp = make_mock_response(registers=[0, 42, 0, 100])
         connected_proto._client.read_holding_registers.return_value = mock_resp
-        results = await connected_proto.scan_registers(start=0, end=3, register_type="holding")
+        results = await connected_proto.scan_registers(
+            start=0, end=3, register_type="holding"
+        )
         # Non-zero values
         assert any(r["value"] == 42 for r in results)
         assert any(r["value"] == 100 for r in results)
@@ -509,7 +541,9 @@ class TestProtocolScan:
     async def test_scan_registers_coils(self, connected_proto: ProtocolBridge):
         mock_resp = make_mock_response(bits=[True, False, True])
         connected_proto._client.read_coils.return_value = mock_resp
-        results = await connected_proto.scan_registers(start=0, end=2, register_type="coil")
+        results = await connected_proto.scan_registers(
+            start=0, end=2, register_type="coil"
+        )
         assert any(r["value"] is True for r in results)
 
     @pytest.mark.asyncio
@@ -527,11 +561,14 @@ class TestProtocolServer:
         mock_datastore = MagicMock()
         mock_server_mod = MagicMock()
         mock_server_mod.StartAsyncTcpServer = AsyncMock()
-        with patch.dict("sys.modules", {
-            "pymodbus": MagicMock(),
-            "pymodbus.datastore": mock_datastore,
-            "pymodbus.server": mock_server_mod,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "pymodbus": MagicMock(),
+                "pymodbus.datastore": mock_datastore,
+                "pymodbus.server": mock_server_mod,
+            },
+        ):
             result = await proto.start_server(port=5020)
         assert result["status"] == "started"
         assert result["port"] == 5020

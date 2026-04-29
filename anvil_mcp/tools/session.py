@@ -51,10 +51,12 @@ async def session_list() -> list[dict]:
             age_s = int((now - created).total_seconds())
         except Exception:
             age_s = -1
-        result.append({
-            "id": s["id"],
-            "bridge_type": s["bridge_type"],
-            "state": s["state"],
-            "age_s": age_s,
-        })
+        result.append(
+            {
+                "id": s["id"],
+                "bridge_type": s["bridge_type"],
+                "state": s["state"],
+                "age_s": age_s,
+            }
+        )
     return result

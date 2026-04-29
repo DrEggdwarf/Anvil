@@ -146,9 +146,7 @@ class TestPwnCompileSecurity:
             (Path(cwd) / "main").write_bytes(b"\x7fELF\x00")
             return ("", "", 0)
 
-        monkeypatch.setattr(
-            "backend.app.api.pwn._subprocess.execute", fake_execute
-        )
+        monkeypatch.setattr("backend.app.api.pwn._subprocess.execute", fake_execute)
         resp = client.post(
             f"/api/pwn/{sid}/compile",
             json={"path": "main.go", "language": "go", "vuln_flags": False},
@@ -241,6 +239,7 @@ class TestPwnSessionTypeGuard:
         # Replace the session with one of bridge_type="mock".
         sm = app.state.session_manager
         from tests.conftest import MockBridge
+
         mock = MockBridge()
         mock.state = BridgeState.READY
         sm._sessions[sid] = Session(id=sid, bridge_type="mock", bridge=mock, token="t")

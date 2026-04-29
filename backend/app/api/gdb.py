@@ -229,7 +229,9 @@ async def disassemble(
     """Disassemble a function or address range."""
     bridge = _get_gdb_bridge(session_id, sm)
     responses = await bridge.disassemble(
-        start=body.start, end=body.end, function=body.function,
+        start=body.start,
+        end=body.end,
+        function=body.function,
     )
     return GdbRawResponse(responses=responses)
 

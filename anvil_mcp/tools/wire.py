@@ -26,9 +26,7 @@ async def wire_decode_frame(session_id: str, frame_index: int) -> dict:
     raise NotImplementedError(_STUB)
 
 
-async def wire_send(
-    session_id: str, host: str, port: int, frame_dict: dict
-) -> dict:
+async def wire_send(session_id: str, host: str, port: int, frame_dict: dict) -> dict:
     """Craft and send a protocol frame to a target device.
 
     Returns: {ok, response_hex, response_fields}

@@ -47,6 +47,7 @@ class GdbBridge(BaseBridge):
         self.state = BridgeState.STARTING
         try:
             from pygdbmi.gdbcontroller import GdbController
+
             self._controller = GdbController(command=self._gdb_command)
             self.state = BridgeState.READY
             logger.info("GDB bridge started (pid=%s)", self._controller.gdb_process.pid)
@@ -176,9 +177,7 @@ class GdbBridge(BaseBridge):
         """Read memory bytes at address. Returns hex data."""
         self._require_ready()
         sanitize_gdb_input(address, "address")
-        return await self.execute(
-            f"-data-read-memory-bytes {address} {size}"
-        )
+        return await self.execute(f"-data-read-memory-bytes {address} {size}")
 
     async def get_stack(self, max_frames: int = 64) -> list[dict]:
         """Get stack frames."""
@@ -198,11 +197,11 @@ class GdbBridge(BaseBridge):
         self._require_ready()
         if function:
             sanitize_gdb_input(function, "function")
-            return await self.execute(f'-data-disassemble -a {function} -- 0')
+            return await self.execute(f"-data-disassemble -a {function} -- 0")
         elif start and end:
             sanitize_gdb_input(start, "start")
             sanitize_gdb_input(end, "end")
-            return await self.execute(f'-data-disassemble -s {start} -e {end} -- 0')
+            return await self.execute(f"-data-disassemble -s {start} -e {end} -- 0")
         else:
             # Disassemble around $pc
             return await self.execute('-data-disassemble -s "$pc" -e "$pc+64" -- 0')
@@ -219,7 +218,7 @@ class GdbBridge(BaseBridge):
         if pattern:
             sanitize_gdb_input(pattern, "pattern")
         cmd = f"info functions {pattern}" if pattern else "info functions"
-        return await self.execute(f"-interpreter-exec console \"{cmd}\"")
+        return await self.execute(f'-interpreter-exec console "{cmd}"')
 
     # ── Execution control (extended) ─────────────────────
 
@@ -319,7 +318,7 @@ class GdbBridge(BaseBridge):
         """Get a single register value."""
         self._require_ready()
         sanitize_gdb_input(register, "register")
-        return await self.execute(f'-data-evaluate-expression ${register}')
+        return await self.execute(f"-data-evaluate-expression ${register}")
 
     async def get_changed_registers(self) -> list[dict]:
         """Get list of registers changed since last stop."""
@@ -373,26 +372,24 @@ class GdbBridge(BaseBridge):
     async def get_memory_map(self) -> list[dict]:
         """Get process memory map (vmmap equivalent)."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "info proc mappings"'
-        )
+        return await self.execute('-interpreter-exec console "info proc mappings"')
 
     async def get_shared_libraries(self) -> list[dict]:
         """List loaded shared libraries."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "info sharedlibrary"'
-        )
+        return await self.execute('-interpreter-exec console "info sharedlibrary"')
 
     async def get_signals(self) -> list[dict]:
         """Show signal handling table."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "info signals"'
-        )
+        return await self.execute('-interpreter-exec console "info signals"')
 
     async def handle_signal(
-        self, signal: str, stop: bool = False, print_: bool = True, pass_: bool = True,
+        self,
+        signal: str,
+        stop: bool = False,
+        print_: bool = True,
+        pass_: bool = True,
     ) -> list[dict]:
         """Configure signal handling."""
         self._require_ready()
@@ -401,16 +398,12 @@ class GdbBridge(BaseBridge):
         flags.append("stop" if stop else "nostop")
         flags.append("print" if print_ else "noprint")
         flags.append("pass" if pass_ else "nopass")
-        return await self.execute(
-            f'-interpreter-exec console "handle {signal} {" ".join(flags)}"'
-        )
+        return await self.execute(f'-interpreter-exec console "handle {signal} {" ".join(flags)}"')
 
     async def get_file_info(self) -> list[dict]:
         """Get info about loaded file (entry point, sections, etc.)."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "info file"'
-        )
+        return await self.execute('-interpreter-exec console "info file"')
 
     # ── Variables & expressions ──────────────────────────
 
@@ -419,15 +412,13 @@ class GdbBridge(BaseBridge):
         self._require_ready()
         sanitize_gdb_input(variable, "variable")
         sanitize_gdb_input(value, "value")
-        return await self.execute(
-            f'-interpreter-exec console "set {variable} = {value}"'
-        )
+        return await self.execute(f'-interpreter-exec console "set {variable} = {value}"')
 
     async def print_variable(self, variable: str, fmt: str = "") -> list[dict]:
         """Print a variable with optional format (/x, /s, /d, etc.)."""
         self._require_ready()
         if fmt:
-            return await self.execute(f'-data-evaluate-expression (void*){variable}')
+            return await self.execute(f"-data-evaluate-expression (void*){variable}")
         return await self.execute(f"-data-evaluate-expression {variable}")
 
     async def get_local_variables(self) -> list[dict]:
@@ -443,25 +434,19 @@ class GdbBridge(BaseBridge):
         sanitize_gdb_input(start, "start")
         sanitize_gdb_input(end, "end")
         sanitize_gdb_input(pattern, "pattern")
-        return await self.execute(
-            f'-interpreter-exec console "find {start}, {end}, {pattern}"'
-        )
+        return await self.execute(f'-interpreter-exec console "find {start}, {end}, {pattern}"')
 
     # ── Record & replay ─────────────────────────────────
 
     async def record_start(self) -> list[dict]:
         """Start recording execution for reverse debugging."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "record"'
-        )
+        return await self.execute('-interpreter-exec console "record"')
 
     async def record_stop(self) -> list[dict]:
         """Stop recording."""
         self._require_ready()
-        return await self.execute(
-            '-interpreter-exec console "record stop"'
-        )
+        return await self.execute('-interpreter-exec console "record stop"')
 
     # ── Catch events ─────────────────────────────────────
 
@@ -490,11 +475,11 @@ class GdbBridge(BaseBridge):
         self._require_ready()
         if function:
             sanitize_gdb_input(function, "function")
-            return await self.execute(f'-data-disassemble -a {function} -- 4')
+            return await self.execute(f"-data-disassemble -a {function} -- 4")
         elif start and end:
             sanitize_gdb_input(start, "start")
             sanitize_gdb_input(end, "end")
-            return await self.execute(f'-data-disassemble -s {start} -e {end} -- 4')
+            return await self.execute(f"-data-disassemble -s {start} -e {end} -- 4")
         else:
             return await self.execute('-data-disassemble -s "$pc" -e "$pc+64" -- 4')
 
@@ -503,9 +488,7 @@ class GdbBridge(BaseBridge):
         return self._loaded_binary
 
 
-def _merge_register_data(
-    names_resp: list[dict], values_resp: list[dict]
-) -> list[dict]:
+def _merge_register_data(names_resp: list[dict], values_resp: list[dict]) -> list[dict]:
     """Merge register names and values into a single list."""
     names: list[str] = []
     values: list[dict] = []
@@ -530,11 +513,13 @@ def _merge_register_data(
         num = int(val.get("number", -1))
         name = names[num] if 0 <= num < len(names) else f"reg{num}"
         if name:  # Skip empty-named registers
-            merged.append({
-                "name": name,
-                "number": num,
-                "value": val.get("value", ""),
-            })
+            merged.append(
+                {
+                    "name": name,
+                    "number": num,
+                    "value": val.get("value", ""),
+                }
+            )
 
     return merged
 

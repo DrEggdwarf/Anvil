@@ -35,12 +35,8 @@ CRYPTO_SIGS = (
     "aes_acceleration_table,rsa,pem_certificate,pem_public_key,"
     "pem_private_key,openssl,luks,dpapi,gpg_signed"
 )
-FILESYSTEM_SIGS = (
-    "squashfs,cramfs,jffs2,ubifs,ubi,ext,fat,ntfs,romfs,yaffs,apfs,btrfs,logfs"
-)
-COMPRESSION_SIGS = (
-    "gzip,bzip2,lzma,xz,lz4,lzop,lzfse,zstd,zlib,compressd"
-)
+FILESYSTEM_SIGS = "squashfs,cramfs,jffs2,ubifs,ubi,ext,fat,ntfs,romfs,yaffs,apfs,btrfs,logfs"
+COMPRESSION_SIGS = "gzip,bzip2,lzma,xz,lz4,lzop,lzfse,zstd,zlib,compressd"
 
 # Secret scanning patterns
 SECRET_PATTERNS = [
@@ -65,7 +61,7 @@ class FirmwareBridge(BaseBridge):
         super().__init__()
         self._workspace = workspace_dir or tempfile.mkdtemp(prefix="anvil_fw_")
         self._binwalk_version: str | None = None
-        self._use_v3_cli = False   # v3 Rust CLI with JSON
+        self._use_v3_cli = False  # v3 Rust CLI with JSON
         self._use_v2_python = False  # v2 Python module
         self._spm: Any = None  # SubprocessManager reference
 
@@ -89,6 +85,7 @@ class FirmwareBridge(BaseBridge):
             if not self._use_v3_cli:
                 try:
                     import binwalk
+
                     self._use_v2_python = True
                     self._binwalk_version = getattr(binwalk, "__version__", "2.x")
                 except ImportError:
@@ -120,6 +117,7 @@ class FirmwareBridge(BaseBridge):
         method = getattr(self, command, None)
         if method and callable(method):
             import inspect
+
             result = method(**kwargs)
             if inspect.isawaitable(result):
                 return await result
@@ -150,6 +148,7 @@ class FirmwareBridge(BaseBridge):
     async def _run_binwalk_v2(self, binary_path: str, **kwargs) -> list[dict]:
         """Run binwalk v2 Python module."""
         import binwalk
+
         results = []
         for module in binwalk.scan(binary_path, quiet=True, **kwargs):
             for result in module.results:
@@ -274,10 +273,7 @@ class FirmwareBridge(BaseBridge):
             return self._parse_v3_entropy(data)
         # v2 returns entropy per block
         results = await self._run_binwalk_v2(binary_path, entropy=True)
-        return [
-            {"offset": r["offset"], "entropy": r.get("entropy", 0.0)}
-            for r in results if "entropy" in r
-        ]
+        return [{"offset": r["offset"], "entropy": r.get("entropy", 0.0)} for r in results if "entropy" in r]
 
     async def entropy_graph(self, binary_path: str, output_path: str | None = None) -> str:
         """Generate entropy PNG graph. Returns path to PNG."""
@@ -287,6 +283,7 @@ class FirmwareBridge(BaseBridge):
             await self._run_binwalk_cli(["-E", "--png=" + out_path], binary_path)
         else:
             import binwalk
+
             for _module in binwalk.scan(binary_path, entropy=True, quiet=True, nplot=False):
                 pass
             # v2 saves to current directory
@@ -299,9 +296,7 @@ class FirmwareBridge(BaseBridge):
         self._require_ready()
         # Use system `strings` command for reliability
         if self._spm:
-            stdout, _, rc = await self._spm.execute(
-                ["strings", "-a", "-t", "x", f"-n{min_length}", binary_path]
-            )
+            stdout, _, rc = await self._spm.execute(["strings", "-a", "-t", "x", f"-n{min_length}", binary_path])
             if rc == 0:
                 result = []
                 for line in stdout.strip().split("\n"):
@@ -366,11 +361,13 @@ class FirmwareBridge(BaseBridge):
             text = s.get("string", "")
             for pattern, label in _SECRET_RE:
                 if pattern.search(text):
-                    secrets.append({
-                        "offset": s.get("offset", 0),
-                        "type": label,
-                        "value": text[:200],  # Truncate long matches
-                    })
+                    secrets.append(
+                        {
+                            "offset": s.get("offset", 0),
+                            "type": label,
+                            "value": text[:200],  # Truncate long matches
+                        }
+                    )
                     break
         return secrets
 
@@ -416,13 +413,15 @@ class FirmwareBridge(BaseBridge):
         for item in data:
             analysis = item.get("Analysis", {})
             for entry in analysis.get("file_map", []):
-                results.append({
-                    "offset": entry.get("offset", 0),
-                    "size": entry.get("size", 0),
-                    "name": entry.get("name", ""),
-                    "description": entry.get("description", ""),
-                    "confidence": entry.get("confidence", 0),
-                })
+                results.append(
+                    {
+                        "offset": entry.get("offset", 0),
+                        "size": entry.get("size", 0),
+                        "name": entry.get("name", ""),
+                        "description": entry.get("description", ""),
+                        "confidence": entry.get("confidence", 0),
+                    }
+                )
         return results
 
     def _parse_v3_extractions(self, data: list[dict]) -> list[dict]:
@@ -431,13 +430,15 @@ class FirmwareBridge(BaseBridge):
         for item in data:
             analysis = item.get("Analysis", {})
             for uid, ext in analysis.get("extractions", {}).items():
-                results.append({
-                    "id": uid,
-                    "size": ext.get("size", 0),
-                    "success": ext.get("success", False),
-                    "extractor": ext.get("extractor", ""),
-                    "output_dir": ext.get("output_directory", ""),
-                })
+                results.append(
+                    {
+                        "id": uid,
+                        "size": ext.get("size", 0),
+                        "success": ext.get("success", False),
+                        "extractor": ext.get("extractor", ""),
+                        "output_dir": ext.get("output_directory", ""),
+                    }
+                )
         return results
 
     def _parse_v3_entropy(self, data: list[dict]) -> list[dict]:
@@ -446,11 +447,13 @@ class FirmwareBridge(BaseBridge):
         for item in data:
             entropy_data = item.get("Entropy", {})
             for block in entropy_data.get("blocks", []):
-                results.append({
-                    "start": block.get("start", 0),
-                    "end": block.get("end", 0),
-                    "entropy": block.get("entropy", 0.0),
-                })
+                results.append(
+                    {
+                        "start": block.get("start", 0),
+                        "end": block.get("end", 0),
+                        "entropy": block.get("entropy", 0.0),
+                    }
+                )
         return results
 
     def _list_extracted(self, directory: str) -> list[dict]:
@@ -462,11 +465,13 @@ class FirmwareBridge(BaseBridge):
         for path in sorted(base.rglob("*")):
             if path.is_file():
                 rel = str(path.relative_to(base))
-                result.append({
-                    "path": rel,
-                    "size": path.stat().st_size,
-                    "type": path.suffix or "unknown",
-                })
+                result.append(
+                    {
+                        "path": rel,
+                        "size": path.stat().st_size,
+                        "type": path.suffix or "unknown",
+                    }
+                )
         return result
 
     # ── Properties ───────────────────────────────────────

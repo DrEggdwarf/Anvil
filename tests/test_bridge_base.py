@@ -1,6 +1,5 @@
 """Tests for BaseBridge and BridgeRegistry."""
 
-
 import pytest
 
 from backend.app.bridges.base import BridgeState

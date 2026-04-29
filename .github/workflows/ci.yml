@@ -19,9 +19,9 @@ jobs:
         run: |
           pip install ruff bandit
       - name: Ruff lint
-        run: ruff check backend/ tests/
+        run: ruff check backend/ tests/ anvil_mcp/
       - name: Ruff format check
-        run: ruff format --check backend/ tests/
+        run: ruff format --check backend/ tests/ anvil_mcp/
       - name: Bandit security scan
         run: bandit -r backend/ -c backend/pyproject.toml
 

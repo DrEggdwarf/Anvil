@@ -38,11 +38,13 @@ async def list_tools():
             by_category[cat] = []
 
         status = _check_tool(tool_def.name, tool_def.kind, tool_def.check_command)
-        by_category[cat].append({
-            **tool_def.model_dump(),
-            "available": status.available,
-            "path": status.path,
-        })
+        by_category[cat].append(
+            {
+                **tool_def.model_dump(),
+                "available": status.available,
+                "path": status.path,
+            }
+        )
     return {"tools": by_category}
 
 
@@ -53,11 +55,13 @@ async def tools_for_mode(mode: str):
     for tool_def in TOOL_DEFINITIONS:
         if mode in tool_def.modes:
             status = _check_tool(tool_def.name, tool_def.kind, tool_def.check_command)
-            tools.append({
-                **tool_def.model_dump(),
-                "available": status.available,
-                "path": status.path,
-            })
+            tools.append(
+                {
+                    **tool_def.model_dump(),
+                    "available": status.available,
+                    "path": status.path,
+                }
+            )
     return {"mode": mode, "tools": tools}
 
 

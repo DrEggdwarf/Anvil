@@ -57,6 +57,7 @@ def _get_bridge(session_id: str) -> GdbBridge:
 
 # ── Handlers ─────────────────────────────────────────────
 
+
 async def _handle_step_into(ws: WebSocket, msg: WSMessage, session_id: str) -> dict:
     bridge = _get_bridge(session_id)
     responses = await bridge.step_into()

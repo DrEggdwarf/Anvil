@@ -1,6 +1,5 @@
 """Tests for Anvil exception hierarchy (core/exceptions.py)."""
 
-
 from backend.app.core.exceptions import (
     AnvilError,
     BridgeCrash,

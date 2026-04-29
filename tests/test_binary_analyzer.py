@@ -32,9 +32,7 @@ class TestFileInfo:
 
     @pytest.mark.asyncio
     async def test_failure(self, analyzer):
-        analyzer._spm.execute = AsyncMock(
-            return_value=("", "cannot open", 1)
-        )
+        analyzer._spm.execute = AsyncMock(return_value=("", "cannot open", 1))
         result = await analyzer.file_info("/tmp/nonexistent")
         assert result["success"] is False
         assert result["type"] == "unknown"
@@ -53,7 +51,8 @@ class TestChecksec:
                 (
                     "  GNU_RELRO      0x000000 0x600000 0x600000 0x0200 0x0200 R\n"
                     "  GNU_STACK      0x000000 0x000000 0x000000 0x0000 0x0000 RW\n",
-                    "", 0,
+                    "",
+                    0,
                 ),
                 # readelf -W -d (BIND_NOW)
                 ("  0x000000001e (FLAGS)  BIND_NOW\n", "", 0),
@@ -62,10 +61,15 @@ class TestChecksec:
                     "Symbol table '.symtab' contains 50 entries:\n"
                     "   10: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __stack_chk_fail\n"
                     "   11: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __fortify_fail\n",
-                    "", 0,
+                    "",
+                    0,
                 ),
                 # readelf -W -h (PIE)
-                ("  Type:                              DYN (Position-Independent Executable)\n", "", 0),
+                (
+                    "  Type:                              DYN (Position-Independent Executable)\n",
+                    "",
+                    0,
+                ),
             ]
         )
         result = await analyzer.checksec("/tmp/test_bin")
@@ -82,13 +86,21 @@ class TestChecksec:
         analyzer._spm.execute = AsyncMock(
             side_effect=[
                 # readelf -W -l: no GNU_RELRO, GNU_STACK with E flag
-                ("  GNU_STACK      0x000000 0x000000 0x000000 0x0000 0x0000 RWE\n", "", 0),
+                (
+                    "  GNU_STACK      0x000000 0x000000 0x000000 0x0000 0x0000 RWE\n",
+                    "",
+                    0,
+                ),
                 # readelf -W -d: no BIND_NOW
                 ("", "", 0),
                 # readelf -W -s: no canary, no fortify
                 ("Symbol table '.symtab' contains 5 entries:\n", "", 0),
                 # readelf -W -h: EXEC (not PIE)
-                ("  Type:                              EXEC (Executable file)\n", "", 0),
+                (
+                    "  Type:                              EXEC (Executable file)\n",
+                    "",
+                    0,
+                ),
             ]
         )
         result = await analyzer.checksec("/tmp/test_bin")
@@ -103,7 +115,11 @@ class TestChecksec:
     async def test_partial_relro(self, analyzer):
         analyzer._spm.execute = AsyncMock(
             side_effect=[
-                ("  GNU_RELRO      0x000000\n  GNU_STACK      0x0 0x0 0x0 0x0 0x0 RW\n", "", 0),
+                (
+                    "  GNU_RELRO      0x000000\n  GNU_STACK      0x0 0x0 0x0 0x0 0x0 RW\n",
+                    "",
+                    0,
+                ),
                 ("", "", 0),  # no BIND_NOW
                 ("", "", 0),
                 ("  Type:                              EXEC\n", "", 0),
@@ -374,9 +390,7 @@ class TestStrings:
     @pytest.mark.asyncio
     async def test_parse_strings(self, analyzer):
         output = (
-            "   318 /lib64/ld-linux-x86-64.so.2\n"
-            "   3b0 Hello, World!\n"
-            "   3c0 puts\n"
+            "   318 /lib64/ld-linux-x86-64.so.2\n   3b0 Hello, World!\n   3c0 puts\n"
         )
         analyzer._spm.execute = AsyncMock(return_value=(output, "", 0))
         strings = await analyzer.strings("/tmp/bin")

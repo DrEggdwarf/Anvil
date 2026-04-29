@@ -40,8 +40,8 @@ class PwnBridge(BaseBridge):
 
     def __init__(self) -> None:
         super().__init__()
-        self._pwn: Any = None       # pwnlib module reference
-        self._context: Any = None    # pwnlib.context.context
+        self._pwn: Any = None  # pwnlib module reference
+        self._context: Any = None  # pwnlib.context.context
         # Sprint 15 fix #5: real LRU eviction via OrderedDict.move_to_end on every access.
         # Previously evicted the oldest *inserted* entry (FIFO), which could drop a hot ELF.
         self._elf_cache: OrderedDict[str, Any] = OrderedDict()
@@ -78,6 +78,7 @@ class PwnBridge(BaseBridge):
         self.state = BridgeState.STARTING
         try:
             import pwn as pwnlib
+
             self._pwn = pwnlib
             self._context = pwnlib.context
             # Default to amd64 linux
@@ -117,6 +118,7 @@ class PwnBridge(BaseBridge):
         method = getattr(self, command, None)
         if method and callable(method):
             import inspect
+
             result = method(**kwargs)
             if inspect.isawaitable(result):
                 return await result
@@ -359,10 +361,7 @@ class PwnBridge(BaseBridge):
         elf = self._touch_elf(path) or self._pwn.ELF(path, checksec=False)
         if path not in self._elf_cache:
             self._cache_elf(path, elf)
-        return [
-            {"name": name, "address": hex(func.address), "size": func.size}
-            for name, func in elf.functions.items()
-        ]
+        return [{"name": name, "address": hex(func.address), "size": func.size} for name, func in elf.functions.items()]
 
     async def elf_sections(self, path: str) -> list[dict]:
         """List sections with address, size, flags."""
@@ -374,12 +373,14 @@ class PwnBridge(BaseBridge):
         for name in elf.sections:
             sec = elf.get_section_by_name(name)
             if sec:
-                result.append({
-                    "name": name,
-                    "address": hex(sec.header.sh_addr),
-                    "size": sec.header.sh_size,
-                    "type": sec.header.sh_type,
-                })
+                result.append(
+                    {
+                        "name": name,
+                        "address": hex(sec.header.sh_addr),
+                        "size": sec.header.sh_size,
+                        "type": sec.header.sh_type,
+                    }
+                )
         return result
 
     async def elf_search(self, path: str, needle: str, is_hex: bool = False) -> list[str]:
@@ -488,7 +489,8 @@ class PwnBridge(BaseBridge):
             addr = int(addr_str, 16) if isinstance(addr_str, str) else addr_str
             int_writes[addr] = value
         result = self._pwn.fmtstr_payload(
-            offset, int_writes,
+            offset,
+            int_writes,
             numbwritten=numbwritten,
             write_size=write_size,
         )
@@ -607,6 +609,7 @@ class PwnBridge(BaseBridge):
         if encoder:
             kwargs["force"] = True
         from pwnlib.encoders import encode
+
         result = encode(data, **kwargs)
         return result.hex()
 
@@ -637,8 +640,25 @@ class PwnBridge(BaseBridge):
         self._require_ready()
         core = self._pwn.Corefile(path)
         regs = {}
-        for reg in ("rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp", "rip",
-                     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"):
+        for reg in (
+            "rax",
+            "rbx",
+            "rcx",
+            "rdx",
+            "rsi",
+            "rdi",
+            "rsp",
+            "rbp",
+            "rip",
+            "r8",
+            "r9",
+            "r10",
+            "r11",
+            "r12",
+            "r13",
+            "r14",
+            "r15",
+        ):
             val = getattr(core, reg, None)
             if val is not None:
                 regs[reg] = hex(val)

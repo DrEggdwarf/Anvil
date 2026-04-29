@@ -59,6 +59,7 @@ class RizinBridge(BaseBridge):
         self.state = BridgeState.STARTING
         try:
             import rzpipe
+
             target = self._binary_path or ""
             self._pipe = rzpipe.open(target, flags=["-2"])
             self.state = BridgeState.READY

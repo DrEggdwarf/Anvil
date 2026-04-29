@@ -18,11 +18,23 @@ logger = logging.getLogger(__name__)
 # Allowed source extensions for writing.
 # Aligned with pwn._LANG_MAP so /api/compile/files and /api/pwn/upload share
 # the same allowlist (Sprint 14 fix #3).
-_SOURCE_EXTENSIONS = frozenset({
-    ".asm", ".s", ".c", ".h", ".py", ".ld",
-    ".cpp", ".cc", ".cxx", ".hpp", ".hxx",
-    ".rs", ".go",
-})
+_SOURCE_EXTENSIONS = frozenset(
+    {
+        ".asm",
+        ".s",
+        ".c",
+        ".h",
+        ".py",
+        ".ld",
+        ".cpp",
+        ".cc",
+        ".cxx",
+        ".hpp",
+        ".hxx",
+        ".rs",
+        ".go",
+    }
+)
 
 
 class WorkspaceManager:
@@ -62,9 +74,7 @@ class WorkspaceManager:
             return True
         return False
 
-    def write_source(
-        self, session_id: str, filename: str, content: str
-    ) -> str:
+    def write_source(self, session_id: str, filename: str, content: str) -> str:
         """Write source code to a file in the session workspace.
 
         Validates filename and extension. Returns the absolute path.
@@ -97,11 +107,13 @@ class WorkspaceManager:
         files = []
         for p in sorted(workspace.iterdir()):
             if p.is_file():
-                files.append({
-                    "name": p.name,
-                    "size": p.stat().st_size,
-                    "is_binary": p.suffix not in _SOURCE_EXTENSIONS,
-                })
+                files.append(
+                    {
+                        "name": p.name,
+                        "size": p.stat().st_size,
+                        "is_binary": p.suffix not in _SOURCE_EXTENSIONS,
+                    }
+                )
         return files
 
     def delete_file(self, session_id: str, filename: str) -> bool:
@@ -168,8 +180,6 @@ def _validate_filename(filename: str) -> None:
         raise InvalidFile("Filename must not contain path separators")
     ext = Path(filename).suffix.lower()
     if ext not in _SOURCE_EXTENSIONS:
-        raise InvalidFile(
-            f"Extension '{ext}' not allowed. Allowed: {sorted(_SOURCE_EXTENSIONS)}"
-        )
+        raise InvalidFile(f"Extension '{ext}' not allowed. Allowed: {sorted(_SOURCE_EXTENSIONS)}")
     if len(filename) > 255:
         raise InvalidFile("Filename too long")

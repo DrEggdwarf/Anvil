@@ -145,7 +145,9 @@ class TestPathValidation:
 
     def test_traversal_in_allowed_dir(self):
         with pytest.raises(ValidationError):
-            validate_file_path("/tmp/anvil/../../etc/passwd", allowed_dirs=["/tmp/anvil"])
+            validate_file_path(
+                "/tmp/anvil/../../etc/passwd", allowed_dirs=["/tmp/anvil"]
+            )
 
 
 # ── Session ID validation ────────────────────────────────

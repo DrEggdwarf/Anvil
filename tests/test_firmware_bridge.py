@@ -121,14 +121,30 @@ class TestFirmwareLifecycle:
 
 # ── Scan ─────────────────────────────────────────────────
 
-V3_SCAN_RESULT = json.dumps([{
-    "Analysis": {
-        "file_map": [
-            {"offset": 0, "size": 1024, "name": "gzip", "description": "gzip compressed data", "confidence": 95},
-            {"offset": 2048, "size": 512, "name": "squashfs", "description": "SquashFS filesystem", "confidence": 90},
-        ]
-    }
-}])
+V3_SCAN_RESULT = json.dumps(
+    [
+        {
+            "Analysis": {
+                "file_map": [
+                    {
+                        "offset": 0,
+                        "size": 1024,
+                        "name": "gzip",
+                        "description": "gzip compressed data",
+                        "confidence": 95,
+                    },
+                    {
+                        "offset": 2048,
+                        "size": 512,
+                        "name": "squashfs",
+                        "description": "SquashFS filesystem",
+                        "confidence": 90,
+                    },
+                ]
+            }
+        }
+    ]
+)
 
 
 class TestFirmwareScan:
@@ -217,16 +233,31 @@ class TestFirmwareFilteredScan:
 
 # ── Extraction ───────────────────────────────────────────
 
-V3_EXTRACT_RESULT = json.dumps([{
-    "Analysis": {
-        "file_map": [
-            {"offset": 0, "size": 1024, "name": "gzip", "description": "gzip data", "confidence": 95},
-        ],
-        "extractions": {
-            "uuid1": {"size": 1024, "success": True, "extractor": "gzip", "output_directory": "/tmp/out"}
+V3_EXTRACT_RESULT = json.dumps(
+    [
+        {
+            "Analysis": {
+                "file_map": [
+                    {
+                        "offset": 0,
+                        "size": 1024,
+                        "name": "gzip",
+                        "description": "gzip data",
+                        "confidence": 95,
+                    },
+                ],
+                "extractions": {
+                    "uuid1": {
+                        "size": 1024,
+                        "success": True,
+                        "extractor": "gzip",
+                        "output_directory": "/tmp/out",
+                    }
+                },
+            }
         }
-    }
-}])
+    ]
+)
 
 
 class TestFirmwareExtraction:
@@ -273,14 +304,18 @@ class TestFirmwareExtraction:
 
 # ── Entropy ──────────────────────────────────────────────
 
-V3_ENTROPY_RESULT = json.dumps([{
-    "Entropy": {
-        "blocks": [
-            {"start": 0, "end": 1024, "entropy": 7.95},
-            {"start": 1024, "end": 2048, "entropy": 3.2},
-        ]
-    }
-}])
+V3_ENTROPY_RESULT = json.dumps(
+    [
+        {
+            "Entropy": {
+                "blocks": [
+                    {"start": 0, "end": 1024, "entropy": 7.95},
+                    {"start": 1024, "end": 2048, "entropy": 3.2},
+                ]
+            }
+        }
+    ]
+)
 
 
 class TestFirmwareEntropy:
@@ -308,13 +343,12 @@ class TestFirmwareEntropy:
 class TestFirmwareStrings:
     @pytest.mark.asyncio
     async def test_strings(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "     a0 Hello World\n    1f0 firmware v1.0\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(
+            return_value=("     a0 Hello World\n    1f0 firmware v1.0\n", "", 0)
+        )
         results = await fw.strings("/tmp/firmware.bin")
         assert len(results) == 2
-        assert results[0]["offset"] == 0xa0
+        assert results[0]["offset"] == 0xA0
         assert results[0]["string"] == "Hello World"
 
     @pytest.mark.asyncio
@@ -339,7 +373,9 @@ class TestFirmwareOpcodes:
     async def test_opcodes_v3_fallback(self, fw: FirmwareBridge):
         """v3 doesn't have opcode scan — falls back to file command."""
         fw._use_v2_python = False
-        fw._spm.execute = AsyncMock(return_value=("ELF 64-bit LSB executable, x86-64", "", 0))
+        fw._spm.execute = AsyncMock(
+            return_value=("ELF 64-bit LSB executable, x86-64", "", 0)
+        )
         results = await fw.opcodes("/tmp/firmware.bin")
         assert len(results) == 1
         assert "x86-64" in results[0]["description"]
@@ -384,40 +420,34 @@ class TestFirmwareRawSearch:
 class TestFirmwareSecrets:
     @pytest.mark.asyncio
     async def test_scan_secrets_finds_private_key(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "    100 -----BEGIN RSA PRIVATE KEY-----\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(
+            return_value=("    100 -----BEGIN RSA PRIVATE KEY-----\n", "", 0)
+        )
         results = await fw.scan_secrets("/tmp/firmware.bin")
         assert len(results) == 1
         assert results[0]["type"] == "private_key"
 
     @pytest.mark.asyncio
     async def test_scan_secrets_finds_password(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "    200 password=admin123\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(return_value=("    200 password=admin123\n", "", 0))
         results = await fw.scan_secrets("/tmp/firmware.bin")
         assert len(results) == 1
         assert results[0]["type"] == "password"
 
     @pytest.mark.asyncio
     async def test_scan_secrets_finds_apikey(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "    300 api_key=sk_live_abc123def456\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(
+            return_value=("    300 api_key=sk_live_abc123def456\n", "", 0)
+        )
         results = await fw.scan_secrets("/tmp/firmware.bin")
         assert len(results) == 1
         assert results[0]["type"] == "api_key"
 
     @pytest.mark.asyncio
     async def test_scan_secrets_none_found(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "    100 normal text string\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(
+            return_value=("    100 normal text string\n", "", 0)
+        )
         results = await fw.scan_secrets("/tmp/firmware.bin")
         assert results == []
 
@@ -428,10 +458,12 @@ class TestFirmwareSecrets:
 class TestFirmwareFileInfo:
     @pytest.mark.asyncio
     async def test_file_info(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(side_effect=[
-            ("data", "", 0),
-            ("1048576", "", 0),
-        ])
+        fw._spm.execute = AsyncMock(
+            side_effect=[
+                ("data", "", 0),
+                ("1048576", "", 0),
+            ]
+        )
         result = await fw.file_info("/tmp/firmware.bin")
         assert result["path"] == "/tmp/firmware.bin"
         assert result["type"] == "data"
@@ -468,10 +500,9 @@ class TestFirmwareListExtracted:
 class TestFirmwareSignatures:
     @pytest.mark.asyncio
     async def test_list_signatures(self, fw: FirmwareBridge):
-        fw._spm.execute = AsyncMock(return_value=(
-            "gzip\nlzma\nsquashfs\ncramfs\n",
-            "", 0
-        ))
+        fw._spm.execute = AsyncMock(
+            return_value=("gzip\nlzma\nsquashfs\ncramfs\n", "", 0)
+        )
         result = await fw.list_signatures()
         assert len(result) == 4
         assert "gzip" in result
@@ -499,13 +530,21 @@ class TestFirmwareProperties:
 
 class TestFirmwareParsing:
     def test_parse_v3_analysis(self, fw: FirmwareBridge):
-        data = [{
-            "Analysis": {
-                "file_map": [
-                    {"offset": 0, "size": 100, "name": "gzip", "description": "compressed", "confidence": 90}
-                ]
+        data = [
+            {
+                "Analysis": {
+                    "file_map": [
+                        {
+                            "offset": 0,
+                            "size": 100,
+                            "name": "gzip",
+                            "description": "compressed",
+                            "confidence": 90,
+                        }
+                    ]
+                }
             }
-        }]
+        ]
         result = fw._parse_v3_analysis(data)
         assert len(result) == 1
         assert result[0]["name"] == "gzip"
@@ -514,23 +553,26 @@ class TestFirmwareParsing:
         assert fw._parse_v3_analysis([]) == []
 
     def test_parse_v3_extractions(self, fw: FirmwareBridge):
-        data = [{
-            "Analysis": {
-                "extractions": {
-                    "uid1": {"size": 1024, "success": True, "extractor": "gzip", "output_directory": "/tmp"}
+        data = [
+            {
+                "Analysis": {
+                    "extractions": {
+                        "uid1": {
+                            "size": 1024,
+                            "success": True,
+                            "extractor": "gzip",
+                            "output_directory": "/tmp",
+                        }
+                    }
                 }
             }
-        }]
+        ]
         result = fw._parse_v3_extractions(data)
         assert len(result) == 1
         assert result[0]["success"] is True
 
     def test_parse_v3_entropy(self, fw: FirmwareBridge):
-        data = [{
-            "Entropy": {
-                "blocks": [{"start": 0, "end": 1024, "entropy": 7.5}]
-            }
-        }]
+        data = [{"Entropy": {"blocks": [{"start": 0, "end": 1024, "entropy": 7.5}]}}]
         result = fw._parse_v3_entropy(data)
         assert len(result) == 1
         assert result[0]["entropy"] == 7.5

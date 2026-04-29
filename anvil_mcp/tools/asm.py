@@ -32,7 +32,9 @@ async def gdb_step(session_id: str, mode: str = "into") -> dict:
     raise NotImplementedError(_STUB)
 
 
-async def gdb_breakpoint(session_id: str, addr_or_line: str, action: str = "set") -> dict:
+async def gdb_breakpoint(
+    session_id: str, addr_or_line: str, action: str = "set"
+) -> dict:
     """Set or delete a breakpoint.
 
     Args:

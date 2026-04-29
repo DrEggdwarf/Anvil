@@ -4,7 +4,6 @@ Tests use real subprocesses (echo, sleep, false) — no mocks needed
 since these are basic POSIX commands available everywhere.
 """
 
-
 import pytest
 import pytest_asyncio
 
@@ -46,9 +45,7 @@ class TestExecute:
 
     @pytest.mark.asyncio
     async def test_execute_returns_stderr(self, spm: SubprocessManager):
-        stdout, stderr, rc = await spm.execute(
-            ["sh", "-c", "echo error >&2; exit 1"]
-        )
+        stdout, stderr, rc = await spm.execute(["sh", "-c", "echo error >&2; exit 1"])
         assert "error" in stderr
         assert rc == 1
 

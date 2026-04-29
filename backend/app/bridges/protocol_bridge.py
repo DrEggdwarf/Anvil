@@ -60,6 +60,7 @@ class ProtocolBridge(BaseBridge):
         self.state = BridgeState.STARTING
         try:
             import pymodbus
+
             self._pymodbus = pymodbus
             self.state = BridgeState.READY
             logger.info("Protocol bridge started (pymodbus %s)", getattr(pymodbus, "__version__", "?"))
@@ -89,6 +90,7 @@ class ProtocolBridge(BaseBridge):
         method = getattr(self, command, None)
         if method and callable(method):
             import inspect
+
             result = method(**kwargs)
             if inspect.isawaitable(result):
                 return await result
@@ -133,22 +135,34 @@ class ProtocolBridge(BaseBridge):
 
         client_map = {
             "tcp": lambda: ModbusTcpClient(
-                host=host, port=port, timeout=timeout, retries=retries,
+                host=host,
+                port=port,
+                timeout=timeout,
+                retries=retries,
                 framer=framer_type or FramerType.SOCKET,
             ),
             "udp": lambda: ModbusUdpClient(
-                host=host, port=port, timeout=timeout, retries=retries,
+                host=host,
+                port=port,
+                timeout=timeout,
+                retries=retries,
                 framer=framer_type or FramerType.SOCKET,
             ),
             "tls": lambda: ModbusTlsClient(
-                host=host, port=port or 802, timeout=timeout, retries=retries,
+                host=host,
+                port=port or 802,
+                timeout=timeout,
+                retries=retries,
                 framer=framer_type or FramerType.TLS,
             ),
             "serial": lambda: ModbusSerialClient(
                 port=host,  # serial port path
-                baudrate=baudrate, bytesize=bytesize,
-                parity=parity, stopbits=stopbits,
-                timeout=timeout, retries=retries,
+                baudrate=baudrate,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                timeout=timeout,
+                retries=retries,
                 framer=framer_type or FramerType.RTU,
             ),
         }
@@ -258,6 +272,7 @@ class ProtocolBridge(BaseBridge):
         """FC20: Read file record."""
         self._require_connected()
         from pymodbus.pdu import FileRecord
+
         record = FileRecord(
             file_number=file_number,
             record_number=record_number,
@@ -266,9 +281,7 @@ class ProtocolBridge(BaseBridge):
         rr = self._client.read_file_record([record], slave=device_id)
         result = self._check_response(rr)
         if not result["error"]:
-            result["records"] = [
-                {"data": r.record_data.hex()} for r in rr.records
-            ] if hasattr(rr, "records") else []
+            result["records"] = [{"data": r.record_data.hex()} for r in rr.records] if hasattr(rr, "records") else []
         return result
 
     # ── Write operations (DANGEROUS) ─────────────────────
@@ -307,7 +320,10 @@ class ProtocolBridge(BaseBridge):
         """FC22: Mask write register (AND/OR). ⚠️ WRITES TO DEVICE."""
         self._require_connected()
         rr = self._client.mask_write_register(
-            address=address, and_mask=and_mask, or_mask=or_mask, slave=device_id,
+            address=address,
+            and_mask=and_mask,
+            or_mask=or_mask,
+            slave=device_id,
         )
         return self._check_response(rr)
 
@@ -322,8 +338,10 @@ class ProtocolBridge(BaseBridge):
         """FC23: Atomic read+write multiple registers. ⚠️ WRITES TO DEVICE."""
         self._require_connected()
         rr = self._client.readwrite_registers(
-            read_address=read_address, read_count=read_count,
-            write_address=write_address, values=write_values or [],
+            read_address=read_address,
+            read_count=read_count,
+            write_address=write_address,
+            values=write_values or [],
             slave=device_id,
         )
         result = self._check_response(rr)
@@ -341,6 +359,7 @@ class ProtocolBridge(BaseBridge):
         """FC21: Write file record. ⚠️ WRITES TO DEVICE."""
         self._require_connected()
         from pymodbus.pdu import FileRecord
+
         data = bytes.fromhex(record_data)
         record = FileRecord(
             file_number=file_number,
@@ -359,6 +378,7 @@ class ProtocolBridge(BaseBridge):
         """
         self._require_connected()
         from pymodbus.constants import DeviceInformation
+
         code_map = {
             1: DeviceInformation.BASIC,
             2: DeviceInformation.REGULAR,
@@ -374,8 +394,12 @@ class ProtocolBridge(BaseBridge):
         if not result["error"] and hasattr(rr, "information"):
             # Object ID → name mapping
             obj_names = {
-                0x00: "VendorName", 0x01: "ProductCode", 0x02: "MajorMinorRevision",
-                0x03: "VendorUrl", 0x04: "ProductName", 0x05: "ModelName",
+                0x00: "VendorName",
+                0x01: "ProductCode",
+                0x02: "MajorMinorRevision",
+                0x03: "VendorUrl",
+                0x04: "ProductName",
+                0x05: "ModelName",
                 0x06: "UserApplicationName",
             }
             info = {}
@@ -573,11 +597,13 @@ class ProtocolBridge(BaseBridge):
             try:
                 rr = self._client.read_holding_registers(0, count=1, slave=uid)
                 if not rr.isError():
-                    found.append({
-                        "device_id": uid,
-                        "status": "responsive",
-                        "register_0": rr.registers[0] if rr.registers else None,
-                    })
+                    found.append(
+                        {
+                            "device_id": uid,
+                            "status": "responsive",
+                            "register_0": rr.registers[0] if rr.registers else None,
+                        }
+                    )
             except Exception:
                 logger.debug("Device %d not responding", uid)
                 continue
@@ -612,10 +638,12 @@ class ProtocolBridge(BaseBridge):
                     values = rr.bits if register_type in ("coil", "discrete") else rr.registers
                     for i, val in enumerate(values[:count]):
                         if val:  # Only report non-zero
-                            results.append({
-                                "address": offset + i,
-                                "value": val,
-                            })
+                            results.append(
+                                {
+                                    "address": offset + i,
+                                    "value": val,
+                                }
+                            )
             except Exception:
                 logger.debug("Scan chunk at offset %d failed", offset)
                 continue
@@ -651,9 +679,8 @@ class ProtocolBridge(BaseBridge):
 
         # Start server in background
         import asyncio
-        self._server = asyncio.create_task(
-            StartAsyncTcpServer(context=context, address=("127.0.0.1", port))
-        )
+
+        self._server = asyncio.create_task(StartAsyncTcpServer(context=context, address=("127.0.0.1", port)))
         return {
             "status": "started",
             "port": port,

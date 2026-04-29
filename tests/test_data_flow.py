@@ -8,7 +8,6 @@ through all layers. This is NOT unit testing — this is integration testing
 of the full backend stack.
 """
 
-
 import pytest
 from starlette.testclient import TestClient
 
@@ -72,10 +71,12 @@ class TestWSDataFlow:
         """Ping → Pong: verify request_id is preserved."""
         client, sid, token = authed_ws
         with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
-            ws.send_json({
-                "type": "ping",
-                "request_id": "my-unique-id-123",
-            })
+            ws.send_json(
+                {
+                    "type": "ping",
+                    "request_id": "my-unique-id-123",
+                }
+            )
             resp = ws.receive_json()
             assert resp["type"] == "pong"
             assert resp["request_id"] == "my-unique-id-123"
@@ -93,12 +94,14 @@ class TestWSDataFlow:
         ws_dispatcher.register("mock.echo", echo_handler)
         try:
             with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
-                ws.send_json({
-                    "type": "command",
-                    "request_id": "req-42",
-                    "session_id": sid,
-                    "payload": {"command": "echo", "data": {"key": "value"}},
-                })
+                ws.send_json(
+                    {
+                        "type": "command",
+                        "request_id": "req-42",
+                        "session_id": sid,
+                        "payload": {"command": "echo", "data": {"key": "value"}},
+                    }
+                )
                 resp = ws.receive_json()
                 assert resp["type"] == "result"
                 assert resp["session_id"] == sid
@@ -112,11 +115,13 @@ class TestWSDataFlow:
         """Unknown command → Error: verify error structure."""
         client, sid, token = authed_ws
         with client.websocket_connect(f"/ws/mock/{sid}?token={token}") as ws:
-            ws.send_json({
-                "type": "command",
-                "request_id": "req-err",
-                "payload": {"command": "nonexistent"},
-            })
+            ws.send_json(
+                {
+                    "type": "command",
+                    "request_id": "req-err",
+                    "payload": {"command": "nonexistent"},
+                }
+            )
             resp = ws.receive_json()
             assert resp["type"] == "error"
             assert resp["request_id"] == "req-err"

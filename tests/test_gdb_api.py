@@ -148,13 +148,25 @@ class TestGdbInspection:
         # Mock two sequential writes for register names + values
         session = gdb_client.app.state.session_manager.get(sid)
         session.bridge._controller.write.side_effect = [
-            [{"type": "result", "message": "done",
-              "payload": {"register-names": ["rax", "rbx"]}}],
-            [{"type": "result", "message": "done",
-              "payload": {"register-values": [
-                  {"number": "0", "value": "0x1"},
-                  {"number": "1", "value": "0x2"},
-              ]}}],
+            [
+                {
+                    "type": "result",
+                    "message": "done",
+                    "payload": {"register-names": ["rax", "rbx"]},
+                }
+            ],
+            [
+                {
+                    "type": "result",
+                    "message": "done",
+                    "payload": {
+                        "register-values": [
+                            {"number": "0", "value": "0x1"},
+                            {"number": "1", "value": "0x2"},
+                        ]
+                    },
+                }
+            ],
         ]
         resp = await gdb_client.get(f"/api/gdb/{sid}/registers")
         assert resp.status_code == 200
@@ -215,11 +227,15 @@ class TestGdbDataFlow:
         sid = gdb_client.session_id
 
         # Load binary
-        r = await gdb_client.post(f"/api/gdb/{sid}/load", json={"binary_path": "/tmp/test"})
+        r = await gdb_client.post(
+            f"/api/gdb/{sid}/load", json={"binary_path": "/tmp/test"}
+        )
         assert r.status_code == 200
 
         # Set breakpoint
-        r = await gdb_client.post(f"/api/gdb/{sid}/breakpoints", json={"location": "_start"})
+        r = await gdb_client.post(
+            f"/api/gdb/{sid}/breakpoints", json={"location": "_start"}
+        )
         assert r.status_code == 200
 
         # Run
@@ -233,10 +249,20 @@ class TestGdbDataFlow:
         # Get registers (need mock for two calls)
         session = gdb_client.app.state.session_manager.get(sid)
         session.bridge._controller.write.side_effect = [
-            [{"type": "result", "message": "done",
-              "payload": {"register-names": ["rax"]}}],
-            [{"type": "result", "message": "done",
-              "payload": {"register-values": [{"number": "0", "value": "0x0"}]}}],
+            [
+                {
+                    "type": "result",
+                    "message": "done",
+                    "payload": {"register-names": ["rax"]},
+                }
+            ],
+            [
+                {
+                    "type": "result",
+                    "message": "done",
+                    "payload": {"register-values": [{"number": "0", "value": "0x0"}]},
+                }
+            ],
         ]
         r = await gdb_client.get(f"/api/gdb/{sid}/registers")
         assert r.status_code == 200

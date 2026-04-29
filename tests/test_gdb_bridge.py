@@ -77,7 +77,10 @@ class TestGdbLifecycle:
     @pytest.mark.asyncio
     async def test_start_failure_sets_error(self):
         bridge = GdbBridge()
-        with patch("pygdbmi.gdbcontroller.GdbController", side_effect=FileNotFoundError("gdb not found")):
+        with patch(
+            "pygdbmi.gdbcontroller.GdbController",
+            side_effect=FileNotFoundError("gdb not found"),
+        ):
             with pytest.raises(BridgeCrash):
                 await bridge.start()
         assert bridge.state == BridgeState.ERROR
@@ -117,7 +120,9 @@ class TestGdbExecute:
     async def test_execute_calls_write(self, gdb_bridge: GdbBridge):
         await gdb_bridge.execute("-exec-run")
         gdb_bridge._controller.write.assert_called_once_with(
-            "-exec-run", timeout_sec=10, raise_error_on_timeout=True,
+            "-exec-run",
+            timeout_sec=10,
+            raise_error_on_timeout=True,
         )
 
     @pytest.mark.asyncio
@@ -143,7 +148,9 @@ class TestGdbExecute:
     async def test_execute_custom_timeout(self, gdb_bridge: GdbBridge):
         await gdb_bridge.execute("-exec-run", timeout=30)
         gdb_bridge._controller.write.assert_called_once_with(
-            "-exec-run", timeout_sec=30, raise_error_on_timeout=True,
+            "-exec-run",
+            timeout_sec=30,
+            raise_error_on_timeout=True,
         )
 
 
@@ -256,13 +263,19 @@ class TestGdbRegisters:
         # Mock two calls: register names then values
         gdb_bridge._controller.write.side_effect = [
             [gdb_result({"register-names": ["rax", "rbx", "rcx", "", "rsp"]})],
-            [gdb_result({"register-values": [
-                {"number": "0", "value": "0x1"},
-                {"number": "1", "value": "0x2"},
-                {"number": "2", "value": "0x3"},
-                {"number": "3", "value": "0x0"},
-                {"number": "4", "value": "0x7fffffffde00"},
-            ]})],
+            [
+                gdb_result(
+                    {
+                        "register-values": [
+                            {"number": "0", "value": "0x1"},
+                            {"number": "1", "value": "0x2"},
+                            {"number": "2", "value": "0x3"},
+                            {"number": "3", "value": "0x0"},
+                            {"number": "4", "value": "0x7fffffffde00"},
+                        ]
+                    }
+                )
+            ],
         ]
         registers = await gdb_bridge.get_registers()
         assert len(registers) == 4  # Empty name at index 3 is skipped
@@ -275,10 +288,16 @@ class TestGdbRegisters:
 class TestMergeRegisterData:
     def test_merge_basic(self):
         names_resp = [gdb_result({"register-names": ["rax", "rbx"]})]
-        values_resp = [gdb_result({"register-values": [
-            {"number": "0", "value": "0x1"},
-            {"number": "1", "value": "0x2"},
-        ]})]
+        values_resp = [
+            gdb_result(
+                {
+                    "register-values": [
+                        {"number": "0", "value": "0x1"},
+                        {"number": "1", "value": "0x2"},
+                    ]
+                }
+            )
+        ]
         merged = _merge_register_data(names_resp, values_resp)
         assert len(merged) == 2
         assert merged[0] == {"name": "rax", "number": 0, "value": "0x1"}
@@ -286,11 +305,17 @@ class TestMergeRegisterData:
 
     def test_merge_skips_empty_names(self):
         names_resp = [gdb_result({"register-names": ["rax", "", "rcx"]})]
-        values_resp = [gdb_result({"register-values": [
-            {"number": "0", "value": "0x1"},
-            {"number": "1", "value": "0x0"},
-            {"number": "2", "value": "0x3"},
-        ]})]
+        values_resp = [
+            gdb_result(
+                {
+                    "register-values": [
+                        {"number": "0", "value": "0x1"},
+                        {"number": "1", "value": "0x0"},
+                        {"number": "2", "value": "0x3"},
+                    ]
+                }
+            )
+        ]
         merged = _merge_register_data(names_resp, values_resp)
         assert len(merged) == 2  # index 1 (empty name) skipped
         assert merged[0]["name"] == "rax"

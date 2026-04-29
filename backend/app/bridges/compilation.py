@@ -38,12 +38,14 @@ def parse_nasm_errors(stderr: str) -> list[dict]:
     """Parse nasm stderr into structured errors."""
     errors = []
     for match in NASM_ERROR_RE.finditer(stderr):
-        errors.append({
-            "file": match.group(1),
-            "line": int(match.group(2)),
-            "severity": match.group(3),
-            "message": match.group(4),
-        })
+        errors.append(
+            {
+                "file": match.group(1),
+                "line": int(match.group(2)),
+                "severity": match.group(3),
+                "message": match.group(4),
+            }
+        )
     return errors
 
 
@@ -52,23 +54,27 @@ def parse_gas_errors(stderr: str) -> list[dict]:
     errors = []
     # Try gcc-style first (file:line:col: severity: message)
     for match in GCC_ERROR_RE.finditer(stderr):
-        errors.append({
-            "file": match.group(1),
-            "line": int(match.group(2)),
-            "column": int(match.group(3)),
-            "severity": match.group(4).lower(),
-            "message": match.group(5),
-        })
+        errors.append(
+            {
+                "file": match.group(1),
+                "line": int(match.group(2)),
+                "column": int(match.group(3)),
+                "severity": match.group(4).lower(),
+                "message": match.group(5),
+            }
+        )
     if errors:
         return errors
     # Fallback: GAS-style (file:line: Error: message)
     for match in GAS_ERROR_RE.finditer(stderr):
-        errors.append({
-            "file": match.group(1),
-            "line": int(match.group(2)),
-            "severity": match.group(3).lower(),
-            "message": match.group(4),
-        })
+        errors.append(
+            {
+                "file": match.group(1),
+                "line": int(match.group(2)),
+                "severity": match.group(3).lower(),
+                "message": match.group(4),
+            }
+        )
     return errors
 
 
@@ -79,19 +85,23 @@ def parse_fasm_errors(stderr: str) -> list[dict]:
     loc_match = FASM_ERROR_RE.search(stderr)
     msg_match = FASM_MSG_RE.search(stderr)
     if loc_match and msg_match:
-        errors.append({
-            "file": loc_match.group(1).strip(),
-            "line": int(loc_match.group(2)),
-            "severity": msg_match.group(1),
-            "message": msg_match.group(2),
-        })
+        errors.append(
+            {
+                "file": loc_match.group(1).strip(),
+                "line": int(loc_match.group(2)),
+                "severity": msg_match.group(1),
+                "message": msg_match.group(2),
+            }
+        )
     elif msg_match:
-        errors.append({
-            "file": "",
-            "line": 0,
-            "severity": msg_match.group(1),
-            "message": msg_match.group(2),
-        })
+        errors.append(
+            {
+                "file": "",
+                "line": 0,
+                "severity": msg_match.group(1),
+                "message": msg_match.group(2),
+            }
+        )
     return errors
 
 
@@ -99,13 +109,15 @@ def parse_gcc_errors(stderr: str) -> list[dict]:
     """Parse gcc stderr into structured errors."""
     errors = []
     for match in GCC_ERROR_RE.finditer(stderr):
-        errors.append({
-            "file": match.group(1),
-            "line": int(match.group(2)),
-            "column": int(match.group(3)),
-            "severity": match.group(4),
-            "message": match.group(5),
-        })
+        errors.append(
+            {
+                "file": match.group(1),
+                "line": int(match.group(2)),
+                "column": int(match.group(3)),
+                "severity": match.group(4),
+                "message": match.group(5),
+            }
+        )
     return errors
 
 
@@ -246,7 +258,10 @@ class CompilationBridge:
 
     @staticmethod
     def _nasm_cmd(
-        src_path: Path, obj_path: Path, fmt: str, debug: bool,
+        src_path: Path,
+        obj_path: Path,
+        fmt: str,
+        debug: bool,
     ) -> tuple[list[str], type(parse_nasm_errors)]:
         """Build nasm command (Intel syntax)."""
         cmd = ["nasm", f"-f{fmt}"]
@@ -257,7 +272,10 @@ class CompilationBridge:
 
     @staticmethod
     def _gas_cmd(
-        src_path: Path, obj_path: Path, fmt: str, debug: bool,
+        src_path: Path,
+        obj_path: Path,
+        fmt: str,
+        debug: bool,
     ) -> tuple[list[str], type(parse_gas_errors)]:
         """Build GNU Assembler command (AT&T syntax via gcc -c)."""
         # Map format to GAS arch flags
@@ -270,7 +288,9 @@ class CompilationBridge:
 
     @staticmethod
     def _fasm_cmd(
-        src_path: Path, obj_path: Path, fmt: str,
+        src_path: Path,
+        obj_path: Path,
+        fmt: str,
     ) -> tuple[list[str], type(parse_fasm_errors)]:
         """Build FASM command (Intel syntax, FASM dialect)."""
         # FASM compiles to ELF object by default with 'format ELF64' directive
@@ -307,13 +327,14 @@ class CompilationBridge:
             gcc_cmd += ["-g", "-ggdb"]
 
         # Security flags
-        for flag_name in (security_flags or []):
+        for flag_name in security_flags or []:
             flags = SECURITY_FLAGS.get(flag_name, [])
             gcc_cmd.extend(flags)
 
         # Extra flags (validated)
         if extra_flags:
             from backend.app.core.sanitization import validate_gcc_flags
+
             gcc_cmd.extend(validate_gcc_flags(extra_flags))
 
         gcc_cmd += [str(src_path), "-o", str(bin_path)]

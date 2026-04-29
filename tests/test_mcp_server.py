@@ -136,6 +136,7 @@ def test_session_list_signature():
 
 def test_exploit_pipeline_returns_string():
     from anvil_mcp.prompts.pipelines import exploit_pipeline
+
     result = exploit_pipeline("/tmp/vuln")
     assert isinstance(result, str)
     assert "pwn_checksec" in result
@@ -144,6 +145,7 @@ def test_exploit_pipeline_returns_string():
 
 def test_firmware_audit_returns_string():
     from anvil_mcp.prompts.pipelines import firmware_audit
+
     result = firmware_audit("/tmp/fw.bin")
     assert isinstance(result, str)
     assert "firmware_scan" in result
@@ -152,6 +154,7 @@ def test_firmware_audit_returns_string():
 
 def test_ctf_binary_returns_string():
     from anvil_mcp.prompts.pipelines import ctf_binary
+
     result = ctf_binary("/tmp/challenge")
     assert isinstance(result, str)
     assert "pwn_checksec" in result
@@ -160,5 +163,6 @@ def test_ctf_binary_returns_string():
 
 def test_ctf_binary_with_description():
     from anvil_mcp.prompts.pipelines import ctf_binary
+
     result = ctf_binary("/tmp/challenge", description="ret2win format string")
     assert "ret2win format string" in result

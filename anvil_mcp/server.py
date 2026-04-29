@@ -109,7 +109,9 @@ def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Anvil MCP Server")
     p.add_argument("--transport", choices=["stdio", "sse"], default="stdio")
     p.add_argument("--port", type=int, default=8001)
-    p.add_argument("--backend", default="http://127.0.0.1:8000", help="FastAPI base URL")
+    p.add_argument(
+        "--backend", default="http://127.0.0.1:8000", help="FastAPI base URL"
+    )
     return p.parse_args()
 
 

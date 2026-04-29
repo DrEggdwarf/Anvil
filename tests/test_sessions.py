@@ -64,6 +64,7 @@ class TestSessionGet:
         old_activity = session.last_activity
         # Small sleep to ensure timestamp difference
         import asyncio
+
         await asyncio.sleep(0.01)
         session_manager.get(session.id)
         assert session.last_activity > old_activity

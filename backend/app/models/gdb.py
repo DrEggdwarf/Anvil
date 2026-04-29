@@ -98,6 +98,7 @@ class GdbDisassemblyResponse(BaseModel):
 
 class GdbRawResponse(BaseModel):
     """Raw GDB/MI response — used when structured parsing isn't available."""
+
     responses: list[dict]
 
 

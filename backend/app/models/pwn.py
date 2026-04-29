@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 # ── Context ──────────────────────────────────────────────
 
+
 class PwnContextRequest(BaseModel):
     arch: str | None = Field(default=None, max_length=32)
     os: str | None = Field(default=None, max_length=32)
@@ -25,6 +26,7 @@ class PwnContextResponse(BaseModel):
 
 # ── Cyclic ───────────────────────────────────────────────
 
+
 class PwnCyclicRequest(BaseModel):
     length: int = Field(default=200, ge=1, le=100_000)
     alphabet: str | None = Field(default=None, max_length=256)
@@ -38,6 +40,7 @@ class PwnCyclicFindRequest(BaseModel):
 
 
 # ── Packing ──────────────────────────────────────────────
+
 
 class PwnPackRequest(BaseModel):
     value: int
@@ -60,6 +63,7 @@ class PwnFlatRequest(BaseModel):
 
 # ── Assembly ─────────────────────────────────────────────
 
+
 class PwnAsmRequest(BaseModel):
     source: str = Field(..., max_length=65_536)
     arch: str | None = Field(default=None, max_length=32)
@@ -81,6 +85,7 @@ class PwnMakeElfFromAsmRequest(BaseModel):
 
 # ── Shellcraft ───────────────────────────────────────────
 
+
 class PwnShellcraftRequest(BaseModel):
     name: str = Field(..., max_length=256)
     arch: str | None = Field(default=None, max_length=32)
@@ -88,6 +93,7 @@ class PwnShellcraftRequest(BaseModel):
 
 
 # ── ELF ──────────────────────────────────────────────────
+
 
 class PwnUploadRequest(BaseModel):
     filename: str = Field(..., max_length=255)
@@ -146,6 +152,7 @@ class PwnChecksecResponse(BaseModel):
 
 # ── ROP ──────────────────────────────────────────────────
 
+
 class PwnRopCreateRequest(BaseModel):
     elf_path: str = Field(..., max_length=4096)
 
@@ -186,6 +193,7 @@ class PwnRopSetRegsRequest(BaseModel):
 
 # ── Format string ────────────────────────────────────────
 
+
 class PwnFmtstrRequest(BaseModel):
     offset: int
     writes: dict[str, int] = Field(...)  # {hex_addr: value}
@@ -203,6 +211,7 @@ class PwnFmtstrRequest(BaseModel):
 
 # ── SROP ─────────────────────────────────────────────────
 
+
 class PwnSropRequest(BaseModel):
     registers: dict[str, int] = Field(...)
     arch: str | None = Field(default=None, max_length=32)
@@ -218,6 +227,7 @@ class PwnSropRequest(BaseModel):
 
 # ── Ret2dlresolve ────────────────────────────────────────
 
+
 class PwnRet2dlRequest(BaseModel):
     elf_path: str = Field(..., max_length=4096)
     symbol: str = Field(..., max_length=256)
@@ -225,6 +235,7 @@ class PwnRet2dlRequest(BaseModel):
 
 
 # ── Encoding / crypto ───────────────────────────────────
+
 
 class PwnXorRequest(BaseModel):
     hex_data: str = Field(..., max_length=131_072)
@@ -254,6 +265,7 @@ class PwnHexdumpRequest(BaseModel):
 
 # ── Constants ────────────────────────────────────────────
 
+
 class PwnConstantRequest(BaseModel):
     name: str = Field(..., max_length=256)
 
@@ -264,11 +276,13 @@ class PwnListConstantsRequest(BaseModel):
 
 # ── Corefile ─────────────────────────────────────────────
 
+
 class PwnCorefileRequest(BaseModel):
     path: str = Field(..., max_length=4096)
 
 
 # ── Misc ─────────────────────────────────────────────────
+
 
 class PwnRotateRequest(BaseModel):
     value: int
@@ -277,6 +291,7 @@ class PwnRotateRequest(BaseModel):
 
 
 # ── Generic responses ────────────────────────────────────
+
 
 class PwnHexResponse(BaseModel):
     hex: str

@@ -115,11 +115,13 @@ class RizinRawCommandRequest(BaseModel):
 
 class RizinRawResponse(BaseModel):
     """Raw rizin output — for commands that return unstructured text."""
+
     output: str = ""
 
 
 class RizinJsonResponse(BaseModel):
     """JSON output from rizin commands."""
+
     data: list | dict = []
 
 

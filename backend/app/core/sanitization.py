@@ -95,10 +95,19 @@ def sanitize_rizin_input(value: str, field_name: str = "input") -> str:
 # ── Path validation ──────────────────────────────────────
 
 # Directories that must never be accessed
-_BLOCKED_PATHS = frozenset({
-    "/etc", "/proc", "/sys", "/dev", "/root", "/boot",
-    "/var/run", "/var/log", "/run",
-})
+_BLOCKED_PATHS = frozenset(
+    {
+        "/etc",
+        "/proc",
+        "/sys",
+        "/dev",
+        "/root",
+        "/boot",
+        "/var/run",
+        "/var/log",
+        "/run",
+    }
+)
 
 
 def validate_file_path(
@@ -142,10 +151,7 @@ def validate_file_path(
             )
 
     # If allowed dirs specified, enforce containment
-    if allowed_dirs and not any(
-        resolved.is_relative_to(Path(d).resolve())
-        for d in allowed_dirs
-    ):
+    if allowed_dirs and not any(resolved.is_relative_to(Path(d).resolve()) for d in allowed_dirs):
         raise ValidationError(
             f"{field_name} must be within allowed directories",
             code="PATH_BLOCKED",
@@ -173,29 +179,60 @@ def validate_session_id(session_id: str) -> str:
 
 # ── GCC flags allowlist ──────────────────────────────────
 
-_ALLOWED_GCC_FLAG_PREFIXES = frozenset({
-    "-O", "-g", "-W", "-w", "-f", "-m", "-std=",
-    "-D", "-U", "-I", "-L", "-l", "-s", "-c",
-    "-pie", "-no-pie", "-static", "-shared",
-    "-pthread", "-rdynamic",
-})
+_ALLOWED_GCC_FLAG_PREFIXES = frozenset(
+    {
+        "-O",
+        "-g",
+        "-W",
+        "-w",
+        "-f",
+        "-m",
+        "-std=",
+        "-D",
+        "-U",
+        "-I",
+        "-L",
+        "-l",
+        "-s",
+        "-c",
+        "-pie",
+        "-no-pie",
+        "-static",
+        "-shared",
+        "-pthread",
+        "-rdynamic",
+    }
+)
 
 # Explicitly dangerous flags that bypass the allowlist via known-safe prefixes.
 # `-Wl,`/`-Wa,`/`-Wp,` slip past `-W` (warnings) and pass arbitrary args to linker/assembler/preprocessor.
 # `-l/path` and `-L/path` can pull libraries from anywhere on disk.
-_BLOCKED_GCC_FLAGS = frozenset({
-    "-wrapper", "-fplugin", "-fplugin-arg",
-    "-fprofile-generate", "-fprofile-use",
-    "--sysroot", "-isysroot", "-isystem",
-    "-specs", "-dumpspecs",
-    "-Wl,", "-Wa,", "-Wp,",
-    "-Xlinker", "-Xassembler", "-Xpreprocessor",
-    "-rpath",
-})
+_BLOCKED_GCC_FLAGS = frozenset(
+    {
+        "-wrapper",
+        "-fplugin",
+        "-fplugin-arg",
+        "-fprofile-generate",
+        "-fprofile-use",
+        "--sysroot",
+        "-isysroot",
+        "-isystem",
+        "-specs",
+        "-dumpspecs",
+        "-Wl,",
+        "-Wa,",
+        "-Wp,",
+        "-Xlinker",
+        "-Xassembler",
+        "-Xpreprocessor",
+        "-rpath",
+    }
+)
+
 
 def _validate_gcc_path_flag(flag: str, prefix: str) -> None:
     """Reject path-bearing flags (`-I/etc`, `-L/proc`, `-l/abs/path`) that escape the workspace."""
-    payload = flag[len(prefix):]
+    payload = flag[len(prefix) :]
     if not payload:
         return
     # Reject library specs containing path separators (`-l/abs/path` or `-l../foo`).
@@ -245,6 +282,7 @@ def validate_gcc_flags(flags: list[str]) -> list[str]:
 
 
 # ── Generic string limits ────────────────────────────────
+
 
 def validate_string_length(
     value: str,

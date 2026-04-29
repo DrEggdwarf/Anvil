@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 # ── Scan ─────────────────────────────────────────────────
 
+
 class FirmwareScanRequest(BaseModel):
     binary_path: str = Field(..., max_length=4096)
 
@@ -31,6 +32,7 @@ class FirmwareScanResponse(BaseModel):
 
 # ── Extraction ───────────────────────────────────────────
 
+
 class FirmwareExtractRequest(BaseModel):
     binary_path: str = Field(..., max_length=4096)
     output_dir: str | None = Field(default=None, max_length=4096)
@@ -53,6 +55,7 @@ class FirmwareExtractResponse(BaseModel):
 
 # ── Entropy ──────────────────────────────────────────────
 
+
 class FirmwareEntropyBlock(BaseModel):
     start: int | None = None
     end: int | None = None
@@ -70,6 +73,7 @@ class FirmwareEntropyGraphResponse(BaseModel):
 
 # ── Strings ──────────────────────────────────────────────
 
+
 class FirmwareStringsRequest(BaseModel):
     binary_path: str = Field(..., max_length=4096)
     min_length: int = 4
@@ -86,6 +90,7 @@ class FirmwareStringsResponse(BaseModel):
 
 # ── Secrets ──────────────────────────────────────────────
 
+
 class FirmwareSecretEntry(BaseModel):
     offset: int
     type: str
@@ -98,6 +103,7 @@ class FirmwareSecretsResponse(BaseModel):
 
 # ── File info ────────────────────────────────────────────
 
+
 class FirmwareFileInfoResponse(BaseModel):
     path: str
     type: str | None = None
@@ -105,6 +111,7 @@ class FirmwareFileInfoResponse(BaseModel):
 
 
 # ── Raw search ───────────────────────────────────────────
+
 
 class FirmwareSearchRawRequest(BaseModel):
     binary_path: str = Field(..., max_length=4096)
@@ -122,11 +129,13 @@ class FirmwareSearchResponse(BaseModel):
 
 # ── Opcodes ──────────────────────────────────────────────
 
+
 class FirmwareOpcodesResponse(BaseModel):
     results: list[FirmwareScanResult]
 
 
 # ── Files listing ────────────────────────────────────────
+
 
 class FirmwareFileEntry(BaseModel):
     path: str
@@ -139,6 +148,7 @@ class FirmwareFilesResponse(BaseModel):
 
 
 # ── Signatures ───────────────────────────────────────────
+
 
 class FirmwareSignaturesResponse(BaseModel):
     signatures: list[str]

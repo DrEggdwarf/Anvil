@@ -24,6 +24,7 @@ class WSMessageType(StrEnum):
 
 class WSMessage(BaseModel):
     """Typed WebSocket message — every WS frame follows this schema."""
+
     type: WSMessageType
     session_id: str | None = Field(default=None, max_length=64)
     request_id: str = Field(default_factory=lambda: uuid.uuid4().hex, max_length=64)

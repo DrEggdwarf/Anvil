@@ -69,8 +69,8 @@ class TestPwnSropValidator:
 
 class TestPwnFmtstrValidator:
     def test_accepts_normal_writes(self):
-        req = PwnFmtstrRequest(offset=6, writes={"0x401234": 0xdeadbeef})
-        assert req.writes == {"0x401234": 0xdeadbeef}
+        req = PwnFmtstrRequest(offset=6, writes={"0x401234": 0xDEADBEEF})
+        assert req.writes == {"0x401234": 0xDEADBEEF}
 
     def test_rejects_too_many_writes(self):
         writes = {f"0x{i:08x}": i for i in range(257)}

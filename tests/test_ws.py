@@ -107,11 +107,13 @@ class TestWSCommandDispatch:
     def test_unknown_command_returns_error(self, ws_client, mock_session):
         sid, token = mock_session
         with ws_client.websocket_connect(_ws_url(sid, token)) as ws:
-            ws.send_json({
-                "type": "command",
-                "request_id": "cmd-1",
-                "payload": {"command": "nonexistent"},
-            })
+            ws.send_json(
+                {
+                    "type": "command",
+                    "request_id": "cmd-1",
+                    "payload": {"command": "nonexistent"},
+                }
+            )
             resp = ws.receive_json()
             assert resp["type"] == "error"
             assert resp["payload"]["code"] == "UNKNOWN_COMMAND"
@@ -128,11 +130,13 @@ class TestWSCommandDispatch:
         try:
             sid, token = mock_session
             with ws_client.websocket_connect(_ws_url(sid, token)) as ws:
-                ws.send_json({
-                    "type": "command",
-                    "request_id": "cmd-2",
-                    "payload": {"command": "echo", "data": "hello"},
-                })
+                ws.send_json(
+                    {
+                        "type": "command",
+                        "request_id": "cmd-2",
+                        "payload": {"command": "echo", "data": "hello"},
+                    }
+                )
                 resp = ws.receive_json()
                 assert resp["type"] == "result"
                 assert resp["payload"]["echo"] == "hello"
@@ -152,11 +156,13 @@ class TestWSCommandDispatch:
         try:
             sid, token = mock_session
             with ws_client.websocket_connect(_ws_url(sid, token)) as ws:
-                ws.send_json({
-                    "type": "command",
-                    "request_id": "cmd-3",
-                    "payload": {"command": "fail"},
-                })
+                ws.send_json(
+                    {
+                        "type": "command",
+                        "request_id": "cmd-3",
+                        "payload": {"command": "fail"},
+                    }
+                )
                 resp = ws.receive_json()
                 assert resp["type"] == "error"
                 assert resp["payload"]["code"] == "HANDLER_ERROR"
@@ -177,11 +183,13 @@ class TestWSMultipleMessages:
             r2 = ws.receive_json()
             assert r2["request_id"] == "p2"
 
-            ws.send_json({
-                "type": "command",
-                "request_id": "c1",
-                "payload": {"command": "nope"},
-            })
+            ws.send_json(
+                {
+                    "type": "command",
+                    "request_id": "c1",
+                    "payload": {"command": "nope"},
+                }
+            )
             r3 = ws.receive_json()
             assert r3["type"] == "error"
             assert r3["request_id"] == "c1"

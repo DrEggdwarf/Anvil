@@ -38,7 +38,9 @@ class TestSubprocessSemaphoreLeak:
         initial_value = spm._semaphore._value
 
         # Mock create_subprocess_exec to fail
-        with patch("asyncio.create_subprocess_exec", side_effect=OSError("command not found")):
+        with patch(
+            "asyncio.create_subprocess_exec", side_effect=OSError("command not found")
+        ):
             with pytest.raises(OSError):
                 await spm.spawn(["nonexistent_binary"])
 

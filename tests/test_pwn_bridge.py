@@ -64,7 +64,9 @@ def make_mock_pwn():
     mock.urldecode.return_value = b"ABC"
     mock.md5sumhex.return_value = "d41d8cd98f00b204e9800998ecf8427e"
     mock.sha1sumhex.return_value = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-    mock.sha256sumhex.return_value = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    mock.sha256sumhex.return_value = (
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
     mock.sha512sumhex.return_value = "cf83e1357eefb8bdf1542850d66d8007"
     mock.rol.return_value = 0x200
     mock.ror.return_value = 0x80000000
@@ -476,8 +478,8 @@ class TestPwnROP:
     async def test_rop_raw(self, pwn: PwnBridge):
         mock_rop = MagicMock()
         pwn._rop_cache["rop_test"] = mock_rop
-        await pwn.rop_raw("rop_test", 0xdeadbeef)
-        mock_rop.raw.assert_called_once_with(0xdeadbeef)
+        await pwn.rop_raw("rop_test", 0xDEADBEEF)
+        mock_rop.raw.assert_called_once_with(0xDEADBEEF)
 
     @pytest.mark.asyncio
     async def test_rop_chain(self, pwn: PwnBridge):
@@ -553,7 +555,7 @@ class TestPwnFmtstr:
     async def test_fmtstr_payload(self, pwn: PwnBridge):
         result = await pwn.fmtstr_payload(
             offset=6,
-            writes={"0x601020": 0xdeadbeef},
+            writes={"0x601020": 0xDEADBEEF},
         )
         assert isinstance(result, str)
         pwn._pwn.fmtstr_payload.assert_called_once()
@@ -698,7 +700,10 @@ class TestPwnShellcodeEncode:
     @pytest.mark.asyncio
     async def test_encode_shellcode(self, pwn: PwnBridge):
         mock_encode = MagicMock(return_value=b"\x90\x90")
-        with patch.dict("sys.modules", {"pwnlib": MagicMock(), "pwnlib.encoders": MagicMock(encode=mock_encode)}):
+        with patch.dict(
+            "sys.modules",
+            {"pwnlib": MagicMock(), "pwnlib.encoders": MagicMock(encode=mock_encode)},
+        ):
             result = await pwn.encode_shellcode("9090", "00")
             assert isinstance(result, str)
 
@@ -739,8 +744,8 @@ class TestPwnCorefile:
         mock_core.rdx = 0
         mock_core.rsi = 0
         mock_core.rdi = 0
-        mock_core.rsp = 0x7fffffffe000
-        mock_core.rbp = 0x7fffffffe010
+        mock_core.rsp = 0x7FFFFFFFE000
+        mock_core.rbp = 0x7FFFFFFFE010
         mock_core.rip = 0x41414141
         mock_core.r8 = 0
         mock_core.r9 = 0
@@ -752,8 +757,8 @@ class TestPwnCorefile:
         mock_core.r15 = 0
         mock_mapping = MagicMock()
         mock_mapping.name = "[stack]"
-        mock_mapping.start = 0x7ffffffde000
-        mock_mapping.stop = 0x7ffffffff000
+        mock_mapping.start = 0x7FFFFFFDE000
+        mock_mapping.stop = 0x7FFFFFFFF000
         mock_core.mappings = [mock_mapping]
         pwn._pwn.Corefile.return_value = mock_core
         result = await pwn.corefile_load("/tmp/core")

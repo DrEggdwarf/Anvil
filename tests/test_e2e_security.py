@@ -13,7 +13,9 @@ class TestCompilationSecurityE2E:
     @pytest.mark.asyncio
     async def test_compile_c_blocks_wrapper_flag(self, async_client):
         # First create a session
-        resp = await async_client.post("/api/sessions", json={"bridge_type": "compilation"})
+        resp = await async_client.post(
+            "/api/sessions", json={"bridge_type": "compilation"}
+        )
         if resp.status_code == 400:
             pytest.skip("Compilation bridge not registered")
         session_id = resp.json().get("id", "")
@@ -31,7 +33,9 @@ class TestCompilationSecurityE2E:
 
     @pytest.mark.asyncio
     async def test_compile_c_blocks_fplugin(self, async_client):
-        resp = await async_client.post("/api/sessions", json={"bridge_type": "compilation"})
+        resp = await async_client.post(
+            "/api/sessions", json={"bridge_type": "compilation"}
+        )
         if resp.status_code == 400:
             pytest.skip("Compilation bridge not registered")
         session_id = resp.json().get("id", "")
@@ -66,7 +70,9 @@ class TestInputValidationE2E:
     @pytest.mark.asyncio
     async def test_compile_rejects_oversized_source(self, async_client):
         """Source code over 1MB should be rejected by Pydantic."""
-        resp = await async_client.post("/api/sessions", json={"bridge_type": "compilation"})
+        resp = await async_client.post(
+            "/api/sessions", json={"bridge_type": "compilation"}
+        )
         if resp.status_code == 400:
             pytest.skip("Compilation bridge not registered")
         session_id = resp.json().get("id", "")

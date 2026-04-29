@@ -1,6 +1,5 @@
 """Tests for Anvil configuration (core/config.py)."""
 
-
 import pytest
 
 

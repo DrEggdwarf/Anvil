@@ -67,6 +67,7 @@ class SessionManager:
             bridge_class = bridge_registry.get(bridge_type)
             if bridge_class is None:
                 from backend.app.core.exceptions import ValidationError
+
                 raise ValidationError(
                     f"Unknown bridge type: {bridge_type}",
                     code="UNKNOWN_BRIDGE_TYPE",
@@ -138,6 +139,7 @@ class SessionManager:
 
     async def start_cleanup_loop(self) -> None:
         """Start the periodic cleanup of expired sessions."""
+
         async def _loop() -> None:
             while True:
                 await asyncio.sleep(settings.session_cleanup_interval_seconds)

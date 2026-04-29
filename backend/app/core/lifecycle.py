@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
 
     # Init WS handlers that need session_manager
     from backend.app.api.gdb_ws import init_gdb_ws_handlers
+
     init_gdb_ws_handlers(app.state.session_manager)
 
     logger.info("Anvil backend ready")

@@ -230,7 +230,7 @@ class TestCompileC:
         cb, workspace = bridge
         cb._spm.execute = AsyncMock(return_value=("", "", 0))
         result = await cb.compile_c(
-            '#include <stdio.h>\nint main() { return 0; }\n',
+            "#include <stdio.h>\nint main() { return 0; }\n",
             workspace=workspace,
         )
         assert result["success"] is True
@@ -240,7 +240,11 @@ class TestCompileC:
     async def test_compile_error(self, bridge):
         cb, workspace = bridge
         cb._spm.execute = AsyncMock(
-            return_value=("", "prog.c:1:1: error: expected ';'\nprog.c:2:5: warning: unused var", 1)
+            return_value=(
+                "",
+                "prog.c:1:1: error: expected ';'\nprog.c:2:5: warning: unused var",
+                1,
+            )
         )
         result = await cb.compile_c("bad code", workspace=workspace)
         assert result["success"] is False
@@ -317,8 +321,15 @@ class TestCompileC:
 class TestSecurityFlagsMapping:
     def test_all_keys_exist(self):
         expected = {
-            "relro_full", "relro_partial", "nx", "pie", "canary",
-            "fortify", "no_pie", "no_canary", "no_nx",
+            "relro_full",
+            "relro_partial",
+            "nx",
+            "pie",
+            "canary",
+            "fortify",
+            "no_pie",
+            "no_canary",
+            "no_nx",
         }
         assert set(SECURITY_FLAGS.keys()) == expected
 
@@ -361,10 +372,7 @@ class TestParseGasErrors:
         assert errors[0]["severity"] == "warning"
 
     def test_multiple_errors(self):
-        stderr = (
-            "prog.s:1: Error: bad expression\n"
-            "prog.s:5: Error: operand mismatch\n"
-        )
+        stderr = "prog.s:1: Error: bad expression\nprog.s:5: Error: operand mismatch\n"
         errors = parse_gas_errors(stderr)
         assert len(errors) == 2
 
@@ -431,7 +439,9 @@ class TestCompileGas:
             return_value=("", "program.asm:3: Error: no such instruction", 1)
         )
         result = await cb.compile_asm(
-            "bad code", workspace=workspace, assembler="gas",
+            "bad code",
+            workspace=workspace,
+            assembler="gas",
         )
         assert result["success"] is False
         assert result["stage"] == "assemble"
@@ -463,7 +473,10 @@ class TestCompileGas:
 
         cb._spm.execute = mock_execute
         await cb.compile_asm(
-            "code", workspace=workspace, assembler="gas", fmt="elf32",
+            "code",
+            workspace=workspace,
+            assembler="gas",
+            fmt="elf32",
         )
         assert "--32" in calls[0]
 
@@ -478,7 +491,10 @@ class TestCompileGas:
 
         cb._spm.execute = mock_execute
         await cb.compile_asm(
-            "code", workspace=workspace, assembler="gas", debug=True,
+            "code",
+            workspace=workspace,
+            assembler="gas",
+            debug=True,
         )
         assert "-g" in calls[0]
 
@@ -493,7 +509,10 @@ class TestCompileGas:
 
         cb._spm.execute = mock_execute
         await cb.compile_asm(
-            "code", workspace=workspace, assembler="gas", debug=False,
+            "code",
+            workspace=workspace,
+            assembler="gas",
+            debug=False,
         )
         assert "-g" not in calls[0]
 
@@ -531,7 +550,9 @@ class TestCompileFasm:
             return_value=("", "program.asm [5]:\n  error: illegal instruction.", 1)
         )
         result = await cb.compile_asm(
-            "bad code", workspace=workspace, assembler="fasm",
+            "bad code",
+            workspace=workspace,
+            assembler="fasm",
         )
         assert result["success"] is False
         assert result["stage"] == "assemble"
@@ -563,7 +584,10 @@ class TestCompileFasm:
 
         cb._spm.execute = mock_execute
         await cb.compile_asm(
-            "code", workspace=workspace, assembler="fasm", debug=True,
+            "code",
+            workspace=workspace,
+            assembler="fasm",
+            debug=True,
         )
         # FASM command should be simple: fasm <src> <obj>
         assert len(calls[0]) == 3

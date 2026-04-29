@@ -37,8 +37,15 @@ class Settings(BaseSettings):
     # ── Files ────────────────────────────────────────────
     max_upload_size_bytes: int = 10 * 1024 * 1024  # 10 MB
     allowed_upload_extensions: list[str] = [
-        ".asm", ".s", ".c", ".h", ".py",
-        ".elf", ".bin", ".hex", ".o",
+        ".asm",
+        ".s",
+        ".c",
+        ".h",
+        ".py",
+        ".elf",
+        ".bin",
+        ".hex",
+        ".o",
     ]
     workspace_base_dir: str = "~/.anvil/workspaces"
 

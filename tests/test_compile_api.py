@@ -140,7 +140,14 @@ class TestAsmCompileRoute:
                 "stage": "assemble",
                 "binary_path": None,
                 "object_path": None,
-                "errors": [{"file": "program.asm", "line": 5, "severity": "error", "message": "bad instruction"}],
+                "errors": [
+                    {
+                        "file": "program.asm",
+                        "line": 5,
+                        "severity": "error",
+                        "message": "bad instruction",
+                    }
+                ],
                 "stdout": "",
                 "stderr": "program.asm:5: error: bad instruction",
                 "returncode": 1,
@@ -164,9 +171,14 @@ class TestAsmCompileRoute:
             "backend.app.bridges.compilation.CompilationBridge.compile_asm",
             new_callable=AsyncMock,
             return_value={
-                "success": True, "stage": "link", "binary_path": "/tmp/p",
-                "object_path": "/tmp/p.o", "errors": [], "stdout": "",
-                "stderr": "", "returncode": 0,
+                "success": True,
+                "stage": "link",
+                "binary_path": "/tmp/p",
+                "object_path": "/tmp/p.o",
+                "errors": [],
+                "stdout": "",
+                "stderr": "",
+                "returncode": 0,
             },
         ) as mock_compile:
             resp = await client.post(

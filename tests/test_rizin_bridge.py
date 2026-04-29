@@ -165,7 +165,9 @@ class TestRizinFunctions:
 
     @pytest.mark.asyncio
     async def test_function_info(self, rizin: RizinBridge):
-        rizin._pipe.cmdj.return_value = [{"offset": 0x401000, "name": "main", "nargs": 2}]
+        rizin._pipe.cmdj.return_value = [
+            {"offset": 0x401000, "name": "main", "nargs": 2}
+        ]
         result = await rizin.function_info("0x401000")
         rizin._pipe.cmdj.assert_called_with("afij @ 0x401000")
         assert result["name"] == "main"

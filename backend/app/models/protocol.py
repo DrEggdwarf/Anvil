@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # ── Connection ───────────────────────────────────────────
 
+
 class ModbusConnectRequest(BaseModel):
     transport: str = Field(default="tcp", max_length=16)
     host: str = Field(default="127.0.0.1", max_length=256)
@@ -30,6 +31,7 @@ class ModbusConnectResponse(BaseModel):
 
 # ── Read operations ──────────────────────────────────────
 
+
 class ModbusReadRequest(BaseModel):
     address: int = Field(default=0, ge=0)
     count: int = Field(default=1, ge=1, le=2000)
@@ -50,6 +52,7 @@ class ModbusExceptionStatusResponse(BaseModel):
 
 
 # ── Write operations ─────────────────────────────────────
+
 
 class ModbusWriteCoilRequest(BaseModel):
     address: int
@@ -98,6 +101,7 @@ class ModbusWriteResponse(BaseModel):
 
 # ── File records ─────────────────────────────────────────
 
+
 class ModbusFileRecordRequest(BaseModel):
     file_number: int
     record_number: int
@@ -113,6 +117,7 @@ class ModbusFileRecordResponse(BaseModel):
 
 
 # ── Device identification ────────────────────────────────
+
 
 class ModbusDeviceInfoRequest(BaseModel):
     read_code: int = 1  # 1=Basic, 2=Regular, 3=Extended, 4=Specific
@@ -131,6 +136,7 @@ class ModbusDeviceIdRequest(BaseModel):
 
 
 # ── Diagnostics ──────────────────────────────────────────
+
 
 class ModbusDiagRequest(BaseModel):
     device_id: int = 1
@@ -158,6 +164,7 @@ class ModbusDiagResponse(BaseModel):
 
 # ── Event counter/log ────────────────────────────────────
 
+
 class ModbusEventCounterResponse(BaseModel):
     error: bool
     status: int | None = None
@@ -176,6 +183,7 @@ class ModbusEventLogResponse(BaseModel):
 
 # ── Data type conversion ────────────────────────────────
 
+
 class ModbusConvertFromRequest(BaseModel):
     registers: list[int] = Field(..., max_length=500)
     data_type: str = Field(default="UINT16", max_length=32)
@@ -193,6 +201,7 @@ class ModbusConvertResponse(BaseModel):
 
 
 # ── Scan ─────────────────────────────────────────────────
+
 
 class ModbusScanDevicesRequest(BaseModel):
     start_id: int = 1
@@ -219,6 +228,7 @@ class ModbusScanResponse(BaseModel):
 
 
 # ── Server / Simulator ──────────────────────────────────
+
 
 class ModbusServerStartRequest(BaseModel):
     port: int = Field(default=5020, ge=1, le=65535)
