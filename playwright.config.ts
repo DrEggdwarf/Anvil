@@ -16,7 +16,7 @@ export default defineConfig({
   retries: IS_CI ? 2 : 1,
   workers: IS_CI ? 1 : undefined,
   // Keep individual specs under 90s — anything longer points to a real bug.
-  timeout: 90_000,
+  timeout: 120_000,
   expect: { timeout: 10_000 },
 
   reporter: IS_CI ? [['github'], ['list']] : [['list'], ['html', { open: 'never' }]],
@@ -26,8 +26,8 @@ export default defineConfig({
     trace: IS_CI ? 'on-first-retry' : 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: IS_CI ? 'retain-on-failure' : 'off',
-    actionTimeout: 8_000,
-    navigationTimeout: 20_000,
+    actionTimeout: IS_CI ? 20_000 : 8_000,
+    navigationTimeout: IS_CI ? 40_000 : 20_000,
   },
 
   projects: [

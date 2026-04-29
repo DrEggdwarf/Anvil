@@ -93,6 +93,9 @@ export const test = base.extend<AnvilFixtures>({
   app: async ({ page }, use) => {
     await resetBackendState()
     await page.goto('/')
+    // Wait for the ASM editor textarea to be mounted before handing off to tests.
+    // In CI the React app takes longer to hydrate than locally.
+    await page.locator('.anvil-ed-textarea').waitFor({ timeout: 30_000 })
     await use(new AnvilApp(page))
   },
 })
