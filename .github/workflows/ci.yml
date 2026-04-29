@@ -45,9 +45,9 @@ jobs:
           pip install --upgrade pip
           pip install pip-audit
           pip install -e "backend/[dev,re,pwn,protocols]"
-          pip-audit --ignore-package pip
+          pip-audit --ignore-vuln CVE-2026-3219
           # firmware excluded: binwalk has no PyPI release for Python 3.12+
-          # pip ignored: runner-managed, not our dependency
+          # CVE-2026-3219: affects pip itself (runner-managed), fixed by upgrade above
       - name: npm audit (high+ only)
         run: npm audit --audit-level=high
       - name: cargo-audit (Rust deps for src-tauri)
