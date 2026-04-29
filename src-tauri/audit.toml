@@ -1,0 +1,4 @@
+[advisories]
+# rand 0.7.3 unsound via Tauri's dependency chain (phf_generator -> tauri-utils).
+# Cannot update: Tauri owns this transitive dep. Re-evaluate when Tauri updates phf.
+ignore = ["RUSTSEC-2026-0097"]

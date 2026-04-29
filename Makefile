@@ -1,15 +1,16 @@
 # Anvil — local dev helpers
 # Run `make check` before pushing to catch CI failures early.
+# Mirrors exactly what .github/workflows/ci.yml runs.
 
 PYTHON  := .venv/bin/python
 RUFF    := .venv/bin/ruff
 BANDIT  := .venv/bin/bandit
 PYTEST  := .venv/bin/python -m pytest
 
-.PHONY: check lint test fmt install-hooks
+.PHONY: check lint test fmt audit-cargo audit-npm install-hooks
 
-## check: run every CI gate locally (lint + format + bandit + tests)
-check: lint test
+## check: run every CI gate locally (lint + format + bandit + tests + cargo + npm)
+check: lint test audit-cargo audit-npm
 
 lint:
 	$(RUFF) check backend/ tests/ anvil_mcp/
@@ -18,6 +19,18 @@ lint:
 
 test:
 	$(PYTEST) tests/ --tb=short -q
+
+## audit-cargo: cargo audit (requires: cargo install cargo-audit --locked)
+audit-cargo:
+	@if command -v cargo-audit >/dev/null 2>&1; then \
+		cargo audit --manifest-path src-tauri/Cargo.toml; \
+	else \
+		echo "⚠ cargo-audit not installed — skipping (run: cargo install cargo-audit --locked)"; \
+	fi
+
+## audit-npm: npm audit high+ vulnerabilities
+audit-npm:
+	npm audit --audit-level=high
 
 ## fmt: auto-fix formatting
 fmt:
