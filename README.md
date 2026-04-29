@@ -10,7 +10,7 @@ Toolkit de sécurité bas niveau intégré : ASM, Pwn, Reverse Engineering, Firm
 |--------|-------------|------|
 | Shell | Tauri v2 (Rust) | Desktop app, IPC, file dialogs, serial port |
 | Frontend | React 19 + TypeScript 5 + Vite 7 | UI, composants, panels, éditeur |
-| Backend | FastAPI + Python 3.12 | API WebSocket/REST, bridges outils |
+| Backend | FastAPI + Python 3.12+ | API WebSocket/REST, bridges outils |
 
 ## Architecture
 

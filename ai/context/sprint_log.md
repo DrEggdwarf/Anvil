@@ -448,25 +448,42 @@ fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth
 ---
 ---
 
-## Sprint 19 — Vision sync & audit finalization (29 avril 2026) ✅
-**Objectif** : Aligner les docs sur la vision v2 d'Anvil, documenter le contrat MCP, finaliser l'audit sécurité post-merge.
+## Sprint 19 — Vision sync, audit finalization & CI hardening (29 avril 2026) ✅
+**Objectif** : Aligner les docs sur la vision v2, documenter le contrat MCP, finaliser l'audit sécurité, stabiliser la pipeline CI.
 **Agents** : direct session (pas de workflow multi-agent)
 
-### Réalisé
+### Réalisé — Docs & Vision
 - [x] Vision v2 documentée (ADR-021) : "Le Burp Suite du bas niveau", 5 modules, GPL v3
 - [x] Contrat MCP server documenté (ADR-022) : standalone SSE/stdio, contrat complet défini, implémentation en dernier (Sprint 28)
-- [x] Fix `test_concurrent_execute_serialized` — health mock manquant après ajout du pre-check health dans `gdb_bridge.execute()` (regression silencieuse introduite post-Sprint 14)
-- [x] Fix 3 warnings Pydantic v2 — champ `register` shadow ABCMeta.register() :
-      → `GdbSetRegisterRequest`, `RizinEsilSetRegRequest` : `alias="register"` + `ConfigDict(populate_by_name=True)`
-      → `ModbusDiagResponse` : `serialize_by_alias=True` + alias, aucun changement du contrat JSON API
 - [x] Backlog revampé : RE phases 1-3, Wire module, Firmware pipeline, Sprints 24-28 ajoutés
-- [x] Sprint 14 hardening confirmé ✅ : 700/700 tests, ruff clean, bandit clean, cargo check ok
+- [x] README + AGENTS.md + CLAUDE.md synchronisés avec vision v2
+
+### Réalisé — Audit & fixes code
+- [x] Fix `test_concurrent_execute_serialized` — health mock manquant (regression silencieuse post-Sprint 14)
+- [x] Fix 3 warnings Pydantic v2 — champ `register` shadow ABCMeta :
+      → `GdbSetRegisterRequest`, `RizinEsilSetRegRequest` : `alias="register"` + `ConfigDict(populate_by_name=True)`
+      → `ModbusDiagResponse` : `serialize_by_alias=True`, contrat JSON API inchangé
+- [x] Sprint 14 hardening confirmé ✅ : 736 tests, ruff clean, bandit clean, cargo check ok
+- [x] MCP skeleton merge (Ultraplan) + résolution conflits + 36 nouveaux tests
+
+### Réalisé — CI hardening (stabilisation complète)
+- [x] `Makefile` + `.githooks/pre-push` : `make check` = CI locale exacte, hook bloquant avant push
+- [x] Smoke test : gdb → pwn (GDB absent dans le job test)
+- [x] Ruff format : 52 fichiers reformatés, `anvil_mcp/` ajouté aux cibles lint
+- [x] `src-tauri/.cargo/audit.toml` : 19 advisories Tauri documentés et ignorés (scan local exhaustif)
+- [x] pip-audit : `--ignore-vuln CVE-2026-3219` + upgrade pip avant audit
+- [x] Node.js 24 : `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` (migration avant juin 2026)
+- [x] Python 3.12 → 3.13 en CI : alignement avec le venv local, plus de drift
+- [x] Cache pip (`setup-python cache: pip`) sur les 4 jobs qui l'utilisent
+- [x] Cache cargo-audit binary (key: version) : ~4 min install → ~0s sur cache hit
+- [x] E2E : fixture attend `.anvil-ed-textarea` avant lancement, `actionTimeout` 8s → 20s en CI
+- [x] `gh` CLI installé en local pour accès aux logs CI
 
 ### Couverture finale
-- Backend Python : **700 tests** (699 Sprint 14 → 700 après fix test_concurrent_execute_serialized)
+- Backend Python : **736 tests** (+36 MCP skeleton)
 - Frontend unit/component : 27 tests vitest
-- E2E : 31 tests Playwright
-- **Total : ~758 tests automatisés**
+- E2E Playwright : 31 specs
+- **Total : ~794 tests automatisés**
 
 ### Suite
 Sprint 20 — WS migration + Mode RE phase 1 (voir backlog.md)
