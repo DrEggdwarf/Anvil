@@ -43,8 +43,9 @@ jobs:
       - name: pip-audit (Python deps via pyproject.toml)
         run: |
           pip install pip-audit
-          pip install -e "backend/[dev,re,pwn,firmware,protocols]"
+          pip install -e "backend/[dev,re,pwn,protocols]"
           pip-audit
+          # Note: firmware group excluded — binwalk has no PyPI release for Python 3.12+
       - name: npm audit (high+ only)
         run: npm audit --audit-level=high
       - name: cargo-audit (Rust deps for src-tauri)
