@@ -1,4 +1,12 @@
 [advisories]
-# rand 0.7.3 unsound via Tauri's dependency chain (phf_generator -> tauri-utils).
-# Cannot update: Tauri owns this transitive dep. Re-evaluate when Tauri updates phf.
-ignore = ["RUSTSEC-2026-0097"]
+# All advisories below are in Tauri's transitive dependency chain.
+# We cannot update them — Tauri owns these deps. Re-evaluate on each Tauri major bump.
+ignore = [
+    "RUSTSEC-2026-0097",  # rand 0.7.3 unsound — via phf_generator -> tauri-utils
+    "RUSTSEC-2025-0081",  # unic-char-property unmaintained — via urlpattern -> tauri-utils
+    "RUSTSEC-2025-0075",  # unic-char-range unmaintained — via urlpattern -> tauri-utils
+    "RUSTSEC-2025-0080",  # unic-common unmaintained — via urlpattern -> tauri-utils
+    "RUSTSEC-2025-0100",  # unic-ucd-ident unmaintained — via urlpattern -> tauri-utils
+    "RUSTSEC-2025-0098",  # unic-ucd-version unmaintained — via urlpattern -> tauri-utils
+    "RUSTSEC-2024-0429",  # glib 0.18.5 unsound — via webkit2gtk -> wry -> tauri-runtime-wry
+]
