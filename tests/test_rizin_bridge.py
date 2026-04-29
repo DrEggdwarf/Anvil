@@ -241,7 +241,11 @@ class TestRizinDecompile:
         rizin._pipe.cmd.return_value = "int main(void) {\n  return 0;\n}\n"
         result = await rizin.decompile("0x401000")
         rizin._pipe.cmd.assert_called_with("pdg @ 0x401000")
-        assert "main" in result
+        assert result["code"] is not None
+        assert "main" in result["code"]
+        assert result["source"] == "rz-ghidra"
+        assert result["address"] == "0x401000"
+        assert result["language"] == "c"
 
     @pytest.mark.asyncio
     async def test_decompile_fallback_to_pdd(self, rizin: RizinBridge):
@@ -254,9 +258,11 @@ class TestRizinDecompile:
             return "decompiled output"
 
         rizin._pipe.cmd.side_effect = mock_cmd
-        await rizin.decompile("0x401000")
+        result = await rizin.decompile("0x401000")
         assert len(calls) == 2
         assert calls[1].startswith("pdd")
+        assert result["source"] == "rz-dec"
+        assert result["code"] == "decompiled output"
 
 
 # ── Strings ──────────────────────────────────────────────

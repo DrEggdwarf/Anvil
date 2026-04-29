@@ -85,8 +85,8 @@ async def analyze(
 ):
     """Run analysis (aa/aaa/aaaa)."""
     bridge = _get_rizin_bridge(session_id, sm)
-    output = await bridge.analyze(body.level)
-    return RizinRawResponse(output=output)
+    result = await bridge.analyze(body.level)
+    return RizinRawResponse(output=result.get("raw", ""))
 
 
 # ── Binary info ──────────────────────────────────────────
@@ -289,8 +289,8 @@ async def decompile(
 ):
     """Decompile function (r2ghidra/pdd)."""
     bridge = _get_rizin_bridge(session_id, sm)
-    output = await bridge.decompile(body.address)
-    return RizinRawResponse(output=output)
+    result = await bridge.decompile(body.address)
+    return RizinRawResponse(output=result.get("code", ""))
 
 
 # ── Strings ──────────────────────────────────────────────

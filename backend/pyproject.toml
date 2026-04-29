@@ -33,6 +33,10 @@ firmware = [
 protocols = [
     "pymodbus>=3.7",
 ]
+mcp = [
+    "mcp>=1.0",
+    "httpx>=0.27",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["../tests"]

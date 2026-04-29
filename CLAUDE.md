@@ -60,11 +60,33 @@ Note: pytest asyncio_mode is set to "auto" in pyproject.toml — no need for `@p
 src-tauri/src/     Rust shell: spawns backend as subprocess, 2 IPC commands (check_backend, check_dependencies)
 src/               React UI — multi-mode: ASM (3-col editor+debug), Pwn (split editors+terminal+tools)
 backend/app/       FastAPI: main.py → 9 routers (health, sessions, gdb, compile, rizin, pwn, firmware, protocol, ws), core/, bridges/, models/, sessions/
+anvil_mcp/         Standalone MCP server: exposes all tools/resources/prompts to Claude Desktop/Cursor
 tests/             24 pytest modules, ~664 tests, all use MockBridge (no real tools needed in CI)
 ai/                12 Claude Code agents + 2 workflows (see ai/README.md)
 ```
 
 [AGENTS.md](AGENTS.md) is a condensed companion to this file (commands cheatsheet + key patterns). Keep both in sync when editing.
+
+### MCP Server (`anvil_mcp/`)
+
+Standalone Python server, a client of the FastAPI backend. Lets Claude orchestrate the
+full attack pipeline (Firmware → RE → Pwn) autonomously.
+
+```
+Claude Desktop / Cursor
+      │ stdio (default) or SSE --port 8001
+      ▼
+anvil_mcp/server.py  (FastMCP)
+      │ HTTP REST  →  http://127.0.0.1:8000
+      ▼
+FastAPI backend  ← existing bridges
+```
+
+- Install: `pip install -e "backend/[mcp]"` (adds `mcp>=1.0` + `httpx`)
+- Run: `python -m anvil_mcp.server` (stdio) or `python -m anvil_mcp.server --transport sse --port 8001`
+- **Session tools** (`anvil_mcp/tools/session.py`) are fully wired to `/api/sessions`.
+- **Domain tools** (asm, pwn, re, firmware, wire) are stubs — `NotImplementedError` — filled per-sprint as modules mature.
+- **LLM output rule**: every MCP-destined bridge method must return a structured `dict` (not raw `str`). Include a `summary` field (one sentence) when useful. `rizin_bridge.analyze()` and `decompile()` already follow this rule.
 
 ### How the layers connect
 
