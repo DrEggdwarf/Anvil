@@ -42,6 +42,9 @@ export class AnvilApp {
     await this.page.keyboard.press('Control+A')
     await this.page.keyboard.press('Delete')
     await ta.fill(code)
+    // React re-renders the gutter asynchronously after the textarea fill.
+    // Wait for at least one gutter line to be visible before returning.
+    await this.page.locator('.anvil-ed-gutter-line').first().waitFor({ timeout: 10_000 })
   }
 
   // ── Panels ───────────────────────────────────────────────
