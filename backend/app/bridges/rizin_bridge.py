@@ -107,14 +107,15 @@ class RizinBridge(BaseBridge):
 
     # ── Analysis ─────────────────────────────────────────
 
-    async def analyze(self, level: str = "aaa") -> str:
-        """Run analysis. Levels: aa, aaa, aaaa."""
+    async def analyze(self, level: str = "aaa") -> dict:
+        """Run analysis. Levels: aa, aaa, aaaa. Returns structured dict for MCP."""
         self._require_ready()
         if level not in ("aa", "aaa", "aaaa"):
             level = "aaa"
-        result = self._pipe.cmd(level)
+        raw = self._pipe.cmd(level)
         self._analyzed = True
-        return result
+        funcs = self._cmdj("aflj") or []
+        return {"status": "ok", "level": level, "functions_found": len(funcs), "raw": raw}
 
     async def open_binary(self, binary_path: str, *, allowed_dirs: list[str] | None = None) -> str:
         """Open a new binary file in the current session."""
@@ -220,19 +221,18 @@ class RizinBridge(BaseBridge):
 
     # ── Decompiler ───────────────────────────────────────
 
-    async def decompile(self, address: str) -> str:
-        """Decompile function via r2ghidra (pdg @ addr).
+    async def decompile(self, address: str) -> dict:
+        """Decompile function via r2ghidra (pdg @ addr). Returns structured dict for MCP.
 
         Falls back to pdd if r2ghidra not available.
         """
         self._require_ready()
         sanitize_rizin_input(address, "address")
-        # Try r2ghidra first
         result = self._pipe.cmd(f"pdg @ {address}")
         if result and "Cannot" not in result and "error" not in result.lower():
-            return result
-        # Fallback to pdd (rizin native decompiler)
-        return self._pipe.cmd(f"pdd @ {address}")
+            return {"address": address, "language": "c", "code": result, "source": "rz-ghidra"}
+        code = self._pipe.cmd(f"pdd @ {address}")
+        return {"address": address, "language": "c", "code": code, "source": "rz-dec"}
 
     # ── Strings ──────────────────────────────────────────
 
