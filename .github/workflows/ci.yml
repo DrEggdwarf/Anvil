@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Opt into Node.js 24 for all actions (Node 20 deprecated June 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     name: Lint & Security
@@ -14,10 +18,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - name: Install dependencies
-        run: |
-          pip install ruff bandit
+        # Use pyproject.toml versions — same as local venv (ADR-019)
+        run: pip install -e "backend/[dev]"
       - name: Ruff lint
         run: ruff check backend/ tests/ anvil_mcp/
       - name: Ruff format check
@@ -26,7 +32,7 @@ jobs:
         run: bandit -r backend/ -c backend/pyproject.toml
 
   audit:
-    name: Dependency audits (Sprint 17 — closes Sec A9)
+    name: Dependency audits
     runs-on: ubuntu-latest
     # Audits report for visibility but do not gate the build — a fresh upstream
     # CVE shouldn't block a hotfix. Promote each step to required when the team
@@ -36,24 +42,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
       - name: pip-audit (Python deps via pyproject.toml)
         run: |
           pip install --upgrade pip
           pip install pip-audit
           pip install -e "backend/[dev,re,pwn,protocols]"
           pip-audit --ignore-vuln CVE-2026-3219
-          # firmware excluded: binwalk has no PyPI release for Python 3.12+
+          # firmware excluded: binwalk has no PyPI release for Python 3.13+
           # CVE-2026-3219: affects pip itself (runner-managed), fixed by upgrade above
       - name: npm audit (high+ only)
         run: npm audit --audit-level=high
+      - name: Cache cargo-audit binary
+        id: cache-cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-v0.22-${{ runner.os }}
+      - name: Install cargo-audit
+        if: steps.cache-cargo-audit.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked
       - name: cargo-audit (Rust deps for src-tauri)
         working-directory: src-tauri
         run: |
-          cargo install cargo-audit --locked
           # audit.toml ignores known Tauri transitive dep advisories (all unfixable).
           # See src-tauri/.cargo/audit.toml for the documented list.
           cargo audit
@@ -65,11 +82,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
       - name: Install Python deps
         # ADR-019: pyproject.toml is the single source of truth.
         run: pip install -e "backend/[dev]"
@@ -89,7 +108,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - name: Install backend
         run: pip install -e "backend/[dev,pwn]"
       - name: Boot backend
@@ -114,11 +135,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: npm
       - name: Install backend (with pwn for Pwn specs)
         run: pip install -e "backend/[dev,pwn]"
       - name: Install runtime tools (nasm, gdb, gcc)
