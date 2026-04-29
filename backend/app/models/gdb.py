@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ── Requests ─────────────────────────────────────────────
 
@@ -120,7 +120,8 @@ class GdbWriteMemoryRequest(BaseModel):
 
 
 class GdbSetRegisterRequest(BaseModel):
-    register: str = Field(..., max_length=64)
+    model_config = ConfigDict(populate_by_name=True)
+    register_name: str = Field(..., max_length=64, alias="register")
     value: str = Field(..., max_length=256)
 
 

@@ -674,7 +674,7 @@ async def esil_set_register(
     sm: SessionManager = Depends(get_session_manager),
 ):
     bridge = _get_rizin_bridge(session_id, sm)
-    output = await bridge.esil_set_register(body.register, body.value)
+    output = await bridge.esil_set_register(body.register_name, body.value)
     return RizinRawResponse(output=output)
 
 

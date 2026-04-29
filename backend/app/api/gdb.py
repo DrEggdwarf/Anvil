@@ -404,7 +404,7 @@ async def set_register(
 ):
     """Set a register value."""
     bridge = _get_gdb_bridge(session_id, sm)
-    responses = await bridge.set_register(body.register, body.value)
+    responses = await bridge.set_register(body.register_name, body.value)
     return GdbRawResponse(responses=responses)
 
 

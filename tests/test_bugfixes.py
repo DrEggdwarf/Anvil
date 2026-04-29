@@ -93,6 +93,7 @@ class TestGdbBridgeLock:
 
         bridge._controller = MagicMock()
         bridge._controller.write = mock_write
+        bridge.health = AsyncMock(return_value=True)
 
         # Execute two commands concurrently — they should be serialized
         await asyncio.gather(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ── Connection ───────────────────────────────────────────
 
@@ -147,10 +147,11 @@ class ModbusDiagRestartRequest(BaseModel):
 
 
 class ModbusDiagResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
     error: bool
     count: int | None = None
     message: str | None = None
-    register: int | None = None
+    register_val: int | None = Field(None, alias="register")
     status: int | None = None
     exception_code: int | None = None
 

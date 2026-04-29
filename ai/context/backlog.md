@@ -54,26 +54,41 @@
 - [x] CI workflow : 5 jobs (lint, audit, test, smoke, e2e)
 - [x] Doc complète (`tests/e2e/README.md`)
 
-### Sprint 19 — WS migration + Mode RE phase 1 ⏸ PLANIFIÉ
-- [ ] **F.2** Migrer `useAnvilSession` REST → `AnvilWS.request()` (-50ms/step) — débloqué par la stack e2e
-- [ ] **Mode RE phase 1** : layout 3 cols (fonctions | disasm | info), liste fonctions filtrable, viewer disasm, panels strings/imports/exports
-- [ ] Specs e2e RE : `mode-switch`, `analyze`, `function-list`, `disasm-view`
-- [ ] **G** ReferenceModal split par mode (si triggers atteints — backlog Sprint 17)
+### Sprint 19 — Vision sync & audit finalization ✅ (29 avril)
+- [x] ADR-021 Vision v2 + ADR-022 MCP contrat (decisions.md)
+- [x] Fix test `test_concurrent_execute_serialized` (health mock) + 3 warnings Pydantic v2 (register alias)
+- [x] Backlog revampé avec vision v2, Sprints 24-28 ajoutés
+- [x] Sprint 14 hardening confirmé : 700/700 tests, ruff/bandit/cargo clean
 
-### Sprint 20 — Mode RE phase 2 ⏸ PLANIFIÉ
-- [ ] Décompilation pseudo-C via `r2ghidra pdg`
-- [ ] CFG canvas (call graph, function graph)
+### Sprint 20 — WS migration + Mode RE phase 1 ⏸ PLANIFIÉ
+
+**A — WS migration** (débloqué par stack e2e Sprint 18) :
+- [ ] Migrer `useAnvilSession` REST → `AnvilWS.request()` (-50ms/step)
+
+**B — Mode RE phase 1** (~1 semaine, valeur immédiate) :
+- [ ] Layout 3 colonnes : fonctions | désassemblage | info
+- [ ] Liste fonctions/symboles filtrable (rzpipe `aflj`)
+- [ ] Désassemblage texte avec navigation (rzpipe `pdj`)
+- [ ] Panels strings, imports, exports, xrefs
+- [ ] Right-click menus contextuels
+- [ ] `rizin.analyze()` et `decompile()` → dicts structurés (requis ADR-022 MCP)
+- [ ] Specs e2e : `mode-switch`, `analyze`, `function-list`, `disasm-view`
+
+### Sprint 21 — Mode RE phase 2 ⏸ PLANIFIÉ
+- [ ] Décompilation pseudo-C via `r2ghidra pdg` côte à côte avec le désassemblage
+- [ ] Synchronisation ASM ↔ C (clic ligne ASM → highlight C correspondant)
+- [ ] Hex viewer virtualisé
 - [ ] Xrefs panel
-- [ ] Specs e2e RE phase 2 : `decompile`, `cfg-canvas`, `xrefs`
+- [ ] Specs e2e RE phase 2 : `decompile`, `hex-view`, `xrefs`
 
-### Sprint 21 — GitHub & release engineering ⏸ PLANIFIÉ (~9h, 3 phases)
+### Sprint 22 — GitHub & release engineering ⏸ PLANIFIÉ (~9h, 3 phases)
 
 > Anvil n'a quasiment aucun outillage GitHub standard. Ce sprint comble l'écart
 > avant tout déploiement public ou première release. À découper si nécessaire.
 
+**Décisions prises** : Licence **GPL v3** (ADR-021).
+
 **Décisions à prendre avant de démarrer** :
-- License : `MIT` / `Apache-2.0` / `GPLv3` / autre — **bloquant Phase A**, sans license
-  personne ne peut légalement utiliser Anvil
 - Email contact sécurité pour `SECURITY.md` (mailto: ou @PGP key)
 
 #### Phase A — Indispensable (~2h, bloquant déploiement public)
@@ -113,7 +128,7 @@
 - PR auto-labeling par chemin — gadget, peu de valeur sur repo solo
 - Branch protection rules — config UI GitHub, pas dans le repo (juste documenté)
 
-### Sprint 22 — Resilience & UX hardening ⏸ PLANIFIÉ (~3-4 jours)
+### Sprint 23 — Resilience & UX hardening ⏸ PLANIFIÉ (~3-4 jours)
 
 > Ferme les angles morts opérationnels qui apparaissent dès qu'un user externe
 > teste Anvil ou qu'un bug remonte. Pas de feature visible nouvelle, mais l'app
@@ -155,6 +170,75 @@
 - **i18n (Phase H)** — strings actuellement mix FR/EN. Activer quand le projet vise
   un public anglophone explicitement.
 - **Plugin system (Phase H)** — extension third-party. Activer si demande forte.
+
+### Sprint 24 — Contexte partagé inter-modules ⏸ PLANIFIÉ
+
+> Fondement QoL de la vision v2. Sans ce sprint, changer de module = recommencer à zéro.
+
+- [ ] `SessionContext` React (binary, arch, source, workspace_id) dans Context API global
+- [ ] Persistance sur changement de mode (ASM → Pwn → RE = même binaire chargé)
+- [ ] Toasters globaux : `<Toaster>` + `useToast()` — compilation réussie/échouée, session expirée, archi détectée
+- [ ] Actions rapides contextuelles : BOF pattern détecté → "Générer cyclic" inline, ELF trouvé → "Ouvrir en RE", firmware extrait → "Analyser les ELF"
+
+### Sprint 25 — GDB remote dans ASM ⏸ PLANIFIÉ
+
+> Extension d'ASM, pas un nouveau module — même protocole RSP.
+
+- [ ] Remplacer `gdb` → `gdb-multiarch` dans le bridge
+- [ ] Sélecteur d'archi dans l'UI ASM (x86, ARM, MIPS, PowerPC)
+- [ ] Connexion GDB remote via protocole RSP : `qemu-arm-static -g 1234`, `gdbserver`, OpenOCD
+- [ ] Cross-compilers : `arm-linux-gnueabihf-gcc`, `mips-linux-gnu-gcc` dans `CompilationBridge`
+- [ ] Bare metal via OpenOCD (gratuit si remote est implémenté — même protocole)
+- [ ] Specs e2e : `remote-connect`, `cross-compile`, `qemu-step`
+
+### Sprint 26 — Firmware pipeline ⏸ PLANIFIÉ
+
+> Pipeline 4 étapes : détection → extraction → triage → passerelle.
+
+- [ ] Visualisation entropie couleur (zones plaintext / compressées / chiffrées)
+- [ ] Magic bytes, format, archi probable détectés automatiquement
+- [ ] Binwalk récursif (`-eM`) orchestré visuellement — arbre d'extraction par niveau
+- [ ] Support SquashFS, JFFS2, CRAMFS (unsquashfs, jefferson)
+- [ ] Triage automatique firmwalker-like : credentials hardcodés, clés privées, services dangereux, IPs, tokens — classés high/med/low
+- [ ] File browser du filesystem extrait avec badges findings sur fichiers intéressants
+- [ ] ELF trouvé → "Ouvrir en RE" ou "Ouvrir en Pwn" en un clic
+- [ ] Crypto basique : XOR bruteforce, détection AES-CBC IV fixe
+- [ ] `firmware_scan()` et `firmware_extract()` → dicts structurés (requis ADR-022 MCP)
+
+### Sprint 27 — Wire (pcap + Modbus Repeater) ⏸ PLANIFIÉ
+
+> Wireshark affiche les trames ICS ; Anvil les rend exploitables.
+
+**3 modes par ordre de priorité** :
+
+**Phase 1 — pcap** (zéro dépendance hardware, testable offline) :
+- [ ] Drop `.pcap`/`.pcapng` → décodage humain immédiat (pas des bytes bruts)
+- [ ] Filtrage (`modbus.func == 3`, etc.)
+- [ ] Code couleur : sent / recv / error
+- [ ] Champs nommés et expliqués ("function code 0x06 — Write Single Register")
+- [ ] Notes contextuelles automatiques ("Write sans authentification détecté")
+- [ ] Vue hex synchronisée
+
+**Phase 2 — TCP Repeater** :
+- [ ] Repeater : clic trame capturée → importée pré-remplie → modifier champs → envoyer
+- [ ] Replay ×N, fuzzing de registres
+- [ ] Connexion TCP (host:port) — testable avec simulateur logiciel Modbus
+
+**Phase 3 — UART/RTU** (en dernier) :
+- [ ] Série physique via Tauri serial port natif
+- [ ] `wire_*` tools → dicts structurés (requis ADR-022 MCP)
+
+### Sprint 28 — MCP server ⏸ PLANIFIÉ (après que les 5 modules soient prêts)
+
+> Voir ADR-022 pour le contrat complet. Ce sprint est le dernier de la roadmap.
+
+- [ ] `pip install -e "backend/[mcp]"` — groupe optionnel pyproject.toml
+- [ ] `mcp/server.py` standalone (stdio + SSE) — client HTTP du backend FastAPI
+- [ ] `mcp/tools/` : session, asm (gdb_*), pwn (pwn_*), re (rizin_*), firmware (firmware_*), wire (wire_*)
+- [ ] `mcp/resources/session.py` : `session://list`, `session://{id}/binary`, `session://{id}/workspace`
+- [ ] `mcp/prompts/pipelines.py` : `exploit_pipeline`, `firmware_audit`, `ctf_binary`
+- [ ] Intégration Claude Desktop + Cursor testée
+- [ ] Tests : stubs vérifient toutes les signatures, smoke test pipeline complet
 
 ---
 

@@ -448,6 +448,32 @@ fermer les findings Quality reportés du sprint 16, et préparer l'infra WS auth
 ---
 ---
 
-## Sprint 19+ — Planifiés
+## Sprint 19 — Vision sync & audit finalization (29 avril 2026) ✅
+**Objectif** : Aligner les docs sur la vision v2 d'Anvil, documenter le contrat MCP, finaliser l'audit sécurité post-merge.
+**Agents** : direct session (pas de workflow multi-agent)
 
-Voir [backlog.md](./backlog.md) pour le détail des sprints à venir (WS migration, Mode RE phase 1 et 2, Mode Debug enhanced, Firmware, Protocols, polish/a11y/i18n) et les phases A-H qui en découlent.
+### Réalisé
+- [x] Vision v2 documentée (ADR-021) : "Le Burp Suite du bas niveau", 5 modules, GPL v3
+- [x] Contrat MCP server documenté (ADR-022) : standalone SSE/stdio, contrat complet défini, implémentation en dernier (Sprint 28)
+- [x] Fix `test_concurrent_execute_serialized` — health mock manquant après ajout du pre-check health dans `gdb_bridge.execute()` (regression silencieuse introduite post-Sprint 14)
+- [x] Fix 3 warnings Pydantic v2 — champ `register` shadow ABCMeta.register() :
+      → `GdbSetRegisterRequest`, `RizinEsilSetRegRequest` : `alias="register"` + `ConfigDict(populate_by_name=True)`
+      → `ModbusDiagResponse` : `serialize_by_alias=True` + alias, aucun changement du contrat JSON API
+- [x] Backlog revampé : RE phases 1-3, Wire module, Firmware pipeline, Sprints 24-28 ajoutés
+- [x] Sprint 14 hardening confirmé ✅ : 700/700 tests, ruff clean, bandit clean, cargo check ok
+
+### Couverture finale
+- Backend Python : **700 tests** (699 Sprint 14 → 700 après fix test_concurrent_execute_serialized)
+- Frontend unit/component : 27 tests vitest
+- E2E : 31 tests Playwright
+- **Total : ~758 tests automatisés**
+
+### Suite
+Sprint 20 — WS migration + Mode RE phase 1 (voir backlog.md)
+
+---
+---
+
+## Sprint 20+ — Planifiés
+
+Voir [backlog.md](./backlog.md) pour le détail des sprints à venir (WS migration, Mode RE phases 1-3, Contexte inter-modules, GDB remote, Firmware pipeline, Wire, MCP server) — Sprints 20-28.

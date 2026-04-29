@@ -425,3 +425,54 @@ Aucun de ces points n'est dans la roadmap actuelle (Phases C-G du backlog).
   respectées
 - Cette discipline est **vérifiable mécaniquement** : `grep -rn "/proc/\|/sys/\|/dev/\|/usr/bin"`
   dans `backend/app/` et `src/` doit rester vide hors commentaires.
+
+---
+
+## ADR-021 : Vision v2 — "Le Burp Suite du bas niveau"
+
+**Date** : 29 avril 2026
+**Statut** : Accepté
+
+**Contexte** : Anvil a grandi sprint par sprint sans vision formalisée. Risque de devenir une collection d'outils disparates plutôt qu'un produit cohérent.
+
+**Décision** :
+- Anvil = wrapper généraliste, beau et fonctionnel, sur les outils bas niveau existants (GDB, rizin, pwntools, binwalk)
+- UX = feature principale — zéro friction, infos critiques toujours visibles, actions fréquentes en un clic
+- 5 modules précisément, pas un de plus : ASM, Pwn, RE, Firmware, Wire
+- Fil rouge : pipeline d'attaque d'un système embarqué — dump firmware → analyse → identification vulns → exploitation
+- Linux/macOS uniquement assumé (ADR-020), Windows reporté
+- Licence GPL v3 (cohérence écosystème rizin LGPL v3, protège contre distribution propriétaire)
+- Wire remplace le module Protocols — focus pcap + décodage humain + Repeater Modbus (Wireshark lit, Anvil interagit)
+- Module Debug retiré — ASM couvre déjà le debug local complet ; GDB remote = extension d'ASM (même protocole RSP)
+- RE en 3 phases : navigable texte (phase 1) → décompilateur (phase 2) → CFG/call graph (phase 3)
+
+**Conséquences** :
+- Firmware pipeline = 4 étapes : détection → extraction récursive → triage automatique → passerelle RE/Pwn
+- GDB remote dans ASM débloque QEMU, bare metal, OpenOCD (protocole RSP commun, pas de nouveau module)
+- RE phase 1 = valeur immédiate (~1 semaine) ; phases 2-3 = chantier progressif
+- Toasters + contexte partagé inter-modules = couche QoL fondamentale qui colle les modules ensemble
+- Anvil n'est pas un concurrent de IDA, Ghidra, pwntools, rizin — c'est un wrapper qui les rend accessibles
+
+---
+
+## ADR-022 : MCP server — contrat défini maintenant, implémentation en dernier
+
+**Date** : 29 avril 2026
+**Statut** : Accepté
+
+**Contexte** : Un serveur MCP permettrait à Claude d'orchestrer le pipeline firmware→RE→Pwn en autonomie ("charge ce firmware, analyse-le, génère un exploit"). Mais implémenter le MCP avant que les 5 modules existent serait prématuré.
+
+**Décision** :
+- Architecture : serveur standalone Python (SDK `mcp`, stdio ou SSE) → client HTTP du backend FastAPI
+- Aucune modification de FastAPI — le MCP server est un consumer du backend REST existant
+- Contrat complet défini maintenant (tools, resources, prompts), implémenté en dernier (Sprint 28)
+- Règle architecturale pour chaque nouveau module : tout endpoint destiné MCP retourne un dict structuré (pas de string brute), avec champ `summary` LLM-friendly
+- Structure : `mcp/server.py`, `mcp/tools/{session,asm,pwn,re,firmware,wire}.py`, `mcp/resources/session.py`, `mcp/prompts/pipelines.py`, `mcp/client.py`
+
+**Conséquences** :
+- Sessions UUID existantes = MCP-compatibles sans modification
+- Fix immédiat : `rizin.analyze()` et `decompile()` devront retourner des dicts (actuellement strings brutes) — à corriger lors de l'implémentation RE
+- Tools exposés : `gdb_*`, `rizin_*`, `pwn_*`, `firmware_*`, `wire_*`, `session_*`
+- Resources : `session://list`, `session://{id}/binary`, `session://{id}/workspace`
+- Prompts orchestrés : `exploit_pipeline` (firmware→RE→Pwn), `firmware_audit`, `ctf_binary`
+- Dépendance optionnelle : `pip install -e "backend/[mcp]"` (groupe `mcp` dans pyproject.toml)
