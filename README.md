@@ -1,8 +1,8 @@
 # Anvil — Low-Level Security Toolkit
 
-> Ghidra + pwntools + pwndbg + binwalk — dans une seule app.
+> Le Burp Suite du bas niveau — GDB, rizin, pwntools, binwalk dans une seule app.
 
-Toolkit de sécurité bas niveau intégré : ASM, Reverse Engineering, Exploitation, Debug, Firmware, Protocoles ICS/OT.
+Toolkit de sécurité bas niveau intégré : ASM, Pwn, Reverse Engineering, Firmware, Wire (ICS/OT).
 
 ## Stack
 
@@ -16,11 +16,12 @@ Toolkit de sécurité bas niveau intégré : ASM, Reverse Engineering, Exploitat
 
 ```
 src-tauri/ (Rust)  → Shell : IPC, subprocess, file dialogs, serial, packaging
-src/ (React/TS)    → UI : composants, panels, éditeur, 6 modes
-backend/ (Python)  → Logique : FastAPI, 6 bridges, sanitization, rate limiting
+src/ (React/TS)    → UI : composants, panels, éditeur, 5 modules
+backend/ (Python)  → Logique : FastAPI, bridges, sanitization, rate limiting
+anvil_mcp/         → Serveur MCP standalone (Claude Desktop / Cursor)
 ai/                → Système multi-agent (12 agents, 2 workflows)
-tests/             → Tests Python (pytest, ~664 tests sur 24 modules)
-.github/           → CI GitHub Actions (ruff, bandit, pytest)
+tests/             → Tests Python (pytest, ~736 tests) + vitest (27) + e2e Playwright (31)
+.github/           → CI GitHub Actions (5 jobs : lint, test, smoke, audit, e2e)
 ```
 
 ## Prérequis
@@ -36,7 +37,7 @@ tests/             → Tests Python (pytest, ~664 tests sur 24 modules)
 # Frontend
 npm install
 
-# Backend (pyproject.toml is the single source of truth — ADR-019)
+# Backend (pyproject.toml est la source de vérité — ADR-019)
 pip install -e "backend/[dev]"                              # core + dev/test
 pip install -e "backend/[dev,re,pwn,firmware,protocols]"   # full toolchain
 ```
@@ -50,17 +51,20 @@ npm run dev
 # Tauri (frontend + Rust shell)
 npm run tauri dev
 
-# Backend (always from repo root — imports use `from backend.app.X`)
+# Backend (toujours depuis la racine — imports via `from backend.app.X`)
 uvicorn backend.app.main:app --reload --port 8000
 
-# Tests Python (~664 tests)
+# Vérification complète avant push (= CI locale exacte)
+make check
+
+# Tests Python (~736 tests)
 python -m pytest tests/ -v --tb=short
 
 # Lint
+ruff check backend/ tests/ anvil_mcp/
+bandit -r backend/ -c backend/pyproject.toml
 npx tsc --noEmit
 cargo check --manifest-path src-tauri/Cargo.toml
-ruff check backend/ tests/
-bandit -r backend/ -c backend/pyproject.toml
 ```
 
 ## API Bridges
@@ -83,7 +87,10 @@ bandit -r backend/ -c backend/pyproject.toml
 ## Tests
 
 ```bash
-# Full suite (~664 tests)
+# Vérification complète (lint + tests + audits)
+make check
+
+# Python pytest (~736 tests)
 python -m pytest tests/ -v
 
 # Avec coverage
@@ -91,7 +98,25 @@ python -m pytest tests/ --cov=backend/app --cov-report=term-missing
 
 # Un fichier
 python -m pytest tests/test_rizin_bridge.py -v
+
+# Frontend
+npx vitest
+
+# E2E Playwright
+npx playwright test
 ```
+
+## CI
+
+5 jobs GitHub Actions sur push/PR vers main :
+
+| Job | Contenu | Bloquant |
+|-----|---------|----------|
+| `lint` | ruff check+format, bandit, `anvil_mcp/` inclus | ✅ oui |
+| `test` | pytest (~736) + vitest (27) | ✅ oui |
+| `smoke` | backend live + 5 checks ADR-016 | ✅ oui |
+| `audit` | pip-audit + npm audit + cargo audit | ⚠ non (continue-on-error) |
+| `e2e` | Playwright 31 specs | ⚠ non (continue-on-error) |
 
 ## IDE recommandé
 

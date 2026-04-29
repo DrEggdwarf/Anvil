@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is Anvil
 
-Toolkit de securite bas niveau integre : ASM, Reverse Engineering, Exploitation, Debug, Firmware, Protocoles ICS/OT. Desktop app combining Ghidra + pwntools + pwndbg + binwalk capabilities.
+Toolkit de securite bas niveau integre : ASM, Pwn, Reverse Engineering, Firmware, Wire (ICS/OT). Desktop app — "Le Burp Suite du bas niveau" (ADR-021).
 
 ## Stack
 
 | Layer | Tech | Role |
 |-------|------|------|
 | Shell | Tauri v2 (Rust) | Desktop app, IPC, spawns backend subprocess |
-| Frontend | React 19 + TypeScript 5 + Vite 7 | UI with 6 modes (ASM, RE, Pwn, Debug, Firmware, Protocols) |
+| Frontend | React 19 + TypeScript 5 + Vite 7 | UI with 5 modules (ASM, Pwn, RE, Firmware, Wire) |
 | Backend | FastAPI + Python 3.12 | REST/WebSocket API, 6 tool bridges, security layers |
 
 ## Commands
@@ -61,7 +61,7 @@ src-tauri/src/     Rust shell: spawns backend as subprocess, 2 IPC commands (che
 src/               React UI — multi-mode: ASM (3-col editor+debug), Pwn (split editors+terminal+tools)
 backend/app/       FastAPI: main.py → 9 routers (health, sessions, gdb, compile, rizin, pwn, firmware, protocol, ws), core/, bridges/, models/, sessions/
 anvil_mcp/         Standalone MCP server: exposes all tools/resources/prompts to Claude Desktop/Cursor
-tests/             24 pytest modules, ~664 tests, all use MockBridge (no real tools needed in CI)
+tests/             25+ pytest modules, ~736 tests, all use MockBridge (no real tools needed in CI)
 ai/                12 Claude Code agents + 2 workflows (see ai/README.md)
 ```
 
