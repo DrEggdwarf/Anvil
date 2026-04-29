@@ -35,16 +35,17 @@ export class AnvilApp {
   // ── ASM editor (custom textarea overlay) ─────────────────
   get editorTextarea(): Locator { return this.page.locator('.anvil-ed-textarea') }
   async setEditorContent(code: string) {
-    const ta = this.editorTextarea
-    await ta.click()
-    // Selecting all + typing replaces the seeded sample without firing
-    // a hundred autocompletion debounces.
-    await this.page.keyboard.press('Control+A')
-    await this.page.keyboard.press('Delete')
-    await ta.fill(code)
-    // React re-renders the gutter asynchronously after the textarea fill.
-    // Wait for at least one gutter line to be visible before returning.
-    await this.page.locator('.anvil-ed-gutter-line').first().waitFor({ timeout: 10_000 })
+    // Playwright's fill() doesn't reliably trigger React's synthetic onChange on
+    // controlled textareas in headless Chrome. Use the native setter hack to
+    // properly dispatch the input event and force a React re-render.
+    await this.page.evaluate((newCode) => {
+      const el = document.querySelector('.anvil-ed-textarea') as HTMLTextAreaElement
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!
+      setter.call(el, newCode)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    }, code)
+    // Wait for the custom editor to re-render gutter lines after React state update.
+    await this.page.locator('.anvil-ed-gutter-line').first().waitFor({ timeout: 15_000 })
   }
 
   // ── Panels ───────────────────────────────────────────────

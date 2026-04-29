@@ -19,7 +19,9 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 10_000 },
 
-  reporter: IS_CI ? [['github'], ['list']] : [['list'], ['html', { open: 'never' }]],
+  reporter: IS_CI
+    ? [['github'], ['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]]
+    : [['list'], ['html', { open: 'never' }]],
 
   use: {
     baseURL: 'http://localhost:1420',
