@@ -20,6 +20,18 @@ Desktop app (Tauri v2) with React frontend and FastAPI backend wrapping tool bri
 
 pytest asyncio_mode is `"auto"` in `backend/pyproject.toml` — no `@pytest.mark.asyncio` needed.
 
+## Context & Prompts
+
+| Resource | Purpose |
+|----------|---------|
+| [ai/context/decisions.md](ai/context/decisions.md) | All ADRs (001-022) — read before making architecture choices |
+| [ai/context/backlog.md](ai/context/backlog.md) | Sprint status and planned work |
+| [ai/context/sprint_log.md](ai/context/sprint_log.md) | Detailed sprint history |
+| `/new-endpoint` | `.github/prompts/new-endpoint.prompt.md` — step-by-step checklist for adding a backend route |
+| `/new-component` | `.github/prompts/new-component.prompt.md` — step-by-step checklist for adding a React component |
+
+**Current state**: Sprint 21bis ✅ — RE phase 2 light (Xrefs panel, Hex viewer, sync ASM↔C visuel, Decompile via Docker rz-ghidra). Sprint 22 prochain : Agent IA in-app (BYOK, command palette tooltip-modal, MCP-as-tools, ADR-023 à rédiger).
+
 ## Architecture
 
 See [CLAUDE.md](CLAUDE.md) for full architecture details, bridge pattern, security layers, and error hierarchy.
@@ -49,6 +61,7 @@ tests/             pytest modules — all use MockBridge (no real tools needed)
 - Tests use `MockBridge` from `conftest.py` — never depend on real tools (gdb, rizin, etc.)
 - `from __future__ import annotations` in every file
 - Imports: stdlib → third-party → local (ruff I001)
+- **Binary data (ADR-010)**: all binary payloads exchanged as hex strings (e.g. `"9090"` for `\x90\x90`) — bridge converts hex↔bytes
 
 ### React / TypeScript (frontend)
 - Functional components only, props via `interface XxxProps`
@@ -56,9 +69,12 @@ tests/             pytest modules — all use MockBridge (no real tools needed)
 - Design tokens via CSS custom properties (`--space-*`, `--cat-*`, `--font-*`)
 - Theme: `data-theme="dark|light"` on root, mode accent via `data-cat="asm|re|pwn|dbg|fw|hw"`
 - API calls through `src/api/client.ts` — single typed `request<T>()` wrapper
+- **LOC limit (ADR-018)**: file > 400 L must be split; > 500 L **blocks merge**
+- **WS auth (ADR-016)**: WS connections require `?token=<session_token>` — token returned once at session create, stored in React state
 
 ### Rust (src-tauri)
 - Shell only — no business logic. Only IPC commands: `check_backend`, `check_dependencies`
+- **Portability (ADR-020)**: no hardcoded `/usr/bin/*` paths, no direct `subprocess.run`, no `/proc`/`/sys`/`/dev` in app code — verify with `grep -rn '/proc/\|/sys/\|/dev/\|/usr/bin' backend/app/ src/`
 
 ## Backend dependencies
 

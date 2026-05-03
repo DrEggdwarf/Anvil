@@ -20,7 +20,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (res.status === 204) return undefined as T
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || err.message || res.statusText)
+    const error = new Error(err.error || err.detail || err.message || res.statusText) as Error & { code?: string; status?: number }
+    error.code = err.code
+    error.status = res.status
+    throw error
   }
   return res.json()
 }
@@ -176,6 +179,82 @@ export function gdbDisassemble(sessionId: string) {
 
 export function gdbCurrentLine(sessionId: string) {
   return request<GdbRawResponse>('GET', `/api/gdb/${sessionId}/current-line`)
+}
+
+// ── RE / Rizin ────────────────────────────────────────────────
+
+import type {
+  RizinFunction, RizinOp, CfgGraph, CfgBlock, RizinString,
+  RizinImport, RizinExport, RizinSymbol, RizinXref,
+  RizinBinaryInfo, AnalyzeResult, DecompileResult,
+} from '../types/re'
+
+export type { RizinFunction, RizinOp, CfgGraph, CfgBlock, RizinString }
+export type { RizinImport, RizinExport, RizinSymbol, RizinXref }
+export type { RizinBinaryInfo, AnalyzeResult, DecompileResult }
+
+export function reOpenBinary(sessionId: string, binaryPath: string) {
+  return request<{ message: string }>('POST', `/api/re/${sessionId}/open`, { binary_path: binaryPath })
+}
+export function reAnalyze(sessionId: string, level = 'aaa') {
+  return request<AnalyzeResult>('POST', `/api/re/${sessionId}/analyze`, { level })
+}
+export function reBinaryInfo(sessionId: string) {
+  return request<RizinBinaryInfo>('GET', `/api/re/${sessionId}/info`)
+}
+export async function reFunctions(sessionId: string): Promise<RizinFunction[]> {
+  const res = await request<{ functions: RizinFunction[] } | RizinFunction[]>('GET', `/api/re/${sessionId}/functions`)
+  return Array.isArray(res) ? res : (res as { functions: RizinFunction[] }).functions ?? []
+}
+export function reFunctionInfo(sessionId: string, address: string) {
+  return request<RizinFunction>('GET', `/api/re/${sessionId}/functions/${address}`)
+}
+export async function reDisasmFunction(sessionId: string, address: string): Promise<RizinOp[]> {
+  const res = await request<{ data: RizinOp[] } | RizinOp[]>('POST', `/api/re/${sessionId}/disassemble/function/${address}`, {})
+  return Array.isArray(res) ? res : (res as { data: RizinOp[] }).data ?? []
+}
+export async function reCfg(sessionId: string, address: string): Promise<CfgBlock[]> {
+  const res = await request<{ data: CfgBlock[] } | CfgBlock[]>('GET', `/api/re/${sessionId}/cfg/${address}`)
+  return Array.isArray(res) ? res : (res as { data: CfgBlock[] }).data ?? []
+}
+export async function reDecompile(sessionId: string, address: string): Promise<DecompileResult> {
+  const res = await request<{ data: DecompileResult } | DecompileResult>('POST', `/api/re/${sessionId}/decompile`, { address })
+  return 'data' in (res as object) && (res as { data?: DecompileResult }).data
+    ? (res as { data: DecompileResult }).data
+    : (res as DecompileResult)
+}
+export async function reStringsAll(sessionId: string): Promise<RizinString[]> {
+  const res = await request<{ strings: RizinString[] } | RizinString[]>('GET', `/api/re/${sessionId}/strings/all`)
+  return Array.isArray(res) ? res : (res as { strings: RizinString[] }).strings ?? []
+}
+export async function reImports(sessionId: string): Promise<RizinImport[]> {
+  const res = await request<{ imports: RizinImport[] } | RizinImport[]>('GET', `/api/re/${sessionId}/imports`)
+  return Array.isArray(res) ? res : (res as { imports: RizinImport[] }).imports ?? []
+}
+export async function reExports(sessionId: string): Promise<RizinExport[]> {
+  const res = await request<{ exports: RizinExport[] } | RizinExport[]>('GET', `/api/re/${sessionId}/exports`)
+  return Array.isArray(res) ? res : (res as { exports: RizinExport[] }).exports ?? []
+}
+export function reSymbols(sessionId: string) {
+  return request<RizinSymbol[]>('GET', `/api/re/${sessionId}/symbols`)
+}
+export async function reXrefsTo(sessionId: string, address: string): Promise<RizinXref[]> {
+  const res = await request<{ xrefs: RizinXref[] } | RizinXref[]>('GET', `/api/re/${sessionId}/xrefs/to/${address}`)
+  return Array.isArray(res) ? res : (res as { xrefs: RizinXref[] }).xrefs ?? []
+}
+export async function reXrefsFrom(sessionId: string, address: string): Promise<RizinXref[]> {
+  const res = await request<{ xrefs: RizinXref[] } | RizinXref[]>('GET', `/api/re/${sessionId}/xrefs/from/${address}`)
+  return Array.isArray(res) ? res : (res as { xrefs: RizinXref[] }).xrefs ?? []
+}
+export async function reReadHex(sessionId: string, address: string, length: number): Promise<{ address: string; bytes: string; ascii: string } | unknown> {
+  const res = await request<{ data: unknown } | unknown>('POST', `/api/re/${sessionId}/hex/read`, { address, length })
+  return (res && typeof res === 'object' && 'data' in res) ? (res as { data: unknown }).data : res
+}
+export function reReadHexText(sessionId: string, address: string, length: number) {
+  return request<{ output: string }>('POST', `/api/re/${sessionId}/hex/read/text`, { address, length })
+}
+export function reRenameFunction(sessionId: string, address: string, newName: string) {
+  return request<{ message: string }>('POST', `/api/re/${sessionId}/functions/rename`, { address, new_name: newName })
 }
 
 // ── Binary Analysis ──────────────────────────────────────

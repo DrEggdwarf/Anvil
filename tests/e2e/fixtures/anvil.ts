@@ -67,6 +67,32 @@ export class AnvilApp {
   }
   get pwnFilterInput(): Locator { return this.page.locator('input.anvil-pwn-filter') }
 
+  // ── RE mode ──────────────────────────────────────────────
+  get reEmptyState(): Locator { return this.page.locator('.anvil-re-empty-card') }
+  get rePathInput(): Locator { return this.page.locator('.anvil-re-empty-path-input') }
+  get reSidebar(): Locator { return this.page.locator('.anvil-re-sidebar-wrap') }
+  reFunctionRow(name: string | RegExp): Locator {
+    const re = typeof name === 'string' ? new RegExp(name) : name
+    return this.page.locator('.anvil-re-list-row').filter({ hasText: re }).first()
+  }
+  reRightTab(name: 'Pseudo-code' | 'Désassemblage' | 'Xrefs' | 'Hex'): Locator {
+    return this.page.locator('.anvil-re-right-tab').getByText(name)
+  }
+  get reDisasmLines(): Locator { return this.page.locator('.anvil-disasm-line') }
+  get reDisasmSelected(): Locator { return this.page.locator('.anvil-disasm-line--selected') }
+  get reHexDump(): Locator { return this.page.locator('.anvil-hex-dump') }
+  get reXrefsItems(): Locator { return this.page.locator('.anvil-xrefs-item') }
+
+  /** Loads an absolute binary path through the RE empty state and waits for analysis. */
+  async reLoadBinary(absolutePath: string, timeoutMs = 30_000) {
+    await this.switchMode('RE')
+    await this.reEmptyState.waitFor({ timeout: 10_000 })
+    await this.rePathInput.fill(absolutePath)
+    await this.rePathInput.press('Enter')
+    // Sidebar appears once analysis completes
+    await this.reSidebar.waitFor({ timeout: timeoutMs })
+  }
+
   // ── Workflow helpers (compose multiple steps) ────────────
 
   /** Waits until the terminal contains a line matching `pattern`. */

@@ -1,0 +1,1550 @@
+/* ═══════════════════════════════════════════════════════════
+   RE Mode — styles
+   Follows Anvil design system: anvil-re-* prefix, CSS vars only
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Root layout ──────────────────────────────────────────── */
+
+.anvil-re-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--fg);
+  font-family: var(--font-ui);
+}
+
+.anvil-re-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* path input (removed — superseded by anvil-re-path-wrap below */
+
+/* ── Top bar ──────────────────────────────────────────────── */
+
+.anvil-re-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  height: 48px;
+  background: var(--bg-1);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Step indicator ("1", "2") */
+.anvil-re-topbar-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.anvil-re-topbar-step-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-dim, #aaa);
+  flex-shrink: 0;
+}
+
+/* Path input group */
+.anvil-re-path-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  width: 380px;
+  transition: border-color 0.15s;
+}
+
+.anvil-re-path-wrap:focus-within {
+  border-color: var(--accent);
+}
+
+.anvil-re-path-wrap--error {
+  border-color: var(--red) !important;
+}
+
+.anvil-re-path-icon {
+  padding: 0 var(--space-2);
+  color: var(--fg-dim, #666);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.anvil-re-path-icon:hover {
+  color: var(--accent);
+}
+
+.anvil-re-path-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 12px;
+  padding: 6px 0;
+  outline: none;
+}
+
+.anvil-re-path-input::placeholder {
+  color: var(--fg-dim, #555);
+  font-family: var(--font-ui);
+}
+
+.anvil-re-path-input:disabled {
+  opacity: 0.5;
+}
+
+.anvil-re-topbar-load-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  flex-shrink: 0;
+  background: var(--bg-2);
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  font-size: 12px;
+}
+
+.anvil-re-topbar-load-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.anvil-re-topbar-load-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Loaded binary name pill */
+.anvil-re-topbar-binary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  background: rgba(155, 109, 255, 0.1);
+  border: 1px solid rgba(155, 109, 255, 0.3);
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--accent);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.anvil-re-topbar-binary-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Analyze button */
+.anvil-re-topbar-analyze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.1s, opacity 0.1s;
+}
+
+.anvil-re-topbar-analyze-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.anvil-re-topbar-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.anvil-re-topbar-analyze-btn--done {
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+
+.anvil-re-topbar-analyze-btn--done:hover:not(:disabled) {
+  background: rgba(34, 195, 122, 0.1);
+  filter: none;
+}
+
+/* Error banner */
+.anvil-re-topbar-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  background: rgba(240, 71, 71, 0.12);
+  border: 1px solid var(--red);
+  border-radius: 4px;
+  color: var(--red);
+  font-size: 11px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Legacy btn classes (used elsewhere) ─────────────────── */
+.anvil-re-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.1s, opacity 0.1s;
+}
+
+.anvil-re-btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--fg);
+}
+.anvil-re-btn--ghost:hover { background: var(--bg-2); }
+.anvil-re-btn--accent { background: var(--accent); color: #fff; }
+.anvil-re-btn--accent:hover { filter: brightness(1.1); }
+.anvil-re-btn--success { background: transparent; border-color: var(--green); color: var(--green); }
+.anvil-re-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Security badges */
+
+.anvil-re-badges {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.anvil-re-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-code);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.anvil-re-badge--on {
+  background: rgba(34, 195, 122, 0.12);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.anvil-re-badge--off {
+  background: rgba(240, 71, 71, 0.12);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.anvil-re-badge--info {
+  background: var(--bg-2);
+  border-color: var(--border);
+  color: var(--fg-dim, #aaa);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+
+.anvil-re-sidebar-wrap {
+  width: 240px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  position: relative;
+  background: var(--bg-1);
+}
+
+.anvil-re-sidebar-collapsed {
+  width: 28px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--space-2);
+  background: var(--bg-1);
+}
+
+.anvil-re-sidebar-toggle {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 20px;
+  height: 32px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: background 0.15s;
+}
+
+.anvil-re-sidebar-toggle:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Collapsed state uses simpler toggle */
+.anvil-re-sidebar-collapsed .anvil-re-sidebar-toggle {
+  position: static;
+  transform: none;
+}
+
+.anvil-re-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.anvil-re-sidebar-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-0);
+  flex-shrink: 0;
+}
+
+.anvil-re-sidebar-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 4px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  color: var(--fg-dim, #888);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.anvil-re-sidebar-tab:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+}
+
+.anvil-re-sidebar-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--bg-1);
+}
+
+.anvil-re-sidebar-tab-label {
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.anvil-re-sidebar-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 10px;
+  min-width: 18px;
+  padding: 0 4px;
+  line-height: 16px;
+  color: var(--fg-dim, #aaa);
+  font-family: var(--font-code);
+}
+
+.anvil-re-sidebar-tab.active .anvil-re-sidebar-tab-count {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.anvil-re-sidebar-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* List rows */
+
+.anvil-re-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.anvil-re-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  font-size: 12px;
+  font-family: var(--font-code);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.08s, border-color 0.08s;
+  min-height: 24px;
+}
+
+.anvil-re-list-row:hover {
+  background: var(--bg-2);
+}
+
+.anvil-re-list-row.active {
+  background: var(--accent-dim);
+  border-left-color: var(--accent);
+}
+
+.anvil-re-list-icon {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.anvil-re-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+}
+
+.anvil-re-list-name--string {
+  color: var(--blue);
+}
+
+.anvil-re-list-addr {
+  color: var(--fg-dim, #888);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.anvil-re-list-meta {
+  color: var(--amber);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ── Main view ────────────────────────────────────────────── */
+
+.anvil-re-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.anvil-re-tabbar {
+  display: flex;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.anvil-re-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px var(--space-3);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  color: var(--fg-dim, #888);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.anvil-re-tab:hover {
+  color: var(--fg);
+}
+
+.anvil-re-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.anvil-re-view {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Shared states ────────────────────────────────────────── */
+
+.anvil-re-empty,
+.anvil-re-loading,
+.anvil-re-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  font-size: 13px;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-re-error {
+  flex-direction: column;
+  color: var(--red);
+}
+
+.anvil-re-error-hint {
+  font-size: 11px;
+  color: var(--fg-dim, #888);
+}
+
+/* ── CFG ──────────────────────────────────────────────────── */
+
+.anvil-cfg-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--bg-0);
+}
+
+/* React Flow overrides */
+
+.anvil-cfg-wrap .react-flow__background {
+  background: var(--bg-0);
+}
+
+.anvil-cfg-wrap .react-flow__controls {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.anvil-cfg-wrap .react-flow__controls button {
+  background: transparent;
+  border: none;
+  color: var(--fg);
+}
+
+.anvil-cfg-wrap .react-flow__controls button:hover {
+  background: var(--bg-1);
+}
+
+.anvil-cfg-wrap .react-flow__minimap {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* CFG custom node */
+
+.cfg-node {
+  background: linear-gradient(180deg, #1f2030 0%, #181928 100%);
+  border: 1px solid rgba(155, 109, 255, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.55);
+}
+
+.cfg-node:hover {
+  border-color: var(--accent);
+}
+
+.cfg-node-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+
+.cfg-node-header--entry {
+  background: rgba(34, 195, 122, 0.15);
+}
+
+.cfg-node-header--return {
+  background: rgba(240, 71, 71, 0.12);
+}
+
+.cfg-node-badge {
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.cfg-node-badge--entry {
+  background: #22c37a;
+  color: #000;
+}
+
+.cfg-node-badge--ret {
+  background: #f04747;
+  color: #fff;
+}
+
+.cfg-node-addr {
+  font-family: var(--font-code);
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.cfg-node-size {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--fg-dim, #888);
+}
+
+.cfg-node-body {
+  padding: 4px 0;
+}
+
+.cfg-node-op {
+  display: flex;
+  align-items: baseline;
+  padding: 0 8px;
+  line-height: 1.4;
+  gap: 8px;
+}
+
+.cfg-node-op-addr {
+  font-family: var(--font-code);
+  font-size: 10px;
+  color: var(--fg-dim, #888);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.cfg-node-op-instr {
+  font-family: var(--font-code);
+}
+
+/* Legend */
+
+.anvil-cfg-legend {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-3);
+  padding: 4px var(--space-3);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.anvil-cfg-leg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-dim, #aaa);
+}
+
+/* ── Disasm ───────────────────────────────────────────────── */
+
+.anvil-disasm-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.anvil-disasm-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+
+.anvil-disasm-line {
+  display: flex;
+  align-items: baseline;
+  padding: 1px var(--space-2);
+  font-size: 12px;
+  line-height: 1.6;
+  gap: var(--space-2);
+  cursor: default;
+}
+
+.anvil-disasm-line:hover {
+  background: var(--bg-2);
+}
+
+.anvil-disasm-line--jump {
+  border-left: 2px solid rgba(155, 109, 255, 0.3);
+}
+
+.anvil-disasm-line--selected {
+  background: rgba(155, 109, 255, 0.18);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.anvil-disasm-line--selected:hover {
+  background: rgba(155, 109, 255, 0.24);
+}
+
+/* Monaco line decoration for ASM↔C sync (DecompileView) */
+.anvil-decompile-line-highlight {
+  background: rgba(155, 109, 255, 0.18) !important;
+}
+.anvil-decompile-line-margin {
+  background: var(--accent) !important;
+  width: 3px !important;
+}
+
+.anvil-disasm-addr {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--fg-dim, #888);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.anvil-disasm-bytes {
+  font-family: var(--font-code);
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.anvil-disasm-instr {
+  font-family: var(--font-code);
+}
+
+.anvil-disasm-target {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.anvil-disasm-comment {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: #6a9955;
+}
+
+/* Context menu */
+
+.anvil-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.anvil-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 6px var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.anvil-context-menu button:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ── Decompile ────────────────────────────────────────────── */
+
+.anvil-decompile-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.anvil-decompile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--space-3);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-family: var(--font-code);
+  color: var(--fg-dim, #888);
+}
+
+.anvil-decompile-source {
+  color: var(--accent);
+}
+
+.anvil-decompile-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Info panel ───────────────────────────────────────────── */
+
+.anvil-re-info-wrap {
+  width: 220px;
+  min-width: 160px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: row;
+  position: relative;
+}
+
+.anvil-re-infopanel {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--bg-1);
+}
+
+.anvil-re-info-section {
+  margin-bottom: var(--space-3);
+}
+
+.anvil-re-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-dim, #888);
+  margin-bottom: var(--space-1);
+}
+
+.anvil-re-info-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.anvil-re-info-fn-name {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.anvil-re-rename-input {
+  font-family: var(--font-code);
+  font-size: 12px;
+  background: var(--bg-0);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--fg);
+  padding: 2px 4px;
+  width: 100%;
+}
+
+.anvil-re-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.anvil-re-icon-btn:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.anvil-re-info-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-1);
+}
+
+.anvil-re-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: var(--font-code);
+}
+
+.anvil-re-info-row-label {
+  color: var(--fg-dim, #888);
+}
+
+.anvil-re-info-row-value {
+  color: var(--fg);
+}
+
+.anvil-re-xref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anvil-re-xref-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 11px;
+  font-family: var(--font-code);
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.anvil-re-xref-item:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.anvil-re-xref-type {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--amber);
+}
+
+.anvil-re-xref-more {
+  font-size: 10px;
+  color: var(--fg-dim, #888);
+  padding: 2px 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Empty state
+   ═══════════════════════════════════════════════════════════ */
+
+.anvil-re-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  background: var(--bg-0);
+}
+
+.anvil-re-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 40px 48px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.anvil-re-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: var(--accent);
+  opacity: 0.7;
+  animation: re-icon-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes re-icon-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.anvil-re-empty-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+
+.anvil-re-empty-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-dim, #888);
+  line-height: 1.5;
+}
+
+.anvil-re-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.anvil-re-empty-btn:hover { opacity: 0.85; }
+.anvil-re-empty-btn:active { opacity: 0.7; }
+
+.anvil-re-empty-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  color: var(--fg-dim, #666);
+  font-size: 11px;
+}
+
+.anvil-re-empty-divider::before,
+.anvil-re-empty-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.anvil-re-empty-path-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.anvil-re-empty-path-wrap:focus-within { border-color: var(--accent); }
+
+.anvil-re-empty-path-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 12px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.anvil-re-empty-path-input::placeholder {
+  color: var(--fg-dim, #555);
+  font-family: var(--font-ui);
+}
+
+.anvil-re-empty-path-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  padding: 8px;
+  background: var(--bg-2);
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.anvil-re-empty-path-btn:hover { background: var(--accent); color: #fff; }
+
+.anvil-re-empty-formats {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-dim, #555);
+  letter-spacing: 0.04em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Loading bar
+   ═══════════════════════════════════════════════════════════ */
+
+.anvil-re-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  background: var(--bg-0);
+}
+
+.anvil-re-loading-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 32px 40px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+  min-width: 380px;
+  max-width: 500px;
+}
+
+.anvil-re-loading-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.anvil-re-loading-header i { color: var(--accent); font-size: 16px; }
+
+.anvil-re-loading-name {
+  flex: 1;
+  font-family: var(--font-code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anvil-re-loading-pct {
+  font-size: 12px;
+  color: var(--fg-dim, #888);
+  font-family: var(--font-code);
+}
+
+.anvil-re-loading-track {
+  height: 4px;
+  background: var(--bg-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.anvil-re-loading-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #c084fc);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.anvil-re-loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.anvil-re-loading-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+}
+
+.anvil-re-loading-step-icon { width: 18px; text-align: center; flex-shrink: 0; }
+
+.anvil-re-loading-step--pending .anvil-re-loading-step-label { color: var(--fg-dim, #666); }
+.anvil-re-loading-step--running .anvil-re-loading-step-label { color: var(--fg); }
+.anvil-re-loading-step--running i  { color: var(--accent); }
+.anvil-re-loading-step--done    i  { color: var(--green); }
+.anvil-re-loading-step--error   i  { color: var(--red); }
+.anvil-re-loading-step--error .anvil-re-loading-step-label { color: var(--red); }
+
+.anvil-re-step-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--fg-dim, #555);
+  border-radius: 50%;
+}
+
+.anvil-re-loading-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(240, 71, 71, 0.1);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.anvil-re-loading-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 7px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.anvil-re-loading-retry:hover {
+  background: var(--bg-0);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Topbar (ready state)
+   ═══════════════════════════════════════════════════════════ */
+
+.anvil-re-topbar-binary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  background: rgba(155, 109, 255, 0.08);
+  border: 1px solid rgba(155, 109, 255, 0.25);
+  border-radius: 6px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--accent);
+  max-width: 220px;
+}
+
+.anvil-re-topbar-binary-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anvil-re-topbar-count {
+  font-size: 10px;
+  color: var(--fg-dim, #888);
+  background: var(--bg-2);
+  padding: 0 5px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.anvil-re-topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 5px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--fg);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.anvil-re-topbar-btn:hover:not(:disabled) {
+  background: var(--bg-1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.anvil-re-topbar-btn:disabled { opacity: 0.5; cursor: default; }
+
+.anvil-re-topbar-err {
+  font-size: 11px;
+  color: var(--red);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anvil-re-topbar-close {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+
+.anvil-re-topbar-close:hover {
+  background: rgba(240, 71, 71, 0.1);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Right panel (pseudo-code / disasm)
+   ═══════════════════════════════════════════════════════════ */
+
+.anvil-re-right-panel {
+  width: 320px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--border);
+  background: var(--bg-0);
+  flex-shrink: 0;
+}
+
+.anvil-re-right-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+  flex-shrink: 0;
+}
+
+.anvil-re-right-tab {
+  flex: 1;
+  padding: 7px var(--space-2);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.anvil-re-right-tab:hover { background: var(--bg-2); color: var(--fg); }
+
+.anvil-re-right-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--bg-0);
+}
+
+.anvil-re-right-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Center hint
+   ═══════════════════════════════════════════════════════════ */
+
+.anvil-re-center-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-2);
+  color: var(--fg-dim, #555);
+  font-size: 13px;
+  user-select: none;
+}
+
+.anvil-re-center-hint i { font-size: 24px; opacity: 0.4; }
+
+/* ── Xrefs panel ─────────────────────────────────────── */
+
+.anvil-xrefs-wrap {
+  height: 100%;
+  overflow: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.anvil-xrefs-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.anvil-xrefs-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim, #888);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.anvil-xrefs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anvil-xrefs-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-code);
+  font-size: 12px;
+  transition: background-color 0.1s ease;
+}
+.anvil-xrefs-item:hover {
+  background: var(--bg-2);
+}
+
+.anvil-xrefs-type {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-2);
+  color: var(--fg-dim, #888);
+  min-width: 38px;
+  text-align: center;
+}
+.anvil-xrefs-type--CALL { background: rgba(155,109,255,0.2); color: var(--accent); }
+.anvil-xrefs-type--CODE { background: rgba(34,195,122,0.2); color: #22c37a; }
+.anvil-xrefs-type--DATA { background: rgba(245,166,35,0.2); color: #f5a623; }
+.anvil-xrefs-type--STRING { background: rgba(35,192,245,0.2); color: #23c0f5; }
+
+.anvil-xrefs-addr {
+  color: var(--accent);
+}
+.anvil-xrefs-name {
+  color: var(--fg);
+  margin-left: auto;
+  opacity: 0.8;
+}
+
+.anvil-xrefs-empty {
+  font-size: 11px;
+  color: var(--fg-dim, #666);
+  padding: 4px 8px;
+  font-style: italic;
+}
+
+/* ── Hex view ────────────────────────────────────────── */
+
+.anvil-hex-wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.anvil-hex-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+
+.anvil-hex-addr {
+  flex: 1;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.anvil-hex-addr:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.anvil-hex-length {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.anvil-hex-refresh {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.anvil-hex-refresh:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.anvil-hex-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.anvil-hex-dump {
+  margin: 0;
+  padding: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre;
+  background: var(--bg-1);
+}

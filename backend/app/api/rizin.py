@@ -281,16 +281,16 @@ async def disassemble_text(
 # ── Decompiler ───────────────────────────────────────────
 
 
-@router.post("/{session_id}/decompile", response_model=RizinRawResponse)
+@router.post("/{session_id}/decompile", response_model=RizinJsonResponse)
 async def decompile(
     session_id: str,
     body: RizinDecompileRequest,
     sm: SessionManager = Depends(get_session_manager),
 ):
-    """Decompile function (r2ghidra/pdd)."""
+    """Decompile function (r2ghidra/pdd). Returns structured dict (code/language/source/summary)."""
     bridge = _get_rizin_bridge(session_id, sm)
     result = await bridge.decompile(body.address)
-    return RizinRawResponse(output=result.get("code", ""))
+    return RizinJsonResponse(data=result)
 
 
 # ── Strings ──────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useColResize } from './hooks/useColResize'
 import { useAnvilSession } from './hooks/useAnvilSession'
 import { usePwnSession } from './hooks/usePwnSession'
+import { useRizinSession } from './hooks/useRizinSession'
 import { EditorPanel } from './components/EditorPanel'
 import { RegistersPane } from './components/RegistersPane'
 import { AnvilTerminal } from './components/AnvilTerminal'
@@ -15,6 +16,7 @@ import './App.css'
 // PwnMode pulls Monaco + xterm + the pwn completion table; ReferenceModal pulls
 // the 6 reference datasets (~150 KB). Loading them lazily cuts initial JS by ~30-40%.
 const PwnMode = lazy(() => import('./components/PwnMode').then(m => ({ default: m.PwnMode })))
+const REMode = lazy(() => import('./components/REMode').then(m => ({ default: m.REMode })))
 const ReferenceModal = lazy(() =>
   import('./components/ReferenceModal').then(m => ({ default: m.ReferenceModal }))
 )
@@ -80,6 +82,7 @@ function App() {
 
   const session = useAnvilSession()
   const pwnSession = usePwnSession()
+  const rizinSession = useRizinSession()
   const { cols, bodyRef, onDown } = useColResize([30, 36, 34])
   const { cols: pwnCols, bodyRef: pwnBodyRef, onDown: pwnOnDown } = useColResize([45, 55])
 
@@ -94,7 +97,7 @@ function App() {
 
   // Cleanup sessions on unmount
   useEffect(() => {
-    return () => { session.destroySessions(); pwnSession.destroySession() }
+    return () => { session.destroySessions(); pwnSession.destroySession(); rizinSession.destroySession() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -182,7 +185,11 @@ function App() {
       </header>
 
       {/* ── Body ─────────────────────────────────────────────── */}
-      {mode === 'Pwn' ? (
+      {mode === 'RE' ? (
+        <Suspense fallback={<LazyFallback label="RE mode" />}>
+          <REMode session={rizinSession} />
+        </Suspense>
+      ) : mode === 'Pwn' ? (
         <Suspense fallback={<LazyFallback label="Pwn mode" />}>
           <PwnMode
             session={pwnSession}

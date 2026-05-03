@@ -1,0 +1,128 @@
+# syntax=docker/dockerfile:1.7
+# ─────────────────────────────────────────────────────────────────────────────
+# Anvil backend image — FastAPI + low-level security tools (Debian-based).
+#
+# Multi-stage :
+#   1. builder  : compile rz-ghidra against rizin (~10 min on first build)
+#   2. runtime  : slim Debian + rizin (OBS) + rz-ghidra artifacts + Python deps
+#
+# Build (from repo root) :
+#   docker build -f docker/Dockerfile.backend -t anvil-backend:dev .
+# Run :
+#   docker run --rm -p 8000:8000 anvil-backend:dev
+# ─────────────────────────────────────────────────────────────────────────────
+
+ARG DEBIAN_RELEASE=trixie
+ARG RIZIN_OBS_REPO=Debian_Testing
+ARG RZ_GHIDRA_VERSION=v0.8.0
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Stage 1 — Builder : compile rz-ghidra
+# ═════════════════════════════════════════════════════════════════════════════
+FROM debian:${DEBIAN_RELEASE}-slim AS builder
+
+ARG DEBIAN_RELEASE
+ARG RIZIN_OBS_REPO
+ARG RZ_GHIDRA_VERSION
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Add Rizin OBS repository (official rizin packages for Debian).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates gnupg \
+ && curl -fsSL "https://download.opensuse.org/repositories/home:RizinOrg/${RIZIN_OBS_REPO}/Release.key" \
+        | gpg --dearmor -o /etc/apt/trusted.gpg.d/rizin.gpg \
+ && echo "deb https://download.opensuse.org/repositories/home:/RizinOrg/${RIZIN_OBS_REPO}/ /" \
+        > /etc/apt/sources.list.d/rizin.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
+        rizin librizin-dev \
+        build-essential cmake ninja-build pkg-config \
+        git \
+ && rm -rf /var/lib/apt/lists/*
+
+# Build rz-ghidra (Ghidra sleigh decompiler is vendored as a submodule).
+WORKDIR /src
+RUN git clone --depth 1 --branch "${RZ_GHIDRA_VERSION}" --recursive \
+        https://github.com/rizinorg/rz-ghidra.git \
+ && cmake -S rz-ghidra -B rz-ghidra/build -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_CUTTER_PLUGIN=OFF \
+        -DBUILD_SLEIGH_PLUGIN=ON \
+ && cmake --build rz-ghidra/build \
+ && DESTDIR=/install cmake --install rz-ghidra/build
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Stage 2 — Runtime
+# ═════════════════════════════════════════════════════════════════════════════
+FROM debian:${DEBIAN_RELEASE}-slim AS runtime
+
+ARG DEBIAN_RELEASE
+ARG RIZIN_OBS_REPO
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# ── System tools (RE + Pwn + Firmware + ASM) ────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates gnupg \
+ && curl -fsSL "https://download.opensuse.org/repositories/home:RizinOrg/${RIZIN_OBS_REPO}/Release.key" \
+        | gpg --dearmor -o /etc/apt/trusted.gpg.d/rizin.gpg \
+ && echo "deb https://download.opensuse.org/repositories/home:/RizinOrg/${RIZIN_OBS_REPO}/ /" \
+        > /etc/apt/sources.list.d/rizin.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv \
+        # ASM toolchain
+        nasm gcc binutils \
+        # RE
+        rizin \
+        # Pwn / debug
+        gdb gdbserver \
+        # Firmware (Python module fourni par python3-binwalk, CLI par binwalk)
+        binwalk python3-binwalk \
+ && apt-get purge -y gnupg \
+ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
+
+# ── Copy rz-ghidra artifacts from builder ───────────────────────────────────
+# rz-ghidra installs into the multiarch lib dir (rizin's RZ_LIBDIR is multiarch
+# on Debian). Copy both plugins (.so) and sleigh data (.pspec/.sla/.cspec).
+COPY --from=builder /install/usr/lib/x86_64-linux-gnu/rizin/plugins/ /usr/lib/x86_64-linux-gnu/rizin/plugins/
+
+# Sanity check — fail the build if the plugin is missing.
+RUN rizin -qc 'Lc' /bin/ls 2>&1 | grep -qi ghidra \
+    || (echo "rz-ghidra plugin not loaded" && rizin -qc 'Lc' /bin/ls && exit 1)
+
+# ── Python venv (system-site-packages so apt python3-binwalk is visible) ────
+ENV VENV=/opt/anvil-venv
+RUN python3 -m venv --system-site-packages "$VENV"
+ENV PATH="$VENV/bin:$PATH"
+
+WORKDIR /app
+
+# Backend deps (cached layer). 'firmware' extra is intentionally omitted —
+# binwalk on PyPI is stuck at 2.1.0 (legacy fork). We use the apt-shipped
+# python3-binwalk module (>=2.4) accessible through --system-site-packages.
+COPY backend/pyproject.toml /app/backend/pyproject.toml
+RUN pip install --upgrade pip \
+ && pip install -e "/app/backend[re,pwn,protocols,mcp]"
+
+# Source.
+COPY backend /app/backend
+COPY anvil_mcp /app/anvil_mcp
+
+# ── Runtime ─────────────────────────────────────────────────────────────────
+EXPOSE 8000
+ENV ANVIL_HOST=0.0.0.0 \
+    ANVIL_PORT=8000
+
+RUN useradd --create-home --uid 1000 anvil \
+ && mkdir -p /home/anvil/.anvil/workspaces \
+ && chown -R anvil:anvil /home/anvil /app
+USER anvil
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+    CMD curl -fsS http://127.0.0.1:8000/api/health || exit 1
+
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -14,7 +14,7 @@ import pytest_asyncio
 
 from backend.app.bridges.base import BridgeState
 from backend.app.bridges.rizin_bridge import RizinBridge
-from backend.app.core.exceptions import BridgeCrash, BridgeNotReady
+from backend.app.core.exceptions import BridgeNotReady
 
 
 # ── Mock helpers ─────────────────────────────────────────
@@ -45,25 +45,27 @@ async def rizin():
 
 class TestRizinLifecycle:
     @pytest.mark.asyncio
-    async def test_start_opens_pipe(self):
+    async def test_start_marks_ready_without_opening_pipe(self):
+        """rzpipe.open("") hangs on rizin 0.8.2 — start() now defers pipe creation."""
         bridge = RizinBridge(binary_path="/tmp/test")
+        await bridge.start()
+        assert bridge.state == BridgeState.READY
+        assert bridge._pipe is None
+
+    @pytest.mark.asyncio
+    async def test_open_binary_spawns_pipe(self, tmp_path):
+        """open_binary() is the actual entry point that spawns rizin."""
+        bin_path = tmp_path / "test.elf"
+        bin_path.write_bytes(b"\x7fELF" + b"\x00" * 64)
+        bridge = RizinBridge()
+        await bridge.start()
         mock_pipe = make_mock_pipe()
         mock_rz = MagicMock()
         mock_rz.open.return_value = mock_pipe
         with patch.dict("sys.modules", {"rzpipe": mock_rz}):
-            await bridge.start()
-        assert bridge.state == BridgeState.READY
+            await bridge.open_binary(str(bin_path), allowed_dirs=[str(tmp_path)])
         assert bridge._pipe is mock_pipe
-
-    @pytest.mark.asyncio
-    async def test_start_failure(self):
-        bridge = RizinBridge()
-        mock_rz = MagicMock()
-        mock_rz.open.side_effect = FileNotFoundError("rizin not found")
-        with patch.dict("sys.modules", {"rzpipe": mock_rz}):
-            with pytest.raises(BridgeCrash):
-                await bridge.start()
-        assert bridge.state == BridgeState.ERROR
+        assert bridge._binary_path == str(bin_path)
 
     @pytest.mark.asyncio
     async def test_stop_quits_pipe(self, rizin: RizinBridge):
@@ -116,10 +118,18 @@ class TestRizinAnalysis:
         rizin._pipe.cmd.assert_called_with("aaa")
 
     @pytest.mark.asyncio
-    async def test_open_binary(self, rizin: RizinBridge):
-        await rizin.open_binary("/tmp/new_bin")
-        rizin._pipe.cmd.assert_called_with("o /tmp/new_bin")
-        assert rizin.binary_path == "/tmp/new_bin"
+    async def test_open_binary(self, rizin: RizinBridge, tmp_path):
+        """open_binary now respawns rzpipe with the target binary."""
+        bin_path = tmp_path / "new_bin"
+        bin_path.write_bytes(b"\x7fELF" + b"\x00" * 64)
+        new_pipe = make_mock_pipe()
+        mock_rz = MagicMock()
+        mock_rz.open.return_value = new_pipe
+        with patch.dict("sys.modules", {"rzpipe": mock_rz}):
+            await rizin.open_binary(str(bin_path), allowed_dirs=[str(tmp_path)])
+        mock_rz.open.assert_called_once()
+        assert rizin._pipe is new_pipe
+        assert rizin.binary_path == str(bin_path)
         assert rizin.is_analyzed is False
 
 
@@ -581,9 +591,24 @@ class TestRizinGraphs:
 
     @pytest.mark.asyncio
     async def test_function_cfg(self, rizin: RizinBridge):
-        rizin._pipe.cmdj.return_value = [{"offset": 0x401000, "blocks": []}]
-        await rizin.function_cfg("0x401000")
-        rizin._pipe.cmdj.assert_called_with("agj @ 0x401000")
+        """function_cfg combines afbj (basic blocks) with pdfj (instructions)."""
+        # afbj returns blocks, then pdfj returns the function's ops list
+        rizin._pipe.cmdj.side_effect = [
+            [{"addr": 0x401000, "size": 16, "ninstr": 4, "jump": None, "fail": None}],
+            {
+                "ops": [
+                    {
+                        "offset": 0x401000,
+                        "disasm": "push rbp",
+                        "type": "push",
+                        "size": 1,
+                    }
+                ]
+            },
+        ]
+        result = await rizin.function_cfg("0x401000")
+        assert len(result) == 1
+        assert result[0]["addr"] == 0x401000
 
     @pytest.mark.asyncio
     async def test_ascii_graph(self, rizin: RizinBridge):

@@ -60,21 +60,88 @@
 - [x] Backlog revampé avec vision v2, Sprints 24-28 ajoutés
 - [x] Sprint 14 hardening confirmé : 700/700 tests, ruff/bandit/cargo clean
 
-### Sprint 20 — WS migration + Mode RE phase 1 ⏸ PLANIFIÉ
+### Sprint 20 — Mode RE phase 1 + Decompiler capability + Docker ✅ (3 mai 2026)
 
-**A — WS migration** (débloqué par stack e2e Sprint 18) :
-- [ ] Migrer `useAnvilSession` REST → `AnvilWS.request()` (-50ms/step)
+**A — Mode RE phase 1** :
+- [x] Layout 3 panneaux : sidebar (functions/strings/imports/exports) | CFG | right panel (decompile/disasm)
+- [x] Hook `useRizinSession` rewrite avec auto-analyze pipeline
+- [x] `ReEmptyState` (Tauri/browser-aware), `ReLoadingBar`, `ReTopBar`
+- [x] CFG @xyflow/react + dagre, alignement T/F, back-edges, hover border violet
+- [x] `rizin.analyze()` et `decompile()` → dicts structurés (ADR-022 conforme)
+- [x] `rizin_bridge.start()` deferred (fix hang `rzpipe.open("")`)
 
-**B — Mode RE phase 1** (~1 semaine, valeur immédiate) :
-- [ ] Layout 3 colonnes : fonctions | désassemblage | info
-- [ ] Liste fonctions/symboles filtrable (rzpipe `aflj`)
-- [ ] Désassemblage texte avec navigation (rzpipe `pdj`)
-- [ ] Panels strings, imports, exports, xrefs
-- [ ] Right-click menus contextuels
-- [ ] `rizin.analyze()` et `decompile()` → dicts structurés (requis ADR-022 MCP)
-- [ ] Specs e2e : `mode-switch`, `analyze`, `function-list`, `disasm-view`
+**B — Decompiler capability** :
+- [x] `decompile()` raise `DECOMPILER_MISSING` (HTTP 422) quand pdg/pdd absent
+- [x] `client.ts` propage `error.code` + `error.status`
+- [x] `DecompileView.onMissing` callback → `REMode` masque l'onglet
+- [x] Tab par défaut : `disasm` (universellement dispo)
+
+**C — Docker** :
+- [x] `docker/Dockerfile.backend` basé `kalilinux/kali-rolling`
+- [x] rizin + rz-ghidra + binwalk + gdb + nasm/gcc préinstallés
+- [x] User non-root, HEALTHCHECK, sanity check rz-ghidra plugin
+
+**D — WS migration (REPORTÉ Sprint 22+)** :
+- [ ] Migrer `useAnvilSession` REST → `AnvilWS.request()` — pas bloquant, gain marginal
+
+### Sprint 21bis — RE phase 2 light ✅ DONE
+- [x] Build Docker image + verify rz-ghidra (decompile fonctionnel via container)
+- [x] Xrefs panel (onglet right panel — `to/from`, click-to-navigate, badges typés)
+- [x] Hex viewer (toolbar addr custom + size, dump `px` rizin)
+- [x] ASM↔C sync visuel (état partagé `selectedAddr`, click DisasmView highlight + heuristique de matching d'adresse dans Monaco DecompileView)
+- [x] E2E specs : `tests/e2e/re/re-phase2.spec.ts` (7 tests : load binary, xrefs to/navigate, hex view + custom addr, disasm select, decompile capability)
+
+**Décisions** :
+- Sync ASM↔C reste **best-effort** : pas de mapping pdgj côté backend, l'heuristique cherche le hex de l'adresse dans le pseudo-C (rz-ghidra émet souvent les adresses en commentaires ou litéraux). Le vrai mapping (parser `pdgj` JSON + Monaco decorations stables) est reporté à un sprint dédié si le besoin se confirme.
+- Hex viewer non virtualisé : `read_hex_text` (commande `px` rizin) renvoie un dump déjà formaté ; suffisant ≤ 4 KB. Virtualisation reportée si paginations longues nécessaires.
+
+### Sprint Agent IA ⏸ IDÉE — PLANIFIÉ POST-21bis
+
+> Agent IA in-app qui peut **agir** (pas juste répondre) via les tools MCP existants.
+> Bring Your Own Key, multi-provider, safeguards.
+
+**UX retenue** : **command palette contextuelle** (Cmd+K-like)
+- Raccourci clavier global → petit modal flottant (~400×200px) ancré près du curseur
+- Champ texte libre + suggestions contextuelles selon le mode actif
+- L'agent répond inline + peut lancer des tool calls visibles ("🔧 `rizin.decompile(0x401260)`")
+- Modal se ferme sur Esc ou click extérieur — pas d'historique de chat persistant
+- Pour conversations longues : touche pour "épingler" → drawer optionnel
+
+**Architecture** :
+- `POST /api/agent/chat` (SSE stream) côté backend
+- Agent runtime (anthropic SDK / openai SDK / ollama HTTP)
+- Tools = `anvil_mcp.tools.*` (déjà câblés ADR-022) — pas de duplication
+- Provider switch : Anthropic / OpenAI / OpenRouter / Ollama-local
+
+**BYOK** :
+- Settings page → écrit dans `~/.anvil/config.json` via Tauri fs
+- Backend lit au start (hot-reload optionnel)
+- Frontend ne voit plus la clé après save (masque `sk-ant-...****`)
+
+**Safeguards** :
+- Mode lecture seule par défaut, toggle "🔓 Allow write/exec"
+- Confirmation modale avant tool destructif (compile/exec/write_memory)
+- Tool allowlist par mode (RE ne peut pas appeler tools Pwn — limite blast radius prompt-injection)
+- Audit log persistant `~/.anvil/agent.log`
+- Token cap par session
+
+**Killer features pédagogiques** :
+- "Explain this" clic-droit sur asm/fonction RE/payload pwn → explication inline
+- "Suggest exploit" Pwn — agent voit checksec+symbols+GOT, propose technique
+- "Walk me through" mode tutoriel (step-by-step commenté)
+- "Annotate firmware" — pipeline binwalk → triage → résumé
+- "CTF mode" autonomous — agent résout un binaire CTF seul
+
+**ADR à écrire** : ADR-023 — Agent IA in-app (BYOK, multi-provider, MCP-as-tools, safeguards).
+
+**Découpage proposé** (4 sprints) :
+- A — Settings page + storage clé + provider switch + route REST stub (~2j)
+- B — Agent runtime + SSE stream + tool dispatcher branché sur anvil_mcp (~3j)
+- C — Command palette UI + markdown renderer + tool call display (~2j)
+- D — Inline actions ("✨ Explain"), confirmation modals, audit log (~2j)
 
 ### Sprint 21 — Mode RE phase 2 ⏸ PLANIFIÉ
+- [ ] Build Docker image + valider decompile fonctionnel (rz-ghidra Kali)
 - [ ] Décompilation pseudo-C via `r2ghidra pdg` côte à côte avec le désassemblage
 - [ ] Synchronisation ASM ↔ C (clic ligne ASM → highlight C correspondant)
 - [ ] Hex viewer virtualisé

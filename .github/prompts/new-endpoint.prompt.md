@@ -4,7 +4,9 @@ description: "Add a new backend API route with model, bridge method, and test"
 When adding a new backend endpoint to Anvil, follow this checklist:
 
 1. **Model** (`backend/app/models/{module}.py`):
-   - Add Pydantic `BaseModel` request/response classes
+   - `from __future__ import annotations` en première ligne
+   - Imports : stdlib → third-party → local (ruff I001)
+   - Add Pydantic v2 `BaseModel` request/response classes
    - Every `str` field must have `Field(..., max_length=N)`
    - Every `int` field must have `Field(..., ge=X, le=Y)`
    - Every `list` field must have `Field(..., max_length=N)`
@@ -14,6 +16,8 @@ When adding a new backend endpoint to Anvil, follow this checklist:
    - Add method to the bridge class
    - Call `self._require_ready()` first
    - Sanitize all user inputs via `core/sanitization.py` helpers
+   - **Binary data (ADR-010)**: exchange as hex strings (`"9090"` for `\x90\x90`) — bridge converts hex↔bytes
+   - **MCP rule (ADR-022)**: if endpoint will be exposed via MCP, return `dict` with `summary` field
    - Return plain dicts/lists (Pydantic serializes in the route)
 
 3. **API route** (`backend/app/api/{module}.py`):
@@ -29,5 +33,5 @@ When adding a new backend endpoint to Anvil, follow this checklist:
    - For API tests: use `async_client` fixture with `httpx.AsyncClient`
 
 5. **Verify**:
-   - `cd backend && ruff check .` (must pass)
-   - `cd backend && pytest ../tests/ -v --tb=short` (must pass)
+   - `ruff check backend/ tests/` (must pass — run from repo root)
+   - `python -m pytest tests/ -v --tb=short` (use `python -m`, not `pytest` directly — fixes import paths)

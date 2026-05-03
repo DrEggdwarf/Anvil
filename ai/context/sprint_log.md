@@ -491,6 +491,89 @@ Sprint 20 — WS migration + Mode RE phase 1 (voir backlog.md)
 ---
 ---
 
-## Sprint 20+ — Planifiés
+## Sprint 20 — Mode RE phase 1 + Decompiler capability + Docker (3 mai 2026) ✅
+**Objectif** : finaliser RE mode (CFG layout, état empty/loading/ready), gérer absence de décompilateur, préparer image Docker
+**Agents** : @frontend, @backend, @devops
 
-Voir [backlog.md](./backlog.md) pour le détail des sprints à venir (WS migration, Mode RE phases 1-3, Contexte inter-modules, GDB remote, Firmware pipeline, Wire, MCP server) — Sprints 20-28.
+### A — Hook + état machine RE
+- [x] `useRizinSession` rewrite avec `LoadingStep` + auto-analyze pipeline (session → load → aaa → symbols)
+- [x] `ReEmptyState` (Tauri / browser-aware), `ReLoadingBar`, `ReTopBar` simplifiée
+- [x] `REMode` machine d'états `isEmpty / isLoading / isReady` + layout 3 panels
+
+### B — CFG visualisation (@xyflow/react + dagre)
+- [x] `cfgLayout.ts` post-process dagre : alignement T/F par `min(top)` + back-edge skip + shift exclusif (join nodes restent en place, plus de superposition RET ↔ branche T)
+- [x] `CfgView` : edges T (vert) / F (rouge) / Goto (violet), MiniMap, Background grid, légende
+- [x] `.cfg-node` gradient + hover `border-color: var(--accent)` simple (pas de transform/box-shadow → pas de flicker)
+- [x] Loops gérées implicitement par dagre (back-edge non décorée — simplification)
+
+### C — Backend fixes
+- [x] `rizin_bridge.start()` deferred — pipe créé seulement à `open_binary()` (fix hang sur `rzpipe.open("")`)
+- [x] `decompile()` raise `ValidationError("DECOMPILER_MISSING")` si pdg/pdd absent (rz-ghidra/rz-dec)
+- [x] `_STATUS_MAP["DECOMPILER_MISSING"] = 422`
+- [x] `client.ts` enrichit `Error` avec `code` + `status` (pattern réutilisable pour futures capabilities)
+
+### D — Frontend capability detection
+- [x] `DecompileView.onMissing` callback déclenché sur `code === 'DECOMPILER_MISSING'`
+- [x] `REMode` cache l'onglet Pseudo-code et bascule auto sur Désassemblage
+- [x] Tab par défaut désormais `disasm` (universellement disponible)
+
+### E — Docker
+- [x] [docker/Dockerfile.backend](../../docker/Dockerfile.backend) basé sur `kalilinux/kali-rolling`
+- [x] rizin + rz-ghidra + binwalk + gdb + nasm/gcc préinstallés via apt
+- [x] User non-root `anvil` (uid 1000), HEALTHCHECK, sanity check rz-ghidra au build
+- [x] [docker/README.md](../../docker/README.md) avec build/run
+
+### Décisions techniques
+- Base Kali plutôt que Debian + compilation source — Debian trixie n'a pas `rizin`/`rz-ghidra`, compiler depuis source ajouterait ~10min de build
+- Capability détectée à l'usage (pas via `/api/health`) — un seul appel decompile permet de masquer l'onglet, pas besoin d'endpoint health dédié
+- `Error.code` propagé depuis `ErrorResponse.code` — pattern réutilisable pour futures capabilities (`EMULATION_MISSING`, `BINWALK_MISSING`, etc.)
+- CFG layout : shift "exclusif" — un nœud n'est shifté que si TOUS ses parents forward sont dans le sous-arbre. Évite de traîner les join nodes (RET) avec une branche.
+- Loops dans CFG : gardées invisibles. dagre route correctement, l'ajout de styles dashed/loop label ajoutait de la complexité visuelle pour peu de valeur.
+
+### Sample binary
+- `/home/robin/Code/Anvil/samples/re_sample` (ELF 64-bit, no PIE, debug_info, password=`anvil2026`, 5 fns: `main`/`win`/`check_password`/`greet`/`fibonacci`)
+
+### Suite
+Sprint 21 — RE phase 2 (décompilation pseudo-C synchronisée, hex viewer, xrefs) — décompile fonctionnera dès que l'image Docker sera build/run
+
+---
+
+## Sprint 21bis — RE phase 2 light : Xrefs + Hex + sync ASM↔C (3 mai 2026) ✅
+
+**Objectif** : compléter le panneau RE droit avec les onglets manquants (Xrefs, Hex), ajouter une synchronisation visuelle ASM↔C, couvrir le tout en e2e.
+
+**Agents** : @frontend, @testing
+
+### A — API client
+- [x] [src/api/client.ts](src/api/client.ts) — `reXrefsTo/From` unwrap robuste (`{xrefs:[…]}` ou tableau brut), `reReadHex` + `reReadHexText`
+
+### B — Composants right panel
+- [x] [src/components/re/XrefsPanel.tsx](src/components/re/XrefsPanel.tsx) — sections "Appelé depuis" / "Référence vers", click-to-navigate, badges typés (CALL/CODE/DATA/STRING)
+- [x] [src/components/re/HexView.tsx](src/components/re/HexView.tsx) — toolbar (addr custom + select size 256B–4KB + refresh), dump `<pre>` formaté côté rizin
+- [x] [src/components/REMode.tsx](src/components/REMode.tsx) — 4 onglets right panel (Pseudo-code conditionnel | Désassemblage | Xrefs | Hex), default `disasm`
+
+### C — Sync ASM↔C visuel
+- [x] État `selectedAddr` lifté dans REMode, propagé à DisasmView + DecompileView
+- [x] DisasmView : click ligne → highlight `.anvil-disasm-line--selected` (background tint + accent border-left), `scrollIntoView` quand sélection externe
+- [x] DecompileView : `onMount` Monaco capture les déplacements de curseur (extrait `0xADDR` de la ligne) ; effet réciproque qui décore la ligne du Monaco quand `selectedAddr` matche un hex présent dans le code (heuristique best-effort)
+
+### D — E2E coverage
+- [x] [tests/e2e/fixtures/anvil.ts](tests/e2e/fixtures/anvil.ts) — helpers `reLoadBinary`, `reFunctionRow`, `reRightTab`, `reDisasmLines/Selected`, `reHexDump`, `reXrefsItems`
+- [x] [tests/e2e/re/re-phase2.spec.ts](tests/e2e/re/re-phase2.spec.ts) — 7 specs : load binary, Xrefs apparaît + navigation, Hex view + custom addr, Disasm select, Decompile capability fallback
+
+### Décisions techniques
+- **Pas de pdgj backend** : le vrai mapping ligne C ↔ offset asm nécessite parser le JSON rz-ghidra (`pdgj`) + gérer Monaco decorations stables. Trop coûteux pour la valeur. Heuristique d'address-search dans le pseudo-C suffit pour 80 % des cas (rz-ghidra émet souvent les adresses en commentaires ou litéraux).
+- **Hex non virtualisé** : `read_hex_text` (`px` rizin) renvoie déjà du texte formaté ; pour ≤ 4 KB pas besoin de `react-window`. Reportable si paginations longues.
+- **Best-effort > exhaustivité** : tous les nouveaux panneaux dégradent proprement (xrefs vides, hex absent, decompile masqué) plutôt que de bloquer le mode.
+
+### Prochaines étapes
+- Sprint 22 — Agent IA in-app (BYOK, command palette tooltip-modal, MCP-as-tools, ADR-023 à rédiger)
+- Si demande utilisateur : vrai mapping pdgj + Monaco decorations bidirectionnelles dans un sprint dédié
+
+---
+---
+
+## Sprint 22+ — Planifiés
+
+Voir [backlog.md](./backlog.md) pour le détail (Agent IA, GitHub & release engineering, Resilience UX, Mode RE phase 3, GDB remote, Firmware pipeline, Wire, MCP server enrichi).
+

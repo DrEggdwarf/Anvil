@@ -37,7 +37,6 @@ from typing import Any
 
 from backend.app.bridges.base import BaseBridge, BridgeState
 from backend.app.bridges.registry import bridge_registry
-from backend.app.core.exceptions import BridgeCrash
 from backend.app.core.sanitization import sanitize_rizin_input, validate_file_path
 
 logger = logging.getLogger(__name__)
@@ -55,18 +54,15 @@ class RizinBridge(BaseBridge):
         self._analyzed = False
 
     async def start(self) -> None:
-        """Open rizin on the binary (or empty if no binary)."""
-        self.state = BridgeState.STARTING
-        try:
-            import rzpipe
+        """Mark the bridge READY without spawning rizin.
 
-            target = self._binary_path or ""
-            self._pipe = rzpipe.open(target, flags=["-2"])
-            self.state = BridgeState.READY
-            logger.info("Rizin bridge started: %s", target or "(no binary)")
-        except Exception as e:
-            self.state = BridgeState.ERROR
-            raise BridgeCrash("rizin", exit_code=None) from e
+        ``rzpipe.open("")`` hangs on rizin 0.8.2 (no binary → interactive
+        prompt). The pipe is created lazily in :meth:`open_binary`.
+        """
+        self.state = BridgeState.STARTING
+        self._pipe = None
+        self.state = BridgeState.READY
+        logger.info("Rizin bridge ready (pipe deferred until open_binary)")
 
     async def stop(self) -> None:
         """Close the rizin pipe."""
@@ -116,16 +112,39 @@ class RizinBridge(BaseBridge):
         raw = self._pipe.cmd(level)
         self._analyzed = True
         funcs = self._cmdj("aflj") or []
-        return {"status": "ok", "level": level, "functions_found": len(funcs), "raw": raw}
+        count = len(funcs)
+        return {
+            "status": "ok",
+            "level": level,
+            "functions_found": count,
+            "summary": f"Analysis {level} complete: {count} function{'s' if count != 1 else ''} found",
+            "raw": raw,
+        }
 
     async def open_binary(self, binary_path: str, *, allowed_dirs: list[str] | None = None) -> str:
-        """Open a new binary file in the current session."""
+        """Open a new binary file in the current session.
+
+        Re-spawns the rzpipe subprocess with the target binary so that the
+        command runs via a real ``rizin`` process (avoids the native-rz_core
+        requirement when calling ``o <path>`` on an empty pipe).
+        """
         self._require_ready()
         validate_file_path(binary_path, allowed_dirs=allowed_dirs, field_name="binary_path")
         sanitize_rizin_input(binary_path, "binary_path")
+
+        import contextlib
+
+        import rzpipe
+
+        # Close the current (empty) pipe and reopen with the target binary.
+        # This spawns: rizin -q0 <binary_path>
+        if self._pipe is not None:
+            with contextlib.suppress(Exception):
+                self._pipe.quit()
+        self._pipe = rzpipe.open(binary_path, flags=["-2"])
         self._binary_path = binary_path
         self._analyzed = False
-        return self._pipe.cmd(f"o {binary_path}")
+        return f"Opened {binary_path}"
 
     # ── Binary info ──────────────────────────────────────
 
@@ -179,10 +198,66 @@ class RizinBridge(BaseBridge):
         return self._cmdj(f"agCj @ {address}") or []
 
     async def function_cfg(self, address: str) -> list[dict]:
-        """Get control flow graph for function (agj @ addr)."""
+        """Get control flow graph for function.
+
+        Builds the CFG by combining:
+          - ``afbj @ <addr>`` — basic blocks with jump/fail edges
+          - ``pdfj @ <addr>`` — per-instruction details (disasm, type, jump/fail)
+
+        Returns a list of block dicts in a format compatible with the
+        frontend ``CfgBlock`` type:
+          {addr, size, ninstr, jump, fail, ops: [{offset, disasm, type, jump, fail}]}
+        """
         self._require_ready()
         sanitize_rizin_input(address, "address")
-        return self._cmdj(f"agj @ {address}") or []
+
+        blocks_raw: list[dict] = self._cmdj(f"afbj @ {address}") or []
+        ops_raw: list[dict] = []
+        pdf = self._cmdj(f"pdfj @ {address}")
+        if isinstance(pdf, dict):
+            ops_raw = pdf.get("ops", [])
+        elif isinstance(pdf, list):
+            ops_raw = pdf
+
+        # Index instructions by offset for quick lookup
+        ops_by_offset: dict[int, dict] = {op["offset"]: op for op in ops_raw}
+
+        result: list[dict] = []
+        for blk in blocks_raw:
+            blk_addr: int = blk["addr"]
+            blk_size: int = blk.get("size", 0)
+            blk_end = blk_addr + blk_size
+
+            # Collect instructions belonging to this block
+            blk_ops = [
+                {
+                    "offset": op["offset"],
+                    "disasm": op.get("disasm", op.get("opcode", "")),
+                    "type": op.get("type", ""),
+                    "jump": op.get("jump"),
+                    "fail": op.get("fail"),
+                    "bytes": op.get("bytes", ""),
+                    "size": op.get("size", 0),
+                }
+                for offset, op in sorted(ops_by_offset.items())
+                if blk_addr <= offset < blk_end
+            ]
+
+            result.append(
+                {
+                    "offset": blk_addr,
+                    "addr": blk_addr,
+                    "size": blk_size,
+                    "ninstr": blk.get("ninstr", len(blk_ops)),
+                    "jump": blk.get("jump"),
+                    "fail": blk.get("fail"),
+                    "inputs": blk.get("inputs", 0),
+                    "outputs": blk.get("outputs", 0),
+                    "ops": blk_ops,
+                }
+            )
+
+        return result
 
     async def rename_function(self, address: str, new_name: str) -> str:
         """Rename a function (afn name @ addr)."""
@@ -230,10 +305,32 @@ class RizinBridge(BaseBridge):
         self._require_ready()
         sanitize_rizin_input(address, "address")
         result = self._pipe.cmd(f"pdg @ {address}")
-        if result and "Cannot" not in result and "error" not in result.lower():
-            return {"address": address, "language": "c", "code": result, "source": "rz-ghidra"}
+        if result and "does not exist" not in result and "Cannot" not in result and "error" not in result.lower():
+            lines = len(result.splitlines())
+            return {
+                "address": address,
+                "language": "c",
+                "code": result,
+                "source": "rz-ghidra",
+                "summary": f"Decompiled {address} via rz-ghidra ({lines} lines)",
+            }
         code = self._pipe.cmd(f"pdd @ {address}")
-        return {"address": address, "language": "c", "code": code, "source": "rz-dec"}
+        if not code or "does not exist" in code or "Cannot" in code or "error" in code.lower():
+            from backend.app.core.exceptions import ValidationError
+
+            raise ValidationError(
+                "Aucun décompilateur disponible. Installe rz-ghidra (`rz-pm install rz-ghidra`) "
+                "ou rz-dec pour activer le pseudo-code.",
+                code="DECOMPILER_MISSING",
+            )
+        lines = len(code.splitlines()) if code else 0
+        return {
+            "address": address,
+            "language": "c",
+            "code": code,
+            "source": "rz-dec",
+            "summary": f"Decompiled {address} via rz-dec ({lines} lines)",
+        }
 
     # ── Strings ──────────────────────────────────────────
 

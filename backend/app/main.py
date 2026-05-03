@@ -71,6 +71,7 @@ _STATUS_MAP: dict[str, int] = {
     "INVALID_BASE64": 400,
     "WRONG_SESSION_TYPE": 400,
     "COMPILE_ERROR": 422,
+    "DECOMPILER_MISSING": 422,
 }
 
 
