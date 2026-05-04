@@ -49,3 +49,7 @@ samples/pwn/bof_rust
 samples/pwn/*.o
 playwright-report/
 test-results/
+samples/test_suite/*
+!samples/test_suite/*.c
+!samples/test_suite/*.asm
+!samples/test_suite/Makefile

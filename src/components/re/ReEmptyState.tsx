@@ -1,6 +1,4 @@
-import { useRef } from 'react'
-
-const isTauri = !!(window as { __TAURI__?: unknown }).__TAURI__
+import { useRef, useState } from 'react'
 
 interface ReEmptyStateProps {
   onOpenPath: (path: string) => void
@@ -10,6 +8,7 @@ interface ReEmptyStateProps {
 export function ReEmptyState({ onOpenPath, error }: ReEmptyStateProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pathInputRef = useRef<HTMLInputElement>(null)
+  const [hint, setHint] = useState<string | null>(null)
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -18,12 +17,13 @@ export function ReEmptyState({ onOpenPath, error }: ReEmptyStateProps) {
     if (path) {
       onOpenPath(path)
     } else {
-      // Browser / dev mode: file.path unavailable — pre-fill input so user
-      // can complete the absolute path then press Enter
+      // Browser / dev mode: file.path unavailable — pre-fill input with name
+      // and show a hint so user can type the full absolute path
       if (pathInputRef.current) {
         pathInputRef.current.value = file.name
         pathInputRef.current.select()
         pathInputRef.current.focus()
+        setHint(`Fichier sélectionné : ${file.name} — complète le chemin absolu puis Entrée`)
       }
     }
     e.target.value = ''
@@ -57,12 +57,10 @@ export function ReEmptyState({ onOpenPath, error }: ReEmptyStateProps) {
 
         <button
           className="anvil-re-empty-btn"
-          onClick={() => isTauri ? fileInputRef.current?.click() : pathInputRef.current?.focus()}
-          title={isTauri ? '' : 'Mode navigateur : utilise le champ ci-dessous'}
+          onClick={() => fileInputRef.current?.click()}
         >
           <i className="fa-solid fa-folder-open" />
           Charger un binaire
-          {!isTauri && <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: 4 }}>(chemin requis)</span>}
         </button>
 
         <div className="anvil-re-empty-divider">
@@ -86,6 +84,12 @@ export function ReEmptyState({ onOpenPath, error }: ReEmptyStateProps) {
             <i className="fa-solid fa-arrow-right" />
           </button>
         </div>
+
+        {hint && (
+          <p className="anvil-re-empty-hint">
+            <i className="fa-solid fa-circle-info" /> {hint}
+          </p>
+        )}
 
         <p className="anvil-re-empty-formats">
           ELF · PE · Mach-O · .so · .bin · firmware

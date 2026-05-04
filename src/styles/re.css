@@ -1107,6 +1107,15 @@
   letter-spacing: 0.04em;
 }
 
+.anvil-re-empty-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--accent, #00bcd4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ═══════════════════════════════════════════════════════════
    Loading bar
    ═══════════════════════════════════════════════════════════ */
