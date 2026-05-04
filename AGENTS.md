@@ -30,7 +30,7 @@ pytest asyncio_mode is `"auto"` in `backend/pyproject.toml` — no `@pytest.mark
 | `/new-endpoint` | `.github/prompts/new-endpoint.prompt.md` — step-by-step checklist for adding a backend route |
 | `/new-component` | `.github/prompts/new-component.prompt.md` — step-by-step checklist for adding a React component |
 
-**Current state**: Sprint 21bis ✅ — RE phase 2 light (Xrefs panel, Hex viewer, sync ASM↔C visuel, Decompile via Docker rz-ghidra). Sprint 22 prochain : Agent IA in-app (BYOK, command palette tooltip-modal, MCP-as-tools, ADR-023 à rédiger).
+**Current state**: Sprint 21bis ✅ — RE phase 2 light. Sprint 22 🎯 EN COURS : Agent IA in-app (ADR-023 ratifié — BYOK multi-provider Anthropic/OpenAI/OpenRouter/Ollama, FAB ✦ + ⌘K, MCP-as-tools in-process, persistence SQLite, audit log).
 
 ## Architecture
 

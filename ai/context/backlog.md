@@ -95,50 +95,59 @@
 - Sync ASM↔C reste **best-effort** : pas de mapping pdgj côté backend, l'heuristique cherche le hex de l'adresse dans le pseudo-C (rz-ghidra émet souvent les adresses en commentaires ou litéraux). Le vrai mapping (parser `pdgj` JSON + Monaco decorations stables) est reporté à un sprint dédié si le besoin se confirme.
 - Hex viewer non virtualisé : `read_hex_text` (commande `px` rizin) renvoie un dump déjà formaté ; suffisant ≤ 4 KB. Virtualisation reportée si paginations longues nécessaires.
 
-### Sprint Agent IA ⏸ IDÉE — PLANIFIÉ POST-21bis
+### Sprint 22 — Agent IA in-app 🎯 PROCHAIN
 
-> Agent IA in-app qui peut **agir** (pas juste répondre) via les tools MCP existants.
-> Bring Your Own Key, multi-provider, safeguards.
+> ADR-023 ratifié. Sprint **unique de bout en bout** — pas de découpage incrémental : la feature livrée est complète, utilisable, persistée, multi-provider.
 
-**UX retenue** : **command palette contextuelle** (Cmd+K-like)
-- Raccourci clavier global → petit modal flottant (~400×200px) ancré près du curseur
-- Champ texte libre + suggestions contextuelles selon le mode actif
-- L'agent répond inline + peut lancer des tool calls visibles ("🔧 `rizin.decompile(0x401260)`")
-- Modal se ferme sur Esc ou click extérieur — pas d'historique de chat persistant
-- Pour conversations longues : touche pour "épingler" → drawer optionnel
+**Objectif** : un agent IA contextuel intégré, déclenchable par FAB ✦ ou ⌘K, qui agit via les tools MCP existants (ADR-022) en réutilisant `anvil_mcp.tools.*` en in-process.
 
-**Architecture** :
-- `POST /api/agent/chat` (SSE stream) côté backend
-- Agent runtime (anthropic SDK / openai SDK / ollama HTTP)
-- Tools = `anvil_mcp.tools.*` (déjà câblés ADR-022) — pas de duplication
-- Provider switch : Anthropic / OpenAI / OpenRouter / Ollama-local
+**Livrables backend** :
+- [ ] `backend/app/agent/runtime.py` — orchestrator (boucle messages ↔ tools, SSE)
+- [ ] `backend/app/agent/providers/{anthropic,openai,openrouter,ollama}.py` — interface commune `stream(messages, tools) → AsyncIterator[Chunk]`
+- [ ] `backend/app/agent/tools.py` — dispatcher import in-process de `anvil_mcp.tools.*` + allowlist (Strict mode) + flag destructif
+- [ ] `backend/app/agent/storage.py` — SQLite (`aiosqlite`) `~/.anvil/agent.db`
+- [ ] `backend/app/agent/audit.py` — append-only log `~/.anvil/agent.log`
+- [ ] `backend/app/api/agent.py` — `POST /api/agent/chat` (SSE), `GET/DELETE /api/agent/sessions[/{id}]`, `GET/POST /api/agent/settings`, `GET /api/agent/providers/test`
+- [ ] Pydantic models : `AgentChatRequest`, `AgentChunk`, `AgentSession`, `AgentToolCall`, `AgentSettings`
+- [ ] Groupe `[agent]` dans `backend/pyproject.toml` (`anthropic`, `openai`, `aiosqlite`)
 
-**BYOK** :
-- Settings page → écrit dans `~/.anvil/config.json` via Tauri fs
-- Backend lit au start (hot-reload optionnel)
-- Frontend ne voit plus la clé après save (masque `sk-ant-...****`)
+**Livrables frontend** :
+- [ ] `src/components/agent/AgentFab.tsx` — bouton bas-droite + tooltip 3 actions
+- [ ] `src/components/agent/AgentWidget.tsx` — overlay d'entrée (chips + historique 3 + textarea)
+- [ ] `src/components/agent/AgentChat.tsx` — overlay chat (hauteur dynamique, resizable, header avec toggle write/exec)
+- [ ] `src/components/agent/AgentMessage.tsx` — markdown progressif (`react-markdown` + `remark-gfm` + `rehype-highlight`)
+- [ ] `src/components/agent/ToolCallCard.tsx` — carte expandable + Approve/Reject inline
+- [ ] `src/components/agent/ContextChips.tsx` — chips module(s) coché(s)
+- [ ] `src/components/agent/AgentSettings.tsx` — page providers + comportement + historique + audit log
+- [ ] `src/hooks/useAgentSession.ts` — état session + SSE EventSource + tool calls
+- [ ] `src/hooks/useGlobalShortcut.ts` — capture ⌘K (priorité Monaco)
+- [ ] `src/api/client.ts` — `agentChat`, `agentSessions`, `agentSettings`, `agentTestProvider`
+- [ ] `src/styles/agent.css` — border-pulse couleur module, dim layer, drag-handle
+- [ ] Routing/montage dans `App.tsx` (overlay racine, écoute changements `data-cat`)
 
-**Safeguards** :
-- Mode lecture seule par défaut, toggle "🔓 Allow write/exec"
-- Confirmation modale avant tool destructif (compile/exec/write_memory)
-- Tool allowlist par mode (RE ne peut pas appeler tools Pwn — limite blast radius prompt-injection)
-- Audit log persistant `~/.anvil/agent.log`
-- Token cap par session
+**Tests** :
+- [ ] `tests/test_agent_api.py` — SSE, providers (mocks), allowlist, persistence
+- [ ] `tests/test_agent_tools.py` — dispatcher + safeguards (lecture seule, Strict mode)
+- [ ] `tests/test_agent_storage.py` — SQLite CRUD, audit log append-only
+- [ ] `src/components/agent/__tests__/AgentChat.test.tsx` — vitest streaming + tool call card
+- [ ] `tests/e2e/agent/agent.spec.ts` — Playwright : ⌘K, send message, tool call approve, persistence après reload
 
-**Killer features pédagogiques** :
-- "Explain this" clic-droit sur asm/fonction RE/payload pwn → explication inline
-- "Suggest exploit" Pwn — agent voit checksec+symbols+GOT, propose technique
-- "Walk me through" mode tutoriel (step-by-step commenté)
-- "Annotate firmware" — pipeline binwalk → triage → résumé
-- "CTF mode" autonomous — agent résout un binaire CTF seul
+**Critères d'acceptation** :
+- ⌘K depuis n'importe quel module → widget ouvre avec chip module pré-sélectionné, border-pulse couleur correspondante
+- 4 providers fonctionnels (mocks en CI), switch Settings sans reload
+- Tool call lecture pure → exécution directe inline
+- Tool call destructif → bouton Approuver/Refuser avant exécution
+- Refresh navigateur → dernière session restaurée
+- Esc ferme sans perdre l'historique (visible dans FAB tooltip)
+- Audit log présent pour chaque tool call
 
-**ADR à écrire** : ADR-023 — Agent IA in-app (BYOK, multi-provider, MCP-as-tools, safeguards).
+**Estimation** : ~5j pleins (sprint complet, pas de découpage en phases)
 
-**Découpage proposé** (4 sprints) :
-- A — Settings page + storage clé + provider switch + route REST stub (~2j)
-- B — Agent runtime + SSE stream + tool dispatcher branché sur anvil_mcp (~3j)
-- C — Command palette UI + markdown renderer + tool call display (~2j)
-- D — Inline actions ("✨ Explain"), confirmation modals, audit log (~2j)
+### Sprint Idées post-22
+
+- **Inline actions** : "✨ Explain this" clic-droit sur asm/fonction RE/payload pwn → ouvre chat pré-rempli (extension naturelle de Sprint 22)
+- **CTF mode** : prompt système autonome qui résout un binaire CTF seul (réutilise tout Sprint 22)
+- **Walk me through** : mode tutoriel step-by-step (variante system prompt)
 
 ### Sprint 21 — Mode RE phase 2 ⏸ PLANIFIÉ
 - [ ] Build Docker image + valider decompile fonctionnel (rz-ghidra Kali)

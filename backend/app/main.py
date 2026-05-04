@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from backend.app.api import compile, firmware, gdb, health, protocol, pwn, rizin, sessions, ws
+from backend.app.api import agent, compile, firmware, gdb, health, protocol, pwn, rizin, sessions, ws
 from backend.app.core.config import settings
 from backend.app.core.exceptions import AnvilError
 from backend.app.core.lifecycle import lifespan
@@ -97,4 +97,5 @@ app.include_router(rizin.router)
 app.include_router(pwn.router)
 app.include_router(firmware.router)
 app.include_router(protocol.router)
+app.include_router(agent.router)
 app.include_router(ws.router)

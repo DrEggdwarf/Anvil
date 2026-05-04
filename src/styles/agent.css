@@ -1,0 +1,663 @@
+/* Anvil Agent — overlay styles (ADR-023) */
+
+/* ── FAB ───────────────────────────────────────────── */
+.anvil-agent-fab-wrap {
+  position: fixed;
+  right: 24px;
+  bottom: 28px;
+  z-index: 1500;
+}
+
+.anvil-agent-fab {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--cat-border, var(--accent));
+  background: var(--bg-elev, #181818);
+  color: var(--accent);
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.anvil-agent-fab:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+
+.anvil-agent-fab-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: 60px;
+  min-width: 220px;
+  padding: 8px;
+  background: var(--bg-elev, #181818);
+  border: 1px solid var(--border, #333);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.anvil-agent-fab-tooltip button {
+  background: transparent;
+  border: none;
+  color: var(--fg, #ddd);
+  text-align: left;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.anvil-agent-fab-tooltip button:hover {
+  background: var(--bg-hover, #222);
+}
+
+.anvil-agent-fab-history {
+  border-top: 1px solid var(--border, #333);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.anvil-agent-fab-history > span {
+  font-size: 11px;
+  color: var(--fg-dim, #777);
+  padding: 4px 8px;
+  display: block;
+}
+
+.anvil-agent-fab-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.anvil-agent-fab-history button {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Overlay ───────────────────────────────────────── */
+.anvil-agent-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  pointer-events: none;
+}
+
+.anvil-agent-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  animation: anvil-agent-fadein 0.18s ease;
+}
+
+@keyframes anvil-agent-fadein {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+.anvil-agent-panel {
+  position: absolute;
+  right: 24px;
+  bottom: 28px;
+  width: min(520px, 92vw);
+  max-height: 70vh;
+  background: var(--bg, #111);
+  border: 1px solid var(--cat-border, var(--accent));
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  min-width: 360px;
+  min-height: 280px;
+  animation: anvil-agent-pulse 2.4s ease-in-out infinite, anvil-agent-fadein 0.18s ease;
+}
+
+@keyframes anvil-agent-pulse {
+  0%, 100% { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 0 0 var(--cat-border, var(--accent)); }
+  50%      { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 0 3px color-mix(in srgb, var(--cat-border, var(--accent)) 35%, transparent); }
+}
+
+.anvil-agent-panel--widget {
+  min-height: 200px;
+}
+
+.anvil-agent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+  font-size: 13px;
+}
+
+.anvil-agent-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.anvil-agent-header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.anvil-agent-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-agent-toggle input { accent-color: var(--accent); }
+
+.anvil-agent-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.anvil-agent-icon-btn:hover {
+  color: var(--fg, #ddd);
+  background: var(--bg-hover, #222);
+}
+
+/* ── Chips ─────────────────────────────────────────── */
+.anvil-agent-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+}
+
+.anvil-agent-chip {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #333);
+  background: transparent;
+  color: var(--fg-dim, #888);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.12s ease;
+}
+
+.anvil-agent-chip[data-cat="asm"]   { --chip-c: #4caf50; }
+.anvil-agent-chip[data-cat="re"]    { --chip-c: #00bcd4; }
+.anvil-agent-chip[data-cat="pwn"]   { --chip-c: #f44336; }
+.anvil-agent-chip[data-cat="dbg"]   { --chip-c: #9c27b0; }
+.anvil-agent-chip[data-cat="fw"]    { --chip-c: #ff9800; }
+.anvil-agent-chip[data-cat="hw"]    { --chip-c: #03a9f4; }
+
+.anvil-agent-chip--on {
+  border-color: var(--chip-c, var(--accent));
+  color: var(--chip-c, var(--accent));
+  background: color-mix(in srgb, var(--chip-c, var(--accent)) 10%, transparent);
+}
+
+.anvil-agent-chip--module {
+  font-weight: 600;
+}
+
+/* ── Widget body ───────────────────────────────────── */
+.anvil-agent-widget-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.anvil-agent-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.anvil-agent-recent-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim, #777);
+  text-transform: uppercase;
+}
+
+.anvil-agent-recent ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anvil-agent-recent-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg, #ddd);
+  cursor: pointer;
+  text-align: left;
+}
+
+.anvil-agent-recent-item:hover { background: var(--bg-hover, #222); }
+
+.anvil-agent-recent-title { font-size: 13px; }
+.anvil-agent-recent-meta  { font-size: 11px; color: var(--fg-dim, #888); }
+
+/* ── Messages ──────────────────────────────────────── */
+.anvil-agent-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.anvil-agent-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.anvil-agent-msg--user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev, #181818));
+  border-radius: 8px 8px 2px 8px;
+}
+
+.anvil-agent-msg--assistant {
+  max-width: 95%;
+}
+
+.anvil-agent-msg--tool .anvil-agent-tool-output {
+  font-size: 11px;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-agent-msg--error {
+  color: #ff6b6b;
+  font-size: 12px;
+}
+
+.anvil-agent-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-dim, #888);
+  font-size: 12px;
+}
+
+/* ── Markdown ──────────────────────────────────────── */
+.anvil-agent-md-p { margin: 0 0 6px 0; }
+.anvil-agent-md-p:last-child { margin-bottom: 0; }
+
+.anvil-agent-md-inline-code {
+  background: var(--bg-elev, #181818);
+  border: 1px solid var(--border, #2a2a2a);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+.anvil-agent-md-code {
+  background: var(--bg-elev, #181818);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow: auto;
+}
+
+/* ── Tool call card ────────────────────────────────── */
+.anvil-agent-tool {
+  border: 1px solid var(--tool-border, var(--border, #2a2a2a));
+  border-radius: 6px;
+  background: var(--bg-elev, #181818);
+  margin-top: 6px;
+  font-size: 12px;
+  --tool-border: #3a4a6a;
+}
+
+.anvil-agent-tool--read { --tool-border: #2c5282; }
+.anvil-agent-tool--exec { --tool-border: #b7791f; }
+.anvil-agent-tool--running { opacity: 0.85; }
+.anvil-agent-tool--error { --tool-border: #c0392b; }
+.anvil-agent-tool--done { --tool-border: #2f855a; }
+
+.anvil-agent-tool-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: var(--fg, #ddd);
+  cursor: pointer;
+  font-family: var(--font-mono, monospace);
+  text-align: left;
+}
+
+.anvil-agent-tool-name { color: var(--accent); }
+.anvil-agent-tool-status { margin-left: auto; color: var(--fg-dim, #888); display: inline-flex; gap: 4px; align-items: center; }
+.anvil-agent-tool-icon { color: var(--fg-dim, #888); }
+
+.anvil-agent-tool-body { padding: 6px 8px; border-top: 1px solid var(--border, #2a2a2a); display: flex; flex-direction: column; gap: 6px; }
+.anvil-agent-tool-section { display: flex; flex-direction: column; gap: 2px; }
+.anvil-agent-tool-label { font-size: 10px; color: var(--fg-dim, #888); letter-spacing: 0.05em; }
+.anvil-agent-tool-body pre {
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--bg, #0e0e0e);
+  border-radius: 4px;
+  font-size: 11px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.anvil-agent-tool-error { color: #ff6b6b; }
+
+/* ── Input ─────────────────────────────────────────── */
+.anvil-agent-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border, #2a2a2a);
+}
+
+.anvil-agent-input textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--bg-elev, #181818);
+  color: var(--fg, #ddd);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  min-height: 38px;
+  max-height: 200px;
+}
+
+.anvil-agent-input textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.anvil-agent-input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.anvil-agent-hint { font-size: 10px; color: var(--fg-dim, #777); }
+
+.anvil-agent-send,
+.anvil-agent-cancel {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.anvil-agent-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.anvil-agent-cancel { background: #c0392b; color: #fff; }
+
+/* ── Settings modal ────────────────────────────────── */
+.anvil-agent-settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.anvil-agent-settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.anvil-agent-settings-card {
+  position: relative;
+  width: min(720px, 94vw);
+  max-height: 86vh;
+  background: var(--bg, #111);
+  border: 1px solid var(--border, #333);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7);
+}
+
+.anvil-agent-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+}
+
+.anvil-agent-settings-header h2 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.anvil-agent-settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+}
+
+.anvil-agent-settings-tabs button {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim, #888);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.anvil-agent-settings-tabs button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.anvil-agent-settings-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.anvil-agent-prov-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.anvil-agent-prov-tabs button {
+  background: transparent;
+  border: 1px solid var(--border, #2a2a2a);
+  color: var(--fg-dim, #888);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anvil-agent-prov-tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.anvil-agent-prov-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2f855a;
+}
+
+.anvil-agent-prov-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.anvil-agent-prov-form label,
+.anvil-agent-behavior label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-agent-prov-form input,
+.anvil-agent-behavior input,
+.anvil-agent-behavior select {
+  background: var(--bg-elev, #181818);
+  color: var(--fg, #ddd);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.anvil-agent-inline {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-size: 13px !important;
+  color: var(--fg, #ddd) !important;
+}
+
+.anvil-agent-prov-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.anvil-agent-prov-actions button {
+  background: var(--bg-elev, #181818);
+  border: 1px solid var(--border, #2a2a2a);
+  color: var(--fg, #ddd);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.anvil-agent-btn-primary {
+  background: var(--accent) !important;
+  color: #000 !important;
+  border-color: var(--accent) !important;
+}
+
+.anvil-agent-prov-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.anvil-agent-test-status {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-agent-prov-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-dim, #888);
+}
+
+.anvil-agent-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.anvil-agent-history li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.anvil-agent-hist-meta { color: var(--fg-dim, #888); font-size: 11px; }
+
+.anvil-agent-history-actions { margin-bottom: 8px; }
+
+.anvil-agent-history-actions button {
+  background: transparent;
+  border: 1px solid var(--border, #2a2a2a);
+  color: var(--fg-dim, #888);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.anvil-agent-audit table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.anvil-agent-audit th,
+.anvil-agent-audit td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+}
+
+.anvil-agent-audit th { color: var(--fg-dim, #888); font-weight: 500; }

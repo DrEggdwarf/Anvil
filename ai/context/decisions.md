@@ -476,3 +476,75 @@ Aucun de ces points n'est dans la roadmap actuelle (Phases C-G du backlog).
 - Resources : `session://list`, `session://{id}/binary`, `session://{id}/workspace`
 - Prompts orchestrés : `exploit_pipeline` (firmware→RE→Pwn), `firmware_audit`, `ctf_binary`
 - Dépendance optionnelle : `pip install -e "backend/[mcp]"` (groupe `mcp` dans pyproject.toml)
+
+---
+
+## ADR-023 : Agent IA in-app (BYOK, multi-provider, MCP-as-tools)
+
+**Date** : 4 mai 2026
+**Statut** : Accepté
+
+**Contexte** : Anvil est un wrapper sur des outils complexes (rizin, GDB, pwntools, binwalk, pymodbus). Un agent IA contextuel transformerait l'expérience pédagogique : "explique cette fonction", "suggère un exploit", "annote ce firmware". L'agent doit pouvoir **agir** sur l'API — pas juste répondre. Le serveur MCP (ADR-022) expose déjà tous les tools nécessaires : on les réutilise via import in-process.
+
+**Décision** :
+
+### Architecture
+- **Composant global** : un seul widget agent partagé entre tous les modules. La couleur de la border-pulse suit le module actif via `data-cat`.
+- **Backend** : router `backend/app/api/agent.py` avec `POST /api/agent/chat` (SSE stream), `GET /api/agent/sessions`, `DELETE /api/agent/sessions/{id}`. Persistance dans `~/.anvil/agent.db` (SQLite via `aiosqlite`) — survit refresh + redémarrage app.
+- **Tool dispatcher** : l'agent appelle `anvil_mcp.tools.*` directement (in-process import, pas de stdio MCP). MCP server externe reste pour Claude Desktop / Cursor.
+- **Multi-provider dès Sprint 22** : Anthropic + OpenAI + OpenRouter + Ollama (HTTP local). Switch via Settings.
+- **BYOK** : clés stockées dans `~/.anvil/config.json` (chmod 600). Frontend masque après save.
+
+### UX (specs validées)
+- **2 entrées** : FAB ✦ bas-droite + raccourci ⌘K (Ctrl+K Linux/Win).
+  - Aucun chat actif → ouvre widget d'entrée.
+  - Chat actif + FAB hover → tooltip 3 actions (Reprendre / Nouveau / Historique).
+  - Chat actif + ⌘K → toujours nouveau chat (l'ancien archivé en historique).
+- **Widget d'entrée** : overlay bas-droite, **border-pulse couleur module**, fond app grisé. 3 zones : chips de contexte, historique des 3 dernières sessions (extensible inline), champ texte multiline auto-resize.
+- **Chat overlay** : transition sans changement de position. Hauteur **dynamique** jusqu'à 70vh max, **resizable** via drag-handle haut-gauche.
+- **Streaming** : SSE token-par-token (effet machine à écrire). Markdown rendu progressif.
+- **Tool calls inline** : carte expandable `🔧 rizin.decompile(0x401260) ▸`. Couleur par catégorie (lecture = bleu, exécution = orange, écriture = rouge).
+- **Confirmation tools destructifs** : bouton **inline** "Approuver / Refuser" dans la carte, pas de modal.
+- **Esc / ✕** : ferme sans détruire — historique préservé.
+
+### Contexte (chips)
+- **Chip module** : 1 par défaut = module actif. Modifiable via `+ ctx`.
+- **Auto-injection** selon module(s) coché(s) :
+  - **RE** : binaire (path/arch/bits), liste fonctions, current function (asm + decomp si chargé)
+  - **ASM** : code source courant, derniers logs terminal, état GDB (registres, breakpoints)
+  - **Pwn** : binaire + checksec, exploit.py courant, symbols/GOT/PLT
+  - **Firmware** : path firmware, scan binwalk si présent
+  - **Wire** : pcap chargé, dernier device interrogé
+- Décocher un chip **ne bloque pas** l'accès aux tools : ça désactive juste l'auto-injection. L'agent peut toujours appeler n'importe quel tool.
+
+### Safeguards (raisonnables, désactivables)
+- **Lecture seule par défaut** : toggle global "🔓 Allow write/exec" dans le **header du chat** (décision contextuelle).
+- **Confirmation inline** pour : `compile.*`, `gdb.run`, `pwn.exec`, `*.write_*`, `*.patch`. Pas de confirmation pour les tools de lecture pure.
+- **Strict mode** désactivé par défaut. Si activé dans Settings, allowlist par module (RE n'accède pas tools Pwn).
+- **Token cap** : 50 000 tokens output par session (configurable Settings).
+- **Audit log** : `~/.anvil/agent.log` append-only — chaque tool call (timestamp, tool name, args hash, result size, duration).
+
+### Persistence
+- Sessions SQLite : `sessions(id, created_at, last_used, title, module, provider, model, messages_json)`.
+- Refresh navigateur → reload de la dernière session ouverte (sauf Esc explicite).
+- Redémarrage app → idem. Historique illimité, purge manuelle Settings.
+
+### Settings (page dédiée)
+- **Providers** : tabs Anthropic / OpenAI / OpenRouter / Ollama. Champ API key masqué après save, URL custom optionnelle, modèle par défaut, test de connexion.
+- **Comportement** : Strict mode toggle, token cap, langue (FR/EN system prompts).
+- **Historique** : liste sessions, suppression individuelle ou bulk, export JSON.
+- **Audit log** : viewer fichier log avec filtres.
+
+**Conséquences** :
+- Nouveau dossier `backend/app/agent/` : `runtime.py`, `providers/{anthropic,openai,openrouter,ollama}.py`, `tools.py` (dispatcher MCP), `storage.py` (SQLite), `audit.py`.
+- Nouveau dossier `src/components/agent/` : `AgentFab.tsx`, `AgentWidget.tsx`, `AgentChat.tsx`, `AgentMessage.tsx`, `ToolCallCard.tsx`, `ContextChips.tsx`, `AgentSettings.tsx`.
+- Nouveau hook `useAgentSession.ts` (lifecycle + SSE streaming).
+- Nouvelles deps : `anthropic`, `openai`, `aiosqlite`. Groupe `agent` dans pyproject.toml.
+- Raccourci ⌘K capturé au niveau `App.tsx` (priorité sur Monaco — `event.metaKey||event.ctrlKey` + `keydown` capture phase).
+- ADR-016 ne s'applique pas — l'agent utilise HTTP+SSE, pas WS.
+- MCP server externe (`anvil_mcp/`) reste indépendant. `anvil_mcp.tools.*` importé in-process par runtime agent — un seul code source, deux consommateurs.
+
+**Non-objectifs** :
+- Pas de fine-tuning, pas de RAG sur les binaires — contexte injecté frame-by-frame selon chips.
+- Pas de sandbox Python pour exécuter du code généré — passe par tools MCP existants ou rien.
+- Pas de fallback offline — message invitant Settings si toutes les API keys absentes.

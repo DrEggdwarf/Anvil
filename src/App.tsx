@@ -10,7 +10,9 @@ import { AnvilTerminal } from './components/AnvilTerminal'
 import { StackPanel } from './components/panels/StackPanel'
 import { MemoryPanel } from './components/panels/MemoryPanel'
 import { SecurityPanel } from './components/panels/SecurityPanel'
+import { AgentOverlay } from './components/agent/AgentOverlay'
 import './App.css'
+import './styles/agent.css'
 
 // Sprint 15 fix #1: heavy modes are code-split out of the initial bundle.
 // PwnMode pulls Monaco + xterm + the pwn completion table; ReferenceModal pulls
@@ -19,6 +21,9 @@ const PwnMode = lazy(() => import('./components/PwnMode').then(m => ({ default: 
 const REMode = lazy(() => import('./components/REMode').then(m => ({ default: m.REMode })))
 const ReferenceModal = lazy(() =>
   import('./components/ReferenceModal').then(m => ({ default: m.ReferenceModal }))
+)
+const AgentSettings = lazy(() =>
+  import('./components/agent/AgentSettings').then(m => ({ default: m.AgentSettings }))
 )
 
 function LazyFallback({ label }: { label: string }) {
@@ -76,6 +81,7 @@ function App() {
   const [openPanels, setOpenPanels] = useState({ stack: true, memory: true, security: false })
   const [assembler, setAssembler] = useState<'nasm' | 'gas' | 'fasm'>('nasm')
   const [refOpen, setRefOpen] = useState(false)
+  const [agentSettingsOpen, setAgentSettingsOpen] = useState(false)
   const [fileName] = useState('source.asm')
   const [code, setCode] = useState(SAMPLE)
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set())
@@ -374,6 +380,25 @@ function App() {
             onClose={() => setRefOpen(false)}
             mode={MODE_CAT[mode] as import('./components/ReferenceModal').AppMode}
           />
+        </Suspense>
+      )}
+
+      <AgentOverlay
+        cat={MODE_CAT[mode]}
+        moduleLabel={mode}
+        anvilSessionIds={{
+          gdb: session.sessionId || '',
+          rizin: rizinSession.sessionId || '',
+          pwn: pwnSession.sessionId || '',
+          asm: session.sessionId || '',
+          re: rizinSession.sessionId || '',
+        }}
+        onOpenSettings={() => setAgentSettingsOpen(true)}
+      />
+
+      {agentSettingsOpen && (
+        <Suspense fallback={<LazyFallback label="Agent settings" />}>
+          <AgentSettings open={agentSettingsOpen} onClose={() => setAgentSettingsOpen(false)} />
         </Suspense>
       )}
 

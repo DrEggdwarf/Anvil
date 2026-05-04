@@ -436,3 +436,154 @@ export function uploadBinary(sessionId: string, filename: string, binaryData: Ar
   const hex = Array.from(new Uint8Array(binaryData)).map(b => b.toString(16).padStart(2, '0')).join('')
   return request<{ filename: string; content: string }>('POST', `/api/compile/${sessionId}/files`, { filename, content: hex })
 }
+
+// ── Agent IA (ADR-023) ───────────────────────────────────────
+
+export type AgentProviderName = 'anthropic' | 'openai' | 'openrouter' | 'ollama'
+
+export interface AgentChunk {
+  type: 'session' | 'delta' | 'tool_call' | 'tool_result' | 'tool_pending' | 'done' | 'error'
+  data: Record<string, any>
+}
+
+export interface AgentChatBody {
+  session_id?: string | null
+  module: string
+  chips: string[]
+  message: string
+  anvil_session_ids?: Record<string, string>
+  allow_write_exec?: boolean | null
+}
+
+export interface AgentSessionSummary {
+  id: string
+  title: string
+  module: string
+  provider: AgentProviderName
+  model: string
+  created_at: string
+  last_used: string
+  message_count: number
+}
+
+export interface AgentToolCall {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+  result?: unknown
+  error?: string | null
+  duration_ms?: number | null
+  destructive?: boolean
+}
+
+export interface AgentMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string
+  tool_calls?: AgentToolCall[]
+  tool_call_id?: string | null
+}
+
+export interface AgentSessionFull {
+  id: string
+  title: string
+  module: string
+  provider: AgentProviderName
+  model: string
+  created_at: string
+  last_used: string
+  messages: AgentMessage[]
+}
+
+export interface AgentSettingsView {
+  active_provider: AgentProviderName
+  providers: Record<AgentProviderName, {
+    api_key_masked: string
+    has_key: boolean
+    base_url: string | null
+    default_model: string
+  }>
+  strict_mode: boolean
+  allow_write_exec: boolean
+  token_cap: number
+  language: 'fr' | 'en'
+}
+
+/** Stream a chat turn from the in-app agent (SSE). */
+export async function* agentChatStream(body: AgentChatBody, signal?: AbortSignal): AsyncGenerator<AgentChunk> {
+  const res = await fetch(`${BASE}/api/agent/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify(body),
+    signal,
+  })
+  if (!res.ok || !res.body) {
+    const txt = await res.text().catch(() => res.statusText)
+    throw new Error(`Agent stream failed (${res.status}): ${txt.slice(0, 200)}`)
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buf = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    let nl: number
+    while ((nl = buf.indexOf('\n\n')) !== -1) {
+      const evt = buf.slice(0, nl)
+      buf = buf.slice(nl + 2)
+      for (const line of evt.split('\n')) {
+        if (!line.startsWith('data:')) continue
+        const payload = line.slice(5).trim()
+        if (!payload) continue
+        try {
+          yield JSON.parse(payload) as AgentChunk
+        } catch {
+          /* ignore malformed */
+        }
+      }
+    }
+  }
+}
+
+export function agentListSessions() {
+  return request<{ sessions: AgentSessionSummary[] }>('GET', '/api/agent/sessions')
+}
+
+export function agentGetSession(id: string) {
+  return request<AgentSessionFull>('GET', `/api/agent/sessions/${id}`)
+}
+
+export function agentDeleteSession(id: string) {
+  return request<{ deleted: boolean }>('DELETE', `/api/agent/sessions/${id}`)
+}
+
+export function agentPurgeSessions() {
+  return request<{ deleted: number }>('DELETE', '/api/agent/sessions')
+}
+
+export function agentGetSettings() {
+  return request<AgentSettingsView>('GET', '/api/agent/settings')
+}
+
+export function agentUpdateSettings(payload: Partial<{
+  active_provider: AgentProviderName
+  strict_mode: boolean
+  allow_write_exec: boolean
+  language: 'fr' | 'en'
+  token_cap: number
+  providers: Partial<Record<AgentProviderName, { api_key?: string; base_url?: string | null; default_model?: string }>>
+}>) {
+  return request<AgentSettingsView>('PUT', '/api/agent/settings', payload)
+}
+
+export function agentListProviders() {
+  return request<{ providers: AgentProviderName[] }>('GET', '/api/agent/providers')
+}
+
+export function agentTestProvider(provider: AgentProviderName, opts: { api_key?: string; base_url?: string; model?: string } = {}) {
+  return request<{ ok: boolean; status?: number; error?: string }>('POST', '/api/agent/providers/test', { provider, ...opts })
+}
+
+export function agentAuditLog(limit = 200) {
+  return request<{ entries: Array<Record<string, unknown>> }>('GET', `/api/agent/audit?limit=${limit}`)
+}
