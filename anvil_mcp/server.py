@@ -79,7 +79,7 @@ mcp.tool()(pwn_cyclic_find)
 mcp.tool()(pwn_rop_gadgets)
 mcp.tool()(pwn_shellcraft)
 
-# ── RE tools (stubs) ─────────────────────────────────────
+# ── RE tools (wired) ──────────────────────────────────────
 mcp.tool()(re_analyze)
 mcp.tool()(re_functions)
 mcp.tool()(re_disasm)

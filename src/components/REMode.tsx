@@ -35,7 +35,6 @@ export function REMode({ session }: REModeProps) {
   // State machine
   const isEmpty   = !session.binaryPath && !session.opening
   const isLoading = session.opening
-  const isReady   = !!session.binaryPath && !session.opening
 
   if (isEmpty) {
     return (

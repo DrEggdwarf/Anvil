@@ -1,4 +1,3 @@
-import { useRef, useState } from 'react'
 import type { RizinBinaryInfo } from '../../types/re'
 
 interface ReTopBarProps {
@@ -17,7 +16,7 @@ export function ReTopBar({
   binaryInfo,
   analyzing,
   analyzeError,
-  analyzed,
+  analyzed: _analyzed,
   functionCount,
   onAnalyze,
   onReset,

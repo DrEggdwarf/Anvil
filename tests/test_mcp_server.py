@@ -87,12 +87,6 @@ _STUBS = [
     (pwn_cyclic_find, ("sid", "0x61616161")),
     (pwn_rop_gadgets, ("sid", "/tmp/bin")),
     (pwn_shellcraft, ("sid", "amd64", "linux", "sh")),
-    (re_analyze, ("sid", "/tmp/bin")),
-    (re_functions, ("sid",)),
-    (re_disasm, ("sid", "main")),
-    (re_decompile, ("sid", "main")),
-    (re_strings, ("sid",)),
-    (re_xrefs, ("sid", "0x401000")),
     (firmware_scan, ("sid", "/tmp/fw.bin")),
     (firmware_extract, ("sid", "/tmp/fw.bin")),
     (firmware_entropy, ("sid", "/tmp/fw.bin")),
@@ -110,6 +104,30 @@ async def test_stub_raises_not_implemented(fn, args):
     assert inspect.iscoroutinefunction(fn), f"{fn.__name__} must be async"
     with pytest.raises(NotImplementedError):
         await fn(*args)
+
+
+# ── Wired RE tools raise httpx errors (no backend in tests) ──
+
+_RE_WIRED = [
+    (re_analyze, ("sid", "/tmp/bin")),
+    (re_functions, ("sid",)),
+    (re_disasm, ("sid", "main")),
+    (re_decompile, ("sid", "main")),
+    (re_strings, ("sid",)),
+    (re_xrefs, ("sid", "0x401000")),
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fn,args", _RE_WIRED)
+async def test_re_tools_are_wired(fn, args):
+    """RE tools are wired to the backend — they raise httpx errors, not NotImplementedError."""
+    assert inspect.iscoroutinefunction(fn), f"{fn.__name__} must be async"
+    with pytest.raises(Exception) as exc_info:
+        await fn(*args)
+    assert not isinstance(exc_info.value, NotImplementedError), (
+        f"{fn.__name__} should be wired, not a stub"
+    )
 
 
 # ── Session tools are async and have correct parameter names ─
